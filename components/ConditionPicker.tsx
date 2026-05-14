@@ -23,7 +23,6 @@ const OPTIONS: { value: ConditionScore; emoji: string }[] = [
 
 function ConditionImage({ score, selected }: { score: ConditionScore; selected: boolean }) {
   const [failed, setFailed] = useState(false);
-  const size = selected ? 52 : 48;
 
   if (failed) {
     return (
@@ -36,7 +35,7 @@ function ConditionImage({ score, selected }: { score: ConditionScore; selected: 
   return (
     <Image
       source={conditionImages[score]}
-      style={{ width: size, height: size }}
+      style={[styles.image, selected && styles.imageSelected]}
       contentFit="contain"
       onError={() => setFailed(true)}
     />
@@ -79,7 +78,7 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    height: 64,
+    aspectRatio: 1,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -87,10 +86,17 @@ const styles = StyleSheet.create({
   btnSelected: {
     backgroundColor: colors.surfaceAlt,
   },
+  image: {
+    width: '75%',
+    aspectRatio: 1,
+  },
+  imageSelected: {
+    width: '88%',
+  },
   emoji: {
-    fontSize: 28,
+    fontSize: 32,
   },
   emojiSelected: {
-    fontSize: 32,
+    fontSize: 38,
   },
 });
