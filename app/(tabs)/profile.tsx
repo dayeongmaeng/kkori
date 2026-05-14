@@ -4,7 +4,6 @@ import {
   Alert,
   Modal,
   Platform,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Image } from 'expo-image';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAutoSave } from '../../hooks/useAutoSave';
@@ -224,7 +224,12 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <SaveIndicator status={saveStatus} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.content}
+        enableOnAndroid
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.titleRow}>
         <Text style={styles.title}>반려동물 등록</Text>
       </View>
@@ -374,7 +379,7 @@ export default function ProfileScreen() {
         />
       </View>
 
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -386,7 +391,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.xl,
-    paddingBottom: spacing.xxl * 2,
+    paddingBottom: 200,
   },
   titleRow: {
     marginBottom: spacing.xl,

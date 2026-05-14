@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
 import {
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useFocusEffect } from 'expo-router';
 import DatePickerModal from '../../components/DatePickerModal';
 import EmptyPetState from '../../components/EmptyPetState';
@@ -217,7 +217,12 @@ export default function LogScreen() {
       <SaveIndicator status={saveStatus} />
 
       {/* 본문 */}
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.content}
+        enableOnAndroid
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
         <Card title="오늘 컨디션은?">
           <ConditionPicker value={condition} onChange={setCondition} />
         </Card>
@@ -271,7 +276,7 @@ export default function LogScreen() {
           onClose={() => setIsCalendarVisible(false)}
         />
 
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -322,7 +327,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     gap: spacing.md,
-    paddingBottom: spacing.xxl + spacing.sm,
+    paddingBottom: 200,
   },
   card: {
     backgroundColor: colors.surface,
