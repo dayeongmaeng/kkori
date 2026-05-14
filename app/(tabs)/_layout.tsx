@@ -1,11 +1,8 @@
 import { Tabs } from 'expo-router';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Camera, Home, NotebookPen, PawPrint } from 'lucide-react-native';
 import AppHeader from '../../components/AppHeader';
 import { colors } from '../../constants/theme';
-
-function TabIcon({ emoji }: { emoji: string }) {
-  return <Text style={{ fontSize: 22 }}>{emoji}</Text>;
-}
 
 export default function TabLayout() {
   return (
@@ -32,28 +29,28 @@ export default function TabLayout() {
           name="home"
           options={{
             title: '홈',
-            tabBarIcon: () => <TabIcon emoji="🏠" />,
+            tabBarIcon: ({ color }) => <Home size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="index"
           options={{
             title: '포토',
-            tabBarIcon: () => <TabIcon emoji="📸" />,
+            tabBarIcon: ({ color }) => <Camera size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="log"
           options={{
             title: '기록',
-            tabBarIcon: () => <TabIcon emoji="📝" />,
+            tabBarIcon: ({ color }) => <NotebookPen size={24} color={color} />,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: '프로필',
-            tabBarIcon: () => <TabIcon emoji="🐾" />,
+            tabBarIcon: ({ color }) => <PawPrint size={24} color={color} />,
           }}
         />
       </Tabs>
