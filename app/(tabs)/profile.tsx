@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   ActivityIndicator,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -16,6 +18,96 @@ import { colors, radius, spacing } from '../../constants/theme';
 import { getCurrentPetId, getPet, savePet, setCurrentPetId } from '../../lib/storage';
 import { uriToBase64 } from '../../lib/photoUtils';
 import { Pet } from '../../lib/types';
+
+let DateTimePicker: any = null;
+try {
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
+} catch {
+  DateTimePicker = null;
+}
+
+const today = new Date();
+const minDate = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
+const maxDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+function formatBirthDate(date: Date) {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  return `${y}년 ${m}월 ${d}일`;
+}
+
+function dateToStorage(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function storageToDate(s: string): Date | null {
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const d = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// 웹 fallback: 년/월/일 select 3개
+function WebDatePicker({
+  value,
+  onChange,
+}: {
+  value: Date;
+  onChange: (date: Date) => void;
+}) {
+  const years = Array.from({ length: 31 }, (_, i) => today.getFullYear() - 30 + i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const daysInMonth = new Date(value.getFullYear(), value.getMonth() + 1, 0).getDate();
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  function update(y: number, m: number, d: number) {
+    const maxD = new Date(y, m, 0).getDate();
+    onChange(new Date(y, m - 1, Math.min(d, maxD)));
+  }
+
+  return (
+    <View style={webPickerStyles.row}>
+      <select
+        value={value.getFullYear()}
+        onChange={e => update(Number(e.target.value), value.getMonth() + 1, value.getDate())}
+        style={webPickerStyles.select as any}
+      >
+        {years.map(y => <option key={y} value={y}>{y}년</option>)}
+      </select>
+      <select
+        value={value.getMonth() + 1}
+        onChange={e => update(value.getFullYear(), Number(e.target.value), value.getDate())}
+        style={webPickerStyles.select as any}
+      >
+        {months.map(m => <option key={m} value={m}>{m}월</option>)}
+      </select>
+      <select
+        value={value.getDate()}
+        onChange={e => update(value.getFullYear(), value.getMonth() + 1, Number(e.target.value))}
+        style={webPickerStyles.select as any}
+      >
+        {days.map(d => <option key={d} value={d}>{d}일</option>)}
+      </select>
+    </View>
+  );
+}
+
+const webPickerStyles = {
+  row: { flexDirection: 'row' as const, gap: 8, justifyContent: 'center' as const },
+  select: {
+    flex: 1,
+    fontSize: 16,
+    padding: 8,
+    borderRadius: 8,
+    border: `1px solid ${colors.border}`,
+    backgroundColor: colors.surfaceAlt,
+    color: colors.textPrimary,
+  },
+};
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -32,6 +124,10 @@ export default function ProfileScreen() {
   const [medicalNotes, setMedicalNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [photoLoading, setPhotoLoading] = useState(false);
+
+  // 날짜 피커 상태
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
 
   useEffect(() => {
     (async () => {
@@ -164,16 +260,67 @@ export default function ProfileScreen() {
       {/* 생일 */}
       <View style={styles.field}>
         <Text style={styles.label}>생일 *</Text>
-        <TextInput
-          style={styles.input}
-          value={birthDate}
-          onChangeText={setBirthDate}
-          placeholder="YYYY-MM-DD (예: 2020-03-15)"
-          placeholderTextColor={colors.textQuaternary}
-          keyboardType="numeric"
-          maxLength={10}
-        />
+        <TouchableOpacity
+          style={[styles.input, styles.dateButton]}
+          onPress={() => {
+            const parsed = storageToDate(birthDate);
+            setPickerDate(parsed ?? new Date(2020, 0, 1));
+            setDatePickerVisible(true);
+          }}
+        >
+          <Text style={birthDate ? styles.dateText : styles.datePlaceholder}>
+            {birthDate ? (() => {
+              const d = storageToDate(birthDate);
+              return d ? formatBirthDate(d) : birthDate;
+            })() : '생일 선택'}
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* 날짜 선택 모달 */}
+      <Modal
+        visible={datePickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setDatePickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
+                <Text style={styles.modalCancel}>취소</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>생일 선택</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setBirthDate(dateToStorage(pickerDate));
+                  setDatePickerVisible(false);
+                }}
+              >
+                <Text style={styles.modalDone}>완료</Text>
+              </TouchableOpacity>
+            </View>
+
+            {Platform.OS === 'web' ? (
+              <View style={styles.webPickerWrapper}>
+                <WebDatePicker value={pickerDate} onChange={setPickerDate} />
+              </View>
+            ) : DateTimePicker ? (
+              <DateTimePicker
+                value={pickerDate}
+                mode="date"
+                display="spinner"
+                locale="ko-KR"
+                minimumDate={minDate}
+                maximumDate={maxDate}
+                onChange={(_: any, date?: Date) => {
+                  if (date) setPickerDate(date);
+                }}
+              />
+            ) : null}
+          </View>
+        </View>
+      </Modal>
 
       {/* 체중 */}
       <View style={styles.field}>
@@ -325,5 +472,53 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: colors.textOnPrimary,
+  },
+  dateButton: {
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  datePlaceholder: {
+    fontSize: 16,
+    color: colors.textQuaternary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  modalCancel: {
+    fontSize: 16,
+    color: colors.textTertiary,
+  },
+  modalDone: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  webPickerWrapper: {
+    padding: spacing.xl,
   },
 });
