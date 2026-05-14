@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Text, View } from 'react-native';
 import AppHeader from '../../components/AppHeader';
+import { colors } from '../../constants/theme';
 
 function TabIcon({ emoji }: { emoji: string }) {
   return <Text style={{ fontSize: 22 }}>{emoji}</Text>;
@@ -14,11 +15,12 @@ export default function TabLayout() {
         initialRouteName="home"
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#E8985C',
-          tabBarInactiveTintColor: '#B0A090',
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textTertiary,
           tabBarStyle: {
-            backgroundColor: '#FFFFFF',
-            borderTopColor: '#F0EAE0',
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            borderTopWidth: 1,
           },
           tabBarLabelStyle: {
             fontSize: 11,

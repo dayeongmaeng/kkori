@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '../constants/theme';
 
 export default function AppHeader() {
   const insets = useSafeAreaInsets();
@@ -14,9 +15,9 @@ export default function AppHeader() {
 const styles = StyleSheet.create({
   container: {
     height: 48,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+    borderBottomColor: colors.border,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: 10,
@@ -24,6 +25,6 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
 });
