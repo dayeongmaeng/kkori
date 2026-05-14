@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,8 @@ import {
 import { useFocusEffect } from 'expo-router';
 import DatePickerModal from '../../components/DatePickerModal';
 import EmptyPetState from '../../components/EmptyPetState';
+import SaveIndicator from '../../components/SaveIndicator';
+import { useAutoSave } from '../../hooks/useAutoSave';
 import ConditionPicker from '../../components/ConditionPicker';
 import MealPicker from '../../components/MealPicker';
 import MemoInput from '../../components/MemoInput';
@@ -51,11 +52,20 @@ function Card({ title, children }: { title: string; children?: React.ReactNode }
 
 export default function LogScreen() {
   const [hasPet, setHasPet] = useState<boolean | null>(null);
+  const [petId, setPetId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [date, setDate] = useState(getTodayString());
   const [existingLog, setExistingLog] = useState<DailyLog | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [markedDates, setMarkedDates] = useState<Record<string, { marked: true; dotColor: string }>>({});
+
+  // 자동저장 시 최신값 참조용 ref
+  const petIdRef = useRef<string | null>(null);
+  const dateRef = useRef(date);
+  const existingLogRef = useRef<DailyLog | null>(null);
+  petIdRef.current = petId;
+  dateRef.current = date;
+  existingLogRef.current = existingLog;
 
   const [condition, setCondition] = useState<ConditionScore | undefined>();
   const [meal, setMeal] = useState<MealAmount | undefined>();
@@ -111,13 +121,15 @@ export default function LogScreen() {
   useFocusEffect(
     useCallback(() => {
       async function loadLog() {
-        const petId = await getCurrentPetId();
-        if (!petId) { setHasPet(false); resetStates(); return; }
+        setIsLoaded(false);
+        const currentPetId = await getCurrentPetId();
+        if (!currentPetId) { setHasPet(false); resetStates(); setIsLoaded(true); return; }
+        setPetId(currentPetId);
         setHasPet(true);
 
         const [log, allLogs] = await Promise.all([
-          getDailyLogByDate(petId, date),
-          getDailyLogs(petId),
+          getDailyLogByDate(currentPetId, date),
+          getDailyLogs(currentPetId),
         ]);
 
         const marks: Record<string, { marked: true; dotColor: string }> = {};
@@ -131,49 +143,55 @@ export default function LogScreen() {
         } else {
           resetStates();
         }
+        setIsLoaded(true);
       }
       loadLog();
     }, [date])
   );
 
-  async function handleSave() {
-    setIsSaving(true);
-    try {
-      const petId = await getCurrentPetId();
-      if (!petId) throw new Error('반려동물 정보가 없어요.');
+  const logData = {
+    condition, meal, mealNote, walkMinutes, walkNote,
+    pooCount, pooCondition, peeCount, urineColor, pooNote,
+    water, waterNote, memo, photoUris,
+  };
 
-      const now = new Date().toISOString();
-      const log: DailyLog = {
-        id: existingLog?.id ?? generateId(),
-        petId,
-        caregiverId: existingLog?.caregiverId ?? '',
-        date,
-        condition,
-        meal,
-        mealNote: mealNote.trim() || undefined,
-        walkMinutes,
-        walkNote: walkNote.trim() || undefined,
-        pooCount,
-        pooCondition,
-        pooNote: pooNote.trim() || undefined,
-        peeCount,
-        urineColor,
-        water,
-        waterNote: waterNote.trim() || undefined,
-        memo: memo.trim() || undefined,
-        photoUris: photoUris.length > 0 ? photoUris : undefined,
-        createdAt: existingLog?.createdAt ?? now,
-        updatedAt: now,
-      };
+  const autoSaveLog = useCallback(async (data: typeof logData) => {
+    const currentPetId = petIdRef.current;
+    if (!currentPetId) return;
 
-      await saveDailyLog(log);
-      Alert.alert('저장됐어요 🐾');
-    } catch {
-      Alert.alert('저장에 실패했어요');
-    } finally {
-      setIsSaving(false);
-    }
-  }
+    const now = new Date().toISOString();
+    const log: DailyLog = {
+      id: existingLogRef.current?.id ?? generateId(),
+      petId: currentPetId,
+      caregiverId: existingLogRef.current?.caregiverId ?? '',
+      date: dateRef.current,
+      condition: data.condition,
+      meal: data.meal,
+      mealNote: data.mealNote.trim() || undefined,
+      walkMinutes: data.walkMinutes,
+      walkNote: data.walkNote.trim() || undefined,
+      pooCount: data.pooCount,
+      pooCondition: data.pooCondition,
+      pooNote: data.pooNote.trim() || undefined,
+      peeCount: data.peeCount,
+      urineColor: data.urineColor,
+      water: data.water,
+      waterNote: data.waterNote.trim() || undefined,
+      memo: data.memo.trim() || undefined,
+      photoUris: data.photoUris.length > 0 ? data.photoUris : undefined,
+      createdAt: existingLogRef.current?.createdAt ?? now,
+      updatedAt: now,
+    };
+    await saveDailyLog(log);
+    if (!existingLogRef.current) setExistingLog(log);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const { status: saveStatus } = useAutoSave(
+    logData,
+    autoSaveLog,
+    { enabled: isLoaded && hasPet === true }
+  );
 
   const isToday = date === getTodayString();
 
@@ -204,6 +222,7 @@ export default function LogScreen() {
           <Text style={[styles.arrowText, isToday && styles.arrowDisabled]}>{'>'}</Text>
         </TouchableOpacity>
       </View>
+      <SaveIndicator status={saveStatus} />
 
       {/* 본문 */}
       <ScrollView contentContainerStyle={styles.content}>
@@ -264,14 +283,6 @@ export default function LogScreen() {
           onClose={() => setIsCalendarVisible(false)}
         />
 
-        {/* 하단 저장 버튼 */}
-        <TouchableOpacity
-          style={[styles.submitBtn, isSaving && styles.submitBtnDisabled]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Text style={styles.submitBtnText}>{isSaving ? '저장 중…' : '저장'}</Text>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -335,20 +346,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.md,
-  },
-  submitBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  submitBtnDisabled: {
-    opacity: 0.5,
-  },
-  submitBtnText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textOnPrimary,
   },
 });

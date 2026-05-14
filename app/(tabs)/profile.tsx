@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -14,8 +14,10 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { colors, radius, spacing } from '../../constants/theme';
+import { useAutoSave } from '../../hooks/useAutoSave';
 import { getCurrentPetId, getPet, savePet, setCurrentPetId } from '../../lib/storage';
 import { Pet } from '../../lib/types';
+import SaveIndicator from '../../components/SaveIndicator';
 
 let DateTimePicker: any = null;
 try {
@@ -121,31 +123,77 @@ export default function ProfileScreen() {
   const [neutered, setNeutered] = useState(false);
   const [medicalNotes, setMedicalNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // 날짜 피커 상태
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
 
+  // petId/createdAt은 자동저장 시 최신값 참조용 ref
+  const petIdRef = useRef<string | null>(null);
+  const createdAtRef = useRef<string | null>(null);
+  petIdRef.current = petId;
+  createdAtRef.current = createdAt;
+
+  const profileData = { name, breed, birthDate, weightKg, neutered, medicalNotes, photoUri };
+
+  const autoSavePet = useCallback(async (data: typeof profileData) => {
+    if (!data.name.trim() || !data.breed.trim() || !data.birthDate.trim()) return;
+    const weight = parseFloat(data.weightKg);
+    if (isNaN(weight) || weight <= 0) return;
+
+    const now = new Date().toISOString();
+    const id = petIdRef.current ?? generateId();
+    const savedAt = createdAtRef.current ?? now;
+    const pet: Pet = {
+      id,
+      species: 'dog',
+      name: data.name.trim(),
+      breed: data.breed.trim(),
+      birthDate: data.birthDate.trim(),
+      weightKg: weight,
+      neutered: data.neutered,
+      medicalNotes: data.medicalNotes.trim() || undefined,
+      photoUri: data.photoUri,
+      caregiverIds: [],
+      createdAt: savedAt,
+    };
+    await savePet(pet);
+    await setCurrentPetId(pet.id);
+    if (!petIdRef.current) {
+      setPetId(pet.id);
+      setCreatedAt(pet.createdAt);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const { status: saveStatus } = useAutoSave(
+    profileData,
+    autoSavePet,
+    { enabled: isLoaded && name.trim().length > 0 }
+  );
+
   useEffect(() => {
     async function loadPet() {
       const currentId = await getCurrentPetId();
-      if (!currentId) return;
-      const saved = await getPet(currentId);
-      if (saved) {
-        setPetId(saved.id);
-        setCreatedAt(saved.createdAt);
-        setName(saved.name);
-        setBreed(saved.breed);
-        setBirthDate(saved.birthDate);
-        setWeightKg(String(saved.weightKg));
-        setNeutered(saved.neutered);
-        setMedicalNotes(saved.medicalNotes ?? '');
-        // blob:/  file:// 는 새로고침 시 무효 → 무시 (legacy 데이터)
-        const uri = saved.photoUri;
-        if (uri && !uri.startsWith('blob:') && !uri.startsWith('file://')) {
-          setPhotoUri(uri);
+      if (currentId) {
+        const saved = await getPet(currentId);
+        if (saved) {
+          setPetId(saved.id);
+          setCreatedAt(saved.createdAt);
+          setName(saved.name);
+          setBreed(saved.breed);
+          setBirthDate(saved.birthDate);
+          setWeightKg(String(saved.weightKg));
+          setNeutered(saved.neutered);
+          setMedicalNotes(saved.medicalNotes ?? '');
+          const uri = saved.photoUri;
+          if (uri && !uri.startsWith('blob:') && !uri.startsWith('file://')) {
+            setPhotoUri(uri);
+          }
         }
       }
+      setIsLoaded(true);
     }
     loadPet();
   }, []);
@@ -173,44 +221,13 @@ export default function ProfileScreen() {
     setPhotoUri(`data:image/jpeg;base64,${b64}`);
   }
 
-  async function handleSave() {
-    if (!name.trim() || !breed.trim() || !birthDate.trim() || !weightKg.trim()) {
-      Alert.alert('입력 오류', '이름, 견종, 생일, 체중은 필수 항목이에요.');
-      return;
-    }
-    const weight = parseFloat(weightKg);
-    if (isNaN(weight) || weight <= 0) {
-      Alert.alert('입력 오류', '체중을 올바르게 입력해주세요.');
-      return;
-    }
-    const now = new Date().toISOString();
-    const pet: Pet = {
-      id: petId ?? generateId(),
-      species: 'dog',
-      name: name.trim(),
-      breed: breed.trim(),
-      birthDate: birthDate.trim(),
-      weightKg: weight,
-      neutered,
-      medicalNotes: medicalNotes.trim() || undefined,
-      photoUri,
-      caregiverIds: [],  // storage에서 자동 채움
-      createdAt: createdAt ?? now,
-    };
-    try {
-      await savePet(pet);
-      await setCurrentPetId(pet.id);
-      setPetId(pet.id);
-      setCreatedAt(pet.createdAt);
-      Alert.alert('저장됐어요', `${pet.name}의 프로필이 저장됐어요.`);
-    } catch {
-      Alert.alert('오류', '저장에 실패했어요. 다시 시도해주세요.');
-    }
-  }
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>강아지 프로필</Text>
+    <View style={styles.container}>
+      <SaveIndicator status={saveStatus} />
+      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>반려동물 등록</Text>
+      </View>
 
       {/* 사진 */}
       <TouchableOpacity style={styles.photoWrapper} onPress={pickImage}>
@@ -357,11 +374,8 @@ export default function ProfileScreen() {
         />
       </View>
 
-      {/* 저장 버튼 */}
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>저장</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -374,11 +388,13 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingBottom: spacing.xxl * 2,
   },
+  titleRow: {
+    marginBottom: spacing.xl,
+  },
   title: {
     fontSize: 24,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: spacing.xl,
   },
   photoWrapper: {
     alignSelf: 'center',
@@ -451,18 +467,6 @@ const styles = StyleSheet.create({
   textarea: {
     height: 120,
     paddingTop: 14,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  saveButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textOnPrimary,
   },
   dateButton: {
     justifyContent: 'center',
