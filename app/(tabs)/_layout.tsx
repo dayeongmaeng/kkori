@@ -43,7 +43,7 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       <AppHeader />
       <Tabs
-        initialRouteName="home"
+        initialRouteName="index"
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: colors.primary,
@@ -57,20 +57,11 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen
-          name="home"
+          name="index"
           options={{
             title: '홈',
             tabBarIcon: ({ focused, color }) => (
               <TabIcon name="home" focused={focused} fallback={<Home size={24} color={color} />} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: '포토',
-            tabBarIcon: ({ focused, color }) => (
-              <TabIcon name="photo" focused={focused} fallback={<Camera size={24} color={color} />} />
             ),
           }}
         />
@@ -80,6 +71,15 @@ export default function TabLayout() {
             title: '기록',
             tabBarIcon: ({ focused, color }) => (
               <TabIcon name="log" focused={focused} fallback={<NotebookPen size={24} color={color} />} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="photo"
+          options={{
+            title: '포토',
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon name="photo" focused={focused} fallback={<Camera size={24} color={color} />} />
             ),
           }}
         />
