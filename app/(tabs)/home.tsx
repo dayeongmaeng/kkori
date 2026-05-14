@@ -2,6 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import AiReportPreview from '../../components/AiReportPreview';
+import EmptyPetState from '../../components/EmptyPetState';
 import HomeConditionChart from '../../components/HomeConditionChart';
 import HomeTodayLogCard from '../../components/HomeTodayLogCard';
 import HomeProfileCard from '../../components/HomeProfileCard';
@@ -56,24 +57,24 @@ export default function HomeScreen() {
 
   if (!loaded) return null;
 
+  if (!pet) {
+    return (
+      <View style={styles.container}>
+        <EmptyPetState />
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {pet ? (
-        <>
-          <HomeProfileCard pet={pet} />
-          <HomeTodayLogCard
-            todayLog={todayLog ?? undefined}
-            onTapAdd={() => router.navigate('/log')}
-            onTapView={() => router.navigate('/log')}
-          />
-          <HomeConditionChart logs={recentLogs} />
-          <AiReportPreview petName={pet.name} />
-        </>
-      ) : (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>프로필 탭에서 반려동물을 먼저 등록해주세요 🐾</Text>
-        </View>
-      )}
+      <HomeProfileCard pet={pet} />
+      <HomeTodayLogCard
+        todayLog={todayLog ?? undefined}
+        onTapAdd={() => router.navigate('/log')}
+        onTapView={() => router.navigate('/log')}
+      />
+      <HomeConditionChart logs={recentLogs} />
+      <AiReportPreview petName={pet.name} />
     </ScrollView>
   );
 }
@@ -87,16 +88,5 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
-  },
-  empty: {
-    marginHorizontal: spacing.lg,
-    marginTop: 60,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 15,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    lineHeight: 24,
   },
 });

@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
-import { daysSince, formatAge } from '../lib/dateUtils';
+import { formatAge } from '../lib/dateUtils';
 import { Pet } from '../lib/types';
 
 interface Props {
@@ -30,7 +30,6 @@ export default function HomeProfileCard({ pet }: Props) {
           <Text style={styles.breed}>
             {pet.breed} · {formatAge(pet.birthDate)}
           </Text>
-          <Text style={styles.since}>함께한 지 {daysSince(pet.createdAt)}일</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -82,9 +81,5 @@ const styles = StyleSheet.create({
   breed: {
     fontSize: 14,
     color: colors.textSecondary,
-  },
-  since: {
-    fontSize: 13,
-    color: colors.textTertiary,
   },
 });

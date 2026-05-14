@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import CaptionModal from '../../components/CaptionModal';
+import EmptyPetState from '../../components/EmptyPetState';
 import TodayPhotoCard from '../../components/TodayPhotoCard';
 import { uriToBase64 } from '../../lib/photoUtils';
 import {
@@ -42,6 +43,7 @@ function PhotoCell({ photo, onPress }: { photo: DailyPhoto; onPress: () => void 
 }
 
 export default function PhotoScreen() {
+  const [hasPet, setHasPet] = useState<boolean | null>(null);
   const [photos, setPhotos] = useState<DailyPhoto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -54,7 +56,8 @@ export default function PhotoScreen() {
 
   const load = useCallback(async () => {
     const petId = await getCurrentPetId();
-    if (!petId) return;
+    if (!petId) { setHasPet(false); return; }
+    setHasPet(true);
     const loadedPhotos = await getDailyPhotos(petId);
     setPhotos(loadedPhotos);
   }, []);
@@ -193,6 +196,14 @@ export default function PhotoScreen() {
       <Text style={styles.emptyText}>기록된 사진이 없습니다</Text>
     </View>
   );
+
+  if (hasPet === false) {
+    return (
+      <View style={styles.container}>
+        <EmptyPetState />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

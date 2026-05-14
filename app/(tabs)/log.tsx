@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import DatePickerModal from '../../components/DatePickerModal';
+import EmptyPetState from '../../components/EmptyPetState';
 import ConditionPicker from '../../components/ConditionPicker';
 import MealPicker from '../../components/MealPicker';
 import MemoInput from '../../components/MemoInput';
@@ -49,6 +50,7 @@ function Card({ title, children }: { title: string; children?: React.ReactNode }
 }
 
 export default function LogScreen() {
+  const [hasPet, setHasPet] = useState<boolean | null>(null);
   const [date, setDate] = useState(getTodayString());
   const [existingLog, setExistingLog] = useState<DailyLog | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -108,7 +110,8 @@ export default function LogScreen() {
 
   const loadLog = useCallback(async () => {
     const petId = await getCurrentPetId();
-    if (!petId) { resetStates(); return; }
+    if (!petId) { setHasPet(false); resetStates(); return; }
+    setHasPet(true);
 
     const [log, allLogs] = await Promise.all([
       getDailyLogByDate(petId, date),
@@ -170,6 +173,14 @@ export default function LogScreen() {
   }
 
   const isToday = date === getTodayString();
+
+  if (hasPet === false) {
+    return (
+      <View style={styles.container}>
+        <EmptyPetState />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
