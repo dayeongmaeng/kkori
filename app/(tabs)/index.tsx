@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import CaptionModal from '../../components/CaptionModal';
+import TodayPhotoCard from '../../components/TodayPhotoCard';
 import { uriToBase64 } from '../../lib/photoUtils';
 import {
   getCurrentPetId,
-  getDailyPhotoByDate,
   getDailyPhotos,
   getPet,
   saveDailyPhoto,
@@ -41,16 +41,6 @@ function PhotoCell({ photo, onPress }: { photo: DailyPhoto; onPress: () => void 
   );
 }
 
-function EmptyGrid() {
-  return (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyEmoji}>📷</Text>
-      <Text style={styles.emptyTitle}>첫 사진을 남겨보세요</Text>
-      <Text style={styles.emptySubtitle}>매일 한 장씩 쌓이는 소중한 기록이에요</Text>
-    </View>
-  );
-}
-
 export default function PhotoScreen() {
   const [pet, setPet] = useState<Pet | null>(null);
   const [photos, setPhotos] = useState<DailyPhoto[]>([]);
@@ -60,7 +50,8 @@ export default function PhotoScreen() {
   const [modalVisible, setModalVisible] = useState(false);
 
   const today = getTodayString();
-  const hasTodayPhoto = photos.some((p) => p.date === today);
+  const todayPhoto = photos.find((p) => p.date === today);
+  const pastPhotos = photos.filter((p) => p.date !== today);
 
   const load = useCallback(async () => {
     const petId = await getCurrentPetId();
@@ -73,16 +64,9 @@ export default function PhotoScreen() {
     setPhotos(loadedPhotos);
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
-  // 상세 화면에서 삭제 후 돌아왔을 때 그리드 자동 갱신
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -90,16 +74,59 @@ export default function PhotoScreen() {
     setRefreshing(false);
   }, [load]);
 
-  async function handleAddPhoto() {
+  async function processPickedImage(uri: string) {
+    try {
+      setConverting(true);
+      const base64 = await uriToBase64(uri);
+      setPendingBase64(base64);
+      setModalVisible(true);
+    } catch {
+      Alert.alert('오류', '사진을 처리하지 못했어요. 다시 시도해주세요.');
+    } finally {
+      setConverting(false);
+    }
+  }
+
+  async function handleTakePhoto() {
+    if (converting) return;
     const petId = await getCurrentPetId();
     if (!petId) {
       Alert.alert('알림', '프로필 탭에서 반려동물을 먼저 등록해주세요.');
       return;
     }
 
-    const existing = await getDailyPhotoByDate(petId, today);
-    if (existing) {
-      Alert.alert('알림', '이미 오늘 사진이 있어요. 내일 와주세요 🐾');
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('카메라 권한이 필요해요', '설정에서 카메라 접근을 허용해주세요.');
+      return;
+    }
+
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+    } catch {
+      // 웹 등 카메라 미지원 환경에서 갤러리로 폴백
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+    }
+
+    if (result.canceled) return;
+    await processPickedImage(result.assets[0].uri);
+  }
+
+  async function handleOpenGallery() {
+    if (converting) return;
+    const petId = await getCurrentPetId();
+    if (!petId) {
+      Alert.alert('알림', '프로필 탭에서 반려동물을 먼저 등록해주세요.');
       return;
     }
 
@@ -116,40 +143,31 @@ export default function PhotoScreen() {
       quality: 0.7,
     });
     if (result.canceled) return;
+    await processPickedImage(result.assets[0].uri);
+  }
 
-    try {
-      setConverting(true);
-      const base64 = await uriToBase64(result.assets[0].uri);
-      setPendingBase64(base64);
-      setModalVisible(true);
-    } catch {
-      Alert.alert('오류', '사진을 처리하지 못했어요. 다시 시도해주세요.');
-    } finally {
-      setConverting(false);
-    }
+  function handleTapTodayPhoto() {
+    if (todayPhoto) router.push(`/photo/${todayPhoto.id}`);
   }
 
   async function handleSavePhoto(caption: string) {
     setModalVisible(false);
-
     const petId = await getCurrentPetId();
     if (!petId || !pendingBase64) return;
 
-    const now = new Date().toISOString();
     const photo: DailyPhoto = {
       id: generateId(),
       petId,
       date: today,
       photoUri: pendingBase64,
       caption: caption || undefined,
-      caregiverId: '',  // storage에서 자동 채움
-      createdAt: now,
+      caregiverId: '',
+      createdAt: new Date().toISOString(),
     };
 
     try {
       await saveDailyPhoto(photo);
       setPendingBase64(null);
-      Alert.alert('저장됐어요', `${formatDateKorean(today)} 사진이 저장됐어요.`);
       await load();
     } catch {
       Alert.alert('오류', '저장에 실패했어요. 다시 시도해주세요.');
@@ -161,54 +179,43 @@ export default function PhotoScreen() {
     setPendingBase64(null);
   }
 
-  function handleCellPress(photo: DailyPhoto) {
-    router.push(`/photo/${photo.id}`);
-  }
+  const listHeader = (
+    <View style={styles.headerSection}>
+      <TodayPhotoCard
+        todayPhoto={todayPhoto}
+        onTapCamera={handleTakePhoto}
+        onTapGallery={handleOpenGallery}
+        onTapPhoto={handleTapTodayPhoto}
+      />
+      {pastPhotos.length > 0 && (
+        <Text style={styles.sectionLabel}>지난 사진</Text>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
           {pet ? `${pet.name} · ${photos.length}장` : '포토'}
         </Text>
-        <TouchableOpacity
-          style={[
-            styles.addButton,
-            (hasTodayPhoto || converting) && styles.addButtonDisabled,
-          ]}
-          disabled={hasTodayPhoto || converting}
-          onPress={handleAddPhoto}
-        >
-          <Text
-            style={[
-              styles.addButtonText,
-              (hasTodayPhoto || converting) && styles.addButtonTextDisabled,
-            ]}
-          >
-            {converting ? '처리 중...' : '오늘 사진 추가'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
-      {/* 그리드 */}
       <FlatList
-        data={photos}
+        data={pastPhotos}
         keyExtractor={(item) => item.id}
         numColumns={3}
+        ListHeaderComponent={listHeader}
         renderItem={({ item }) => (
-          <PhotoCell photo={item} onPress={() => handleCellPress(item)} />
+          <PhotoCell photo={item} onPress={() => router.push(`/photo/${item.id}`)} />
         )}
         ItemSeparatorComponent={() => <View style={{ height: 2 }} />}
         columnWrapperStyle={styles.row}
-        ListEmptyComponent={<EmptyGrid />}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#E8985C" />
         }
-        contentContainerStyle={photos.length === 0 ? styles.emptyList : undefined}
       />
 
-      {/* 캡션 모달 */}
       {pendingBase64 && (
         <CaptionModal
           visible={modalVisible}
@@ -229,7 +236,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
@@ -241,22 +247,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#3D2C1E',
   },
-  addButton: {
-    backgroundColor: '#E8985C',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+  headerSection: {
+    paddingTop: 16,
+    paddingHorizontal: 16,
   },
-  addButtonDisabled: {
-    backgroundColor: '#E0D6C8',
-  },
-  addButtonText: {
+  sectionLabel: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  addButtonTextDisabled: {
-    color: '#A89880',
+    color: '#999999',
+    marginTop: 20,
+    marginBottom: 8,
   },
   row: {
     gap: 2,
@@ -264,28 +263,5 @@ const styles = StyleSheet.create({
   cell: {
     width: CELL_SIZE,
     height: CELL_SIZE,
-  },
-  emptyList: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingTop: 80,
-  },
-  emptyEmoji: {
-    fontSize: 52,
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#3D2C1E',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#8C7B6B',
   },
 });

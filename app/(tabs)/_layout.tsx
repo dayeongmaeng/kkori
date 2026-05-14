@@ -11,6 +11,7 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       <AppHeader />
       <Tabs
+        initialRouteName="home"
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: '#E8985C',
@@ -26,10 +27,10 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen
-          name="log"
+          name="home"
           options={{
-            title: '기록',
-            tabBarIcon: () => <TabIcon emoji="📝" />,
+            title: '홈',
+            tabBarIcon: () => <TabIcon emoji="🏠" />,
           }}
         />
         <Tabs.Screen
@@ -37,6 +38,13 @@ export default function TabLayout() {
           options={{
             title: '포토',
             tabBarIcon: () => <TabIcon emoji="📸" />,
+          }}
+        />
+        <Tabs.Screen
+          name="log"
+          options={{
+            title: '기록',
+            tabBarIcon: () => <TabIcon emoji="📝" />,
           }}
         />
         <Tabs.Screen
