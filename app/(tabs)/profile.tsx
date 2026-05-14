@@ -2,7 +2,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
   Alert,
-  ActivityIndicator,
   Modal,
   Platform,
   ScrollView,
@@ -16,7 +15,6 @@ import {
 import { Image } from 'expo-image';
 import { colors, radius, spacing } from '../../constants/theme';
 import { getCurrentPetId, getPet, savePet, setCurrentPetId } from '../../lib/storage';
-import { uriToBase64 } from '../../lib/photoUtils';
 import { Pet } from '../../lib/types';
 
 let DateTimePicker: any = null;
@@ -123,14 +121,13 @@ export default function ProfileScreen() {
   const [neutered, setNeutered] = useState(false);
   const [medicalNotes, setMedicalNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
-  const [photoLoading, setPhotoLoading] = useState(false);
 
   // 날짜 피커 상태
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
 
   useEffect(() => {
-    (async () => {
+    async function loadPet() {
       const currentId = await getCurrentPetId();
       if (!currentId) return;
       const saved = await getPet(currentId);
@@ -149,7 +146,8 @@ export default function ProfileScreen() {
           setPhotoUri(uri);
         }
       }
-    })();
+    }
+    loadPet();
   }, []);
 
   async function pickImage() {
@@ -159,22 +157,20 @@ export default function ProfileScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.5,
+      base64: true,
     });
     if (result.canceled) return;
 
-    try {
-      setPhotoLoading(true);
-      const base64 = await uriToBase64(result.assets[0].uri);
-      setPhotoUri(base64);
-    } catch {
+    const b64 = result.assets[0].base64;
+    if (!b64) {
       Alert.alert('오류', '사진 처리에 실패했어요. 다시 시도해주세요.');
-    } finally {
-      setPhotoLoading(false);
+      return;
     }
+    setPhotoUri(`data:image/jpeg;base64,${b64}`);
   }
 
   async function handleSave() {
@@ -217,13 +213,8 @@ export default function ProfileScreen() {
       <Text style={styles.title}>강아지 프로필</Text>
 
       {/* 사진 */}
-      <TouchableOpacity style={styles.photoWrapper} onPress={pickImage} disabled={photoLoading}>
-        {photoLoading ? (
-          <View style={styles.photoPlaceholder}>
-            <ActivityIndicator color={colors.primary} />
-            <Text style={styles.photoPlaceholderText}>사진 처리 중...</Text>
-          </View>
-        ) : photoUri ? (
+      <TouchableOpacity style={styles.photoWrapper} onPress={pickImage}>
+        {photoUri ? (
           <Image source={{ uri: photoUri }} style={styles.photo} contentFit="cover" />
         ) : (
           <View style={styles.photoPlaceholder}>

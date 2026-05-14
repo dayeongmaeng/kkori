@@ -17,12 +17,13 @@ export default function AppHeader() {
 
   useFocusEffect(
     useCallback(() => {
-      (async () => {
+      async function loadPetName() {
         const petId = await getCurrentPetId();
         if (!petId) { setPetName(null); return; }
         const pet = await getPet(petId);
         setPetName(pet?.name ?? null);
-      })();
+      }
+      loadPetName();
     }, [])
   );
 

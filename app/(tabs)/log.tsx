@@ -108,30 +108,33 @@ export default function LogScreen() {
     setPhotoUris(log.photoUris ?? []);
   }
 
-  const loadLog = useCallback(async () => {
-    const petId = await getCurrentPetId();
-    if (!petId) { setHasPet(false); resetStates(); return; }
-    setHasPet(true);
+  useFocusEffect(
+    useCallback(() => {
+      async function loadLog() {
+        const petId = await getCurrentPetId();
+        if (!petId) { setHasPet(false); resetStates(); return; }
+        setHasPet(true);
 
-    const [log, allLogs] = await Promise.all([
-      getDailyLogByDate(petId, date),
-      getDailyLogs(petId),
-    ]);
+        const [log, allLogs] = await Promise.all([
+          getDailyLogByDate(petId, date),
+          getDailyLogs(petId),
+        ]);
 
-    const marks: Record<string, { marked: true; dotColor: string }> = {};
-    allLogs.forEach((l) => {
-      marks[l.date] = { marked: true, dotColor: colors.accent };
-    });
-    setMarkedDates(marks);
+        const marks: Record<string, { marked: true; dotColor: string }> = {};
+        allLogs.forEach((l) => {
+          marks[l.date] = { marked: true, dotColor: colors.accent };
+        });
+        setMarkedDates(marks);
 
-    if (log) {
-      populateStates(log);
-    } else {
-      resetStates();
-    }
-  }, [date]);
-
-  useFocusEffect(loadLog);
+        if (log) {
+          populateStates(log);
+        } else {
+          resetStates();
+        }
+      }
+      loadLog();
+    }, [date])
+  );
 
   async function handleSave() {
     setIsSaving(true);

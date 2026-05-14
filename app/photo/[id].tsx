@@ -33,10 +33,11 @@ export default function PhotoDetailScreen() {
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    async function loadPhoto() {
       const found = await getDailyPhotoById(id);
       setPhoto(found);
-    })();
+    }
+    loadPhoto();
   }, [id]);
 
   async function handleShare() {

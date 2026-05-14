@@ -28,7 +28,7 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      (async () => {
+      async function loadData() {
         const today = getTodayString();
         const sevenDaysAgo = get6DaysAgoString();
         const petId = await getCurrentPetId();
@@ -51,7 +51,8 @@ export default function HomeScreen() {
         setTodayLog(loadedLog);
         setRecentLogs(allLogs.filter((l) => l.date >= sevenDaysAgo && l.date <= today));
         setLoaded(true);
-      })();
+      }
+      loadData();
     }, [])
   );
 
