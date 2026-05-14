@@ -15,7 +15,6 @@ import { Image } from 'expo-image';
 import CaptionModal from '../../components/CaptionModal';
 import EmptyPetState from '../../components/EmptyPetState';
 import TodayPhotoCard from '../../components/TodayPhotoCard';
-import { uriToBase64 } from '../../lib/photoUtils';
 import {
   getCurrentPetId,
   getDailyPhotos,
@@ -46,7 +45,6 @@ export default function PhotoScreen() {
   const [hasPet, setHasPet] = useState<boolean | null>(null);
   const [photos, setPhotos] = useState<DailyPhoto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [converting, setConverting] = useState(false);
   const [pendingBase64, setPendingBase64] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -72,56 +70,12 @@ export default function PhotoScreen() {
     setRefreshing(false);
   }, [load]);
 
-  async function processPickedImage(uri: string) {
-    try {
-      setConverting(true);
-      const base64 = await uriToBase64(uri);
-      setPendingBase64(base64);
-      setModalVisible(true);
-    } catch {
-      Alert.alert('오류', '사진을 처리하지 못했어요. 다시 시도해주세요.');
-    } finally {
-      setConverting(false);
-    }
-  }
-
-  async function handleTakePhoto() {
-    if (converting) return;
-    const petId = await getCurrentPetId();
-    if (!petId) {
-      Alert.alert('알림', '프로필 탭에서 반려동물을 먼저 등록해주세요.');
-      return;
-    }
-
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('카메라 권한이 필요해요', '설정에서 카메라 접근을 허용해주세요.');
-      return;
-    }
-
-    let result: ImagePicker.ImagePickerResult;
-    try {
-      result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-    } catch {
-      // 웹 등 카메라 미지원 환경에서 갤러리로 폴백
-      result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-    }
-
-    if (result.canceled) return;
-    await processPickedImage(result.assets[0].uri);
+  function handlePhotoTaken(base64Uri: string) {
+    setPendingBase64(base64Uri);
+    setModalVisible(true);
   }
 
   async function handleOpenGallery() {
-    if (converting) return;
     const petId = await getCurrentPetId();
     if (!petId) {
       Alert.alert('알림', '프로필 탭에서 반려동물을 먼저 등록해주세요.');
@@ -135,13 +89,20 @@ export default function PhotoScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.7,
+      quality: 0.5,
+      base64: true,
     });
     if (result.canceled) return;
-    await processPickedImage(result.assets[0].uri);
+
+    const b64 = result.assets[0].base64;
+    if (!b64) {
+      Alert.alert('오류', '사진을 처리하지 못했어요. 다시 시도해주세요.');
+      return;
+    }
+    handlePhotoTaken(`data:image/jpeg;base64,${b64}`);
   }
 
   function handleTapTodayPhoto() {
@@ -181,7 +142,7 @@ export default function PhotoScreen() {
     <View style={styles.headerSection}>
       <TodayPhotoCard
         todayPhoto={todayPhoto}
-        onTapCamera={handleTakePhoto}
+        onPhotoTaken={handlePhotoTaken}
         onTapGallery={handleOpenGallery}
         onTapPhoto={handleTapTodayPhoto}
       />

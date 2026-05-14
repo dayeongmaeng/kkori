@@ -3,35 +3,31 @@ import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
-import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
 import { DailyPhoto } from '../lib/types';
 
 interface Props {
   todayPhoto?: DailyPhoto;
-  onTapCamera: () => void;
+  onPhotoTaken: (base64Uri: string) => void;
   onTapGallery: () => void;
   onTapPhoto: () => void;
   aspectRatio?: number;
 }
 
 function DashedCard({
-  aspectRatio,
-  onTapCamera,
+  onTap,
   onTapGallery,
+  aspectRatio,
   children,
 }: {
-  aspectRatio: number;
-  onTapCamera: () => void;
+  onTap: () => void;
   onTapGallery: () => void;
+  aspectRatio: number;
   children?: React.ReactNode;
 }) {
   return (
-    <TouchableOpacity
-      style={[styles.emptyCard, { aspectRatio }]}
-      onPress={onTapCamera}
-      activeOpacity={0.85}
-    >
+    <TouchableOpacity style={[styles.emptyCard, { aspectRatio }]} onPress={onTap} activeOpacity={0.85}>
       <TouchableOpacity
         style={styles.overlayTopRight}
         onPress={onTapGallery}
@@ -52,19 +48,39 @@ function DashedCard({
 function LiveCameraCard({
   aspectRatio,
   onTapGallery,
-  onShutter,
+  onPhotoTaken,
 }: {
   aspectRatio: number;
   onTapGallery: () => void;
-  onShutter: () => void;
+  onPhotoTaken: (base64Uri: string) => void;
 }) {
   const [facing, setFacing] = useState<'front' | 'back'>('back');
+  const [capturing, setCapturing] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
   const isFocused = useIsFocused();
+
+  async function handleCapture() {
+    if (!cameraRef.current || capturing) return;
+    setCapturing(true);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.5,
+        base64: true,
+        skipProcessing: false,
+      });
+      if (!photo?.base64) throw new Error('base64 데이터가 없어요.');
+      onPhotoTaken(`data:image/jpeg;base64,${photo.base64}`);
+    } catch (e: any) {
+      Alert.alert('오류', `촬영 실패: ${e?.message ?? '알 수 없는 오류'}`);
+    } finally {
+      setCapturing(false);
+    }
+  }
 
   return (
     <View style={[styles.cameraCard, { aspectRatio }]}>
       {isFocused && (
-        <CameraView style={StyleSheet.absoluteFill} facing={facing} />
+        <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
       )}
 
       {/* 좌상단: 전/후면 전환 */}
@@ -86,8 +102,13 @@ function LiveCameraCard({
       </TouchableOpacity>
 
       {/* 하단 중앙: 촬영 버튼 */}
-      <TouchableOpacity style={styles.shutterWrapper} onPress={onShutter} activeOpacity={0.8}>
-        <View style={styles.shutterOuter}>
+      <TouchableOpacity
+        style={styles.shutterWrapper}
+        onPress={handleCapture}
+        disabled={capturing}
+        activeOpacity={0.8}
+      >
+        <View style={[styles.shutterOuter, capturing && styles.shutterCapturing]}>
           <View style={styles.shutterInner} />
         </View>
       </TouchableOpacity>
@@ -95,9 +116,59 @@ function LiveCameraCard({
   );
 }
 
+function CameraPermissionGate({
+  aspectRatio,
+  onTapGallery,
+  onPhotoTaken,
+}: {
+  aspectRatio: number;
+  onTapGallery: () => void;
+  onPhotoTaken: (base64Uri: string) => void;
+}) {
+  const [permission, requestPermission] = useCameraPermissions();
+
+  if (!permission) return null;
+
+  if (!permission.granted && permission.canAskAgain) {
+    return (
+      <DashedCard aspectRatio={aspectRatio} onTap={requestPermission} onTapGallery={onTapGallery}>
+        <View style={styles.emptyCenter}>
+          <Text style={styles.cameraEmoji}>📷</Text>
+          <Text style={styles.emptyText}>카메라 권한을 허용하면{'\n'}바로 찍을 수 있어요</Text>
+          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+            <Text style={styles.permissionButtonText}>권한 허용하기</Text>
+          </TouchableOpacity>
+        </View>
+      </DashedCard>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <DashedCard aspectRatio={aspectRatio} onTap={() => Linking.openSettings()} onTapGallery={onTapGallery}>
+        <View style={styles.emptyCenter}>
+          <Text style={styles.cameraEmoji}>📷</Text>
+          <Text style={styles.emptyText}>카메라 권한을 허용하면{'\n'}바로 찍을 수 있어요</Text>
+          <TouchableOpacity style={styles.permissionButton} onPress={() => Linking.openSettings()}>
+            <Text style={styles.permissionButtonText}>설정 열기</Text>
+          </TouchableOpacity>
+        </View>
+      </DashedCard>
+    );
+  }
+
+  return (
+    <LiveCameraCard
+      aspectRatio={aspectRatio}
+      onTapGallery={onTapGallery}
+      onPhotoTaken={onPhotoTaken}
+    />
+  );
+}
+
 export default function TodayPhotoCard({
   todayPhoto,
-  onTapCamera,
+  onPhotoTaken,
   onTapGallery,
   onTapPhoto,
   aspectRatio = 1,
@@ -119,72 +190,18 @@ export default function TodayPhotoCard({
     );
   }
 
-  // 웹: CameraView 미지원 → 기존 점선 카드
+  // 웹: CameraView 미지원 → 갤러리로 연결되는 점선 카드
   if (Platform.OS === 'web') {
     return (
-      <DashedCard aspectRatio={aspectRatio} onTapCamera={onTapCamera} onTapGallery={onTapGallery} />
+      <DashedCard aspectRatio={aspectRatio} onTap={onTapGallery} onTapGallery={onTapGallery} />
     );
   }
 
   return (
     <CameraPermissionGate
       aspectRatio={aspectRatio}
-      onTapCamera={onTapCamera}
       onTapGallery={onTapGallery}
-    />
-  );
-}
-
-function CameraPermissionGate({
-  aspectRatio,
-  onTapCamera,
-  onTapGallery,
-}: {
-  aspectRatio: number;
-  onTapCamera: () => void;
-  onTapGallery: () => void;
-}) {
-  const [permission, requestPermission] = useCameraPermissions();
-
-  // 아직 권한 상태 미확인
-  if (!permission) return null;
-
-  // 권한 미결정 → 요청 유도
-  if (!permission.granted && permission.canAskAgain) {
-    return (
-      <DashedCard aspectRatio={aspectRatio} onTapCamera={requestPermission} onTapGallery={onTapGallery}>
-        <View style={styles.emptyCenter}>
-          <Text style={styles.cameraEmoji}>📷</Text>
-          <Text style={styles.emptyText}>카메라 권한을 허용하면{'\n'}바로 찍을 수 있어요</Text>
-          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-            <Text style={styles.permissionButtonText}>권한 허용하기</Text>
-          </TouchableOpacity>
-        </View>
-      </DashedCard>
-    );
-  }
-
-  // 권한 영구 거부 → 설정 유도
-  if (!permission.granted) {
-    return (
-      <DashedCard aspectRatio={aspectRatio} onTapCamera={onTapCamera} onTapGallery={onTapGallery}>
-        <View style={styles.emptyCenter}>
-          <Text style={styles.cameraEmoji}>📷</Text>
-          <Text style={styles.emptyText}>카메라 권한을 허용하면{'\n'}바로 찍을 수 있어요</Text>
-          <TouchableOpacity style={styles.permissionButton} onPress={() => Linking.openSettings()}>
-            <Text style={styles.permissionButtonText}>설정 열기</Text>
-          </TouchableOpacity>
-        </View>
-      </DashedCard>
-    );
-  }
-
-  // 권한 허용 → 라이브 카메라
-  return (
-    <LiveCameraCard
-      aspectRatio={aspectRatio}
-      onTapGallery={onTapGallery}
-      onShutter={onTapCamera}
+      onPhotoTaken={onPhotoTaken}
     />
   );
 }
@@ -248,6 +265,9 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  shutterCapturing: {
+    opacity: 0.5,
   },
   shutterInner: {
     width: 50,
