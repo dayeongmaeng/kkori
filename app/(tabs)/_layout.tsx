@@ -1,8 +1,42 @@
 import { Tabs } from 'expo-router';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 import { Camera, Home, NotebookPen, PawPrint } from 'lucide-react-native';
 import AppHeader from '../../components/AppHeader';
 import { colors } from '../../constants/theme';
+
+let tabIcons: Record<string, any> | null = null;
+try {
+  tabIcons = {
+    home: require('../../assets/tabs/home.png'),
+    photo: require('../../assets/tabs/photo.png'),
+    log: require('../../assets/tabs/log.png'),
+    profile: require('../../assets/tabs/profile.png'),
+  };
+} catch {
+  tabIcons = null;
+}
+
+function TabIcon({
+  name,
+  focused,
+  fallback,
+}: {
+  name: keyof NonNullable<typeof tabIcons>;
+  focused: boolean;
+  fallback: React.ReactNode;
+}) {
+  const tintColor = focused ? colors.primary : colors.textTertiary;
+  if (tabIcons) {
+    return (
+      <Image
+        source={tabIcons[name]}
+        style={{ width: 24, height: 24, tintColor }}
+        resizeMode="contain"
+      />
+    );
+  }
+  return <>{fallback}</>;
+}
 
 export default function TabLayout() {
   return (
@@ -19,38 +53,43 @@ export default function TabLayout() {
             borderTopColor: colors.border,
             borderTopWidth: 1,
           },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '600',
-          },
+          tabBarShowLabel: false,
         }}
       >
         <Tabs.Screen
           name="home"
           options={{
             title: '홈',
-            tabBarIcon: ({ color }) => <Home size={24} color={color} />,
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon name="home" focused={focused} fallback={<Home size={24} color={color} />} />
+            ),
           }}
         />
         <Tabs.Screen
           name="index"
           options={{
             title: '포토',
-            tabBarIcon: ({ color }) => <Camera size={24} color={color} />,
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon name="photo" focused={focused} fallback={<Camera size={24} color={color} />} />
+            ),
           }}
         />
         <Tabs.Screen
           name="log"
           options={{
             title: '기록',
-            tabBarIcon: ({ color }) => <NotebookPen size={24} color={color} />,
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon name="log" focused={focused} fallback={<NotebookPen size={24} color={color} />} />
+            ),
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: '프로필',
-            tabBarIcon: ({ color }) => <PawPrint size={24} color={color} />,
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon name="profile" focused={focused} fallback={<PawPrint size={24} color={color} />} />
+            ),
           }}
         />
       </Tabs>
