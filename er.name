@@ -1,0 +1,62 @@
+diff.astextplain.textconv=astextplain
+filter.lfs.clean=git-lfs clean -- %f
+filter.lfs.smudge=git-lfs smudge -- %f
+filter.lfs.process=git-lfs filter-process
+filter.lfs.required=true
+http.sslbackend=openssl
+http.sslcainfo=C:/dev/Git/mingw64/etc/ssl/certs/ca-bundle.crt
+core.autocrlf=true
+core.fscache=true
+core.symlinks=false
+pull.rebase=false
+credential.helper=manager
+credential.https://dev.azure.com.usehttppath=true
+init.defaultbranch=main
+user.name=ADPENG\e1354
+user.email=dymaen
+difftool.sourcetree.cmd='' 
+mergetool.sourcetree.cmd='' 
+mergetool.sourcetree.trustexitcode=true
+credential.https://kds.inveniacorp.com.provider=github
+http.sslverify=true
+credential.https://gitlab-test.inveniacorp.com.provider=generic
+merge.ours.driver=true
+alias.keepmerge=!f(){ \
+  b="$1"; \
+  if [ -z "$b" ]; then echo "usage: git keepmerge <branch>"; exit 1; fi; \
+  git merge "$b" || exit 1; \
+  git restore --source=ORIG_HEAD -- \
+    ecosystem.config.js \
+	yarn.lock \
+    nuxt.config.js \
+    web.config \
+    package.json \
+    server/common/erp.js \
+    server/common/db.js \
+    server/common/patuah.js \
+    server/index.js \
+    server/routes/account.js \
+    server/middlewares/checkAuthentication.js \
+    || exit 1; \
+  git add -- \
+    ecosystem.config.js \
+    yarn.lock \
+    nuxt.config.js \
+    web.config \
+    package.json \
+    server/common/erp.js \
+    server/common/db.js \
+	server/common/patuah.js \
+    server/index.js \
+    server/routes/account.js \
+    server/middlewares/checkAuthentication.js \
+    || exit 1; \
+  git diff --cached --quiet && { echo "No protected-file changes to commit."; exit 0; }; \
+  git commit -m "Keep ours for protected config files"; \
+}; f
+core.repositoryformatversion=0
+core.filemode=false
+core.bare=false
+core.logallrefupdates=true
+core.symlinks=false
+core.ignorecase=true

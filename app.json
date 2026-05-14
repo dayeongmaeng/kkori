@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "pet-care",
-    "slug": "pet-care",
+    "name": "꼬리",
+    "slug": "kkori",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "petcare",
+    "scheme": "kkori",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
