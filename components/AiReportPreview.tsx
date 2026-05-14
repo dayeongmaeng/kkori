@@ -1,4 +1,5 @@
 import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, radius, shadow, spacing } from '../constants/theme';
 
 interface CardProps {
   icon: string;
@@ -55,62 +56,55 @@ export default function AiReportPreview({ petName }: Props) {
   );
 }
 
-const cardShadow = Platform.select({
-  ios: {
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-  },
-  android: { elevation: 2 },
-  default: {},
-});
-
 const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#3D2C1E',
-    marginHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 12,
+    color: colors.textPrimary,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    marginBottom: spacing.md,
   },
   cards: {
-    marginHorizontal: 16,
-    gap: 10,
+    marginHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     opacity: 0.85,
-    ...cardShadow,
+    ...Platform.select({
+      ios: shadow.sm,
+      android: { elevation: shadow.sm.elevation },
+      default: {},
+    }),
   },
   badge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#FFE4D1',
-    paddingHorizontal: 8,
+    top: spacing.md,
+    right: spacing.md,
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: radius.sm,
   },
   badgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#E8985C',
+    color: colors.accent,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: spacing.md + 2,
     paddingRight: 72,
   },
   iconCircle: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FAF8F5',
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -119,15 +113,15 @@ const styles = StyleSheet.create({
   },
   textBlock: {
     flex: 1,
-    gap: 3,
+    gap: spacing.xs / 2,
   },
   cardTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
   cardDesc: {
     fontSize: 13,
-    color: '#8C7B6B',
+    color: colors.textSecondary,
   },
 });

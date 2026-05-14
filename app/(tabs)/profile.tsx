@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { colors, radius, spacing } from '../../constants/theme';
 import { getCurrentPetId, getPet, savePet, setCurrentPetId } from '../../lib/storage';
 import { uriToBase64 } from '../../lib/photoUtils';
 import { Pet } from '../../lib/types';
@@ -123,7 +124,7 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.photoWrapper} onPress={pickImage} disabled={photoLoading}>
         {photoLoading ? (
           <View style={styles.photoPlaceholder}>
-            <ActivityIndicator color="#E8985C" />
+            <ActivityIndicator color={colors.primary} />
             <Text style={styles.photoPlaceholderText}>사진 처리 중...</Text>
           </View>
         ) : photoUri ? (
@@ -144,7 +145,7 @@ export default function ProfileScreen() {
           value={name}
           onChangeText={setName}
           placeholder="강아지 이름"
-          placeholderTextColor="#C4B8A8"
+          placeholderTextColor={colors.textQuaternary}
         />
       </View>
 
@@ -156,7 +157,7 @@ export default function ProfileScreen() {
           value={breed}
           onChangeText={setBreed}
           placeholder="예: 말티즈, 포메라니안"
-          placeholderTextColor="#C4B8A8"
+          placeholderTextColor={colors.textQuaternary}
         />
       </View>
 
@@ -168,7 +169,7 @@ export default function ProfileScreen() {
           value={birthDate}
           onChangeText={setBirthDate}
           placeholder="YYYY-MM-DD (예: 2020-03-15)"
-          placeholderTextColor="#C4B8A8"
+          placeholderTextColor={colors.textQuaternary}
           keyboardType="numeric"
           maxLength={10}
         />
@@ -183,7 +184,7 @@ export default function ProfileScreen() {
             value={weightKg}
             onChangeText={setWeightKg}
             placeholder="0.0"
-            placeholderTextColor="#C4B8A8"
+            placeholderTextColor={colors.textQuaternary}
             keyboardType="decimal-pad"
           />
           <Text style={styles.weightUnit}>kg</Text>
@@ -197,7 +198,7 @@ export default function ProfileScreen() {
           <Switch
             value={neutered}
             onValueChange={setNeutered}
-            trackColor={{ false: '#E0D6C8', true: '#E8985C' }}
+            trackColor={{ false: colors.border, true: colors.primary }}
             thumbColor="#FFFFFF"
           />
         </View>
@@ -211,7 +212,7 @@ export default function ProfileScreen() {
           value={medicalNotes}
           onChangeText={setMedicalNotes}
           placeholder="알레르기, 복용 중인 약, 주의사항 등"
-          placeholderTextColor="#C4B8A8"
+          placeholderTextColor={colors.textQuaternary}
           multiline
           numberOfLines={4}
           textAlignVertical="top"
@@ -229,66 +230,66 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F5',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 24,
-    paddingBottom: 48,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl * 2,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#3D2C1E',
-    marginBottom: 24,
+    color: colors.textPrimary,
+    marginBottom: spacing.xl,
   },
   photoWrapper: {
     alignSelf: 'center',
-    marginBottom: 32,
+    marginBottom: spacing.xxl,
   },
   photo: {
     width: 120,
     height: 120,
-    borderRadius: 60,
+    borderRadius: radius.full,
   },
   photoPlaceholder: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    backgroundColor: '#EDE8E0',
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
   photoPlaceholderIcon: {
     fontSize: 32,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   photoPlaceholderText: {
     fontSize: 12,
-    color: '#8C7B6B',
+    color: colors.textTertiary,
   },
   field: {
-    marginBottom: 20,
+    marginBottom: spacing.lg + 4,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#5C4A38',
-    marginBottom: 8,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#3D2C1E',
+    color: colors.textPrimary,
     borderWidth: 1,
-    borderColor: '#E8E0D5',
+    borderColor: colors.border,
   },
   weightRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   weightInput: {
     flex: 1,
@@ -296,33 +297,33 @@ const styles = StyleSheet.create({
   weightUnit: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#5C4A38',
+    color: colors.textSecondary,
   },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#E8E0D5',
+    borderColor: colors.border,
   },
   textarea: {
     height: 120,
     paddingTop: 14,
   },
   saveButton: {
-    backgroundColor: '#E8985C',
-    borderRadius: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
     paddingVertical: 18,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   saveButtonText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
   },
 });

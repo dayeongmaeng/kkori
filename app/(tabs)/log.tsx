@@ -16,6 +16,7 @@ import PhotoAttacher from '../../components/PhotoAttacher';
 import PoopPicker from '../../components/PoopPicker';
 import WalkInput from '../../components/WalkInput';
 import WaterPicker from '../../components/WaterPicker';
+import { colors, radius, spacing } from '../../constants/theme';
 import { getCurrentPetId, getDailyLogByDate, getDailyLogs, saveDailyLog } from '../../lib/storage';
 import { ConditionScore, DailyLog, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../../lib/types';
 
@@ -116,7 +117,7 @@ export default function LogScreen() {
 
     const marks: Record<string, { marked: true; dotColor: string }> = {};
     allLogs.forEach((l) => {
-      marks[l.date] = { marked: true, dotColor: '#E8985C' };
+      marks[l.date] = { marked: true, dotColor: colors.accent };
     });
     setMarkedDates(marks);
 
@@ -265,18 +266,18 @@ export default function LogScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F5',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0EAE0',
+    borderBottomColor: colors.border,
   },
   arrowBtn: {
     width: 44,
@@ -286,11 +287,11 @@ const styles = StyleSheet.create({
   },
   arrowText: {
     fontSize: 20,
-    color: '#5C4A38',
+    color: colors.textPrimary,
     fontWeight: '500',
   },
   arrowDisabled: {
-    color: '#C4B8A8',
+    color: colors.textQuaternary,
   },
   dateBtn: {
     flexDirection: 'row',
@@ -300,33 +301,33 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
   calendarIcon: {
     fontSize: 16,
   },
   content: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 40,
+    padding: spacing.lg,
+    gap: spacing.md,
+    paddingBottom: spacing.xxl + spacing.sm,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#3D2C1E',
-    marginBottom: 12,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   submitBtn: {
-    backgroundColor: '#E8985C',
-    borderRadius: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
     paddingVertical: 18,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   submitBtnDisabled: {
     opacity: 0.5,
@@ -334,6 +335,6 @@ const styles = StyleSheet.create({
   submitBtnText: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
   },
 });

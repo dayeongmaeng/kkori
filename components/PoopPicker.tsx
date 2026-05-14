@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { colors, radius, spacing } from '../constants/theme';
 import { StoolCondition, UrineColor } from '../lib/types';
 
 const STOOL_OPTIONS: { value: StoolCondition; label: string }[] = [
@@ -73,13 +74,13 @@ const stepperStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   btn: {
     width: 32,
     height: 32,
-    borderRadius: 8,
-    backgroundColor: '#F0F0F0',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -89,14 +90,14 @@ const stepperStyles = StyleSheet.create({
   btnText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#5C4A38',
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   count: {
     width: 28,
     fontSize: 20,
     fontWeight: '700',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
     textAlign: 'center',
   },
 });
@@ -182,7 +183,7 @@ export default function PoopPicker({
         value={pooNote}
         onChangeText={onChangePooNote}
         placeholder="특이사항 (선택)"
-        placeholderTextColor="#C4B8A8"
+        placeholderTextColor={colors.textQuaternary}
         maxLength={100}
       />
     </View>
@@ -192,57 +193,57 @@ export default function PoopPicker({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
   },
   column: {
     flex: 1,
-    gap: 10,
+    gap: spacing.sm + 2,
   },
   columnTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#8C7B6B',
+    color: colors.textTertiary,
   },
   divider: {
     width: 1,
-    backgroundColor: '#F0EAE0',
+    backgroundColor: colors.divider,
   },
   pooRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm + 2,
   },
   conditionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: spacing.xs + 2,
     flex: 1,
   },
   conditionBtn: {
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.sm + 2,
     paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.surfaceAlt,
   },
   conditionBtnSelected: {
-    backgroundColor: '#E8985C',
+    backgroundColor: colors.primary,
   },
   conditionText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#666666',
+    color: colors.textSecondary,
   },
   conditionTextSelected: {
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontWeight: '700',
   },
   noteInput: {
-    marginTop: 12,
-    backgroundColor: '#F8F8F8',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    marginTop: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     fontSize: 14,
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
 });

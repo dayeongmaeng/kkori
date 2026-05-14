@@ -18,6 +18,7 @@ import PhotoActionSheet from '../../components/PhotoActionSheet';
 import { base64ToTempFile } from '../../lib/photoUtils';
 import { deleteDailyPhoto, getDailyPhotoById } from '../../lib/storage';
 import { DailyPhoto } from '../../lib/types';
+import { colors, radius, spacing } from '../../constants/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -120,7 +121,7 @@ export default function PhotoDetailScreen() {
   if (photo === 'loading') {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" color="#E8985C" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
@@ -183,24 +184,24 @@ export default function PhotoDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F5',
+    backgroundColor: colors.background,
   },
   center: {
     flex: 1,
-    backgroundColor: '#FAF8F5',
+    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    gap: spacing.lg,
   },
   header: {
     height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+    borderBottomColor: colors.border,
   },
   headerBtn: {
     minWidth: 44,
@@ -210,29 +211,29 @@ const styles = StyleSheet.create({
   },
   headerBtnText: {
     fontSize: 15,
-    color: '#5C4A38',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   headerDate: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
   photo: {
     width: SCREEN_WIDTH,
     aspectRatio: 1,
   },
   captionSection: {
-    padding: 16,
+    padding: spacing.lg,
   },
   caption: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#333333',
+    color: colors.textPrimary,
   },
   captionEmpty: {
     fontSize: 15,
-    color: '#AAAAAA',
+    color: colors.textTertiary,
     fontStyle: 'italic',
   },
   notFoundEmoji: {
@@ -240,16 +241,16 @@ const styles = StyleSheet.create({
   },
   notFoundText: {
     fontSize: 16,
-    color: '#8C7B6B',
+    color: colors.textTertiary,
   },
   backButton: {
-    marginTop: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   backButtonText: {
     fontSize: 15,
-    color: '#E8985C',
+    color: colors.primary,
     fontWeight: '600',
   },
 });

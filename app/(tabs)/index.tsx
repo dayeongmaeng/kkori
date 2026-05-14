@@ -21,6 +21,7 @@ import {
   getPet,
   saveDailyPhoto,
 } from '../../lib/storage';
+import { colors, spacing, radius } from '../../constants/theme';
 import { DailyPhoto, Pet } from '../../lib/types';
 
 const CELL_SIZE = Math.floor(Dimensions.get('window').width / 3);
@@ -212,7 +213,7 @@ export default function PhotoScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 2 }} />}
         columnWrapperStyle={styles.row}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#E8985C" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       />
 
@@ -231,31 +232,31 @@ export default function PhotoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F5',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0EAE0',
+    borderBottomColor: colors.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
   headerSection: {
-    paddingTop: 16,
-    paddingHorizontal: 16,
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
   },
   sectionLabel: {
     fontSize: 13,
-    color: '#999999',
-    marginTop: 20,
-    marginBottom: 8,
+    color: colors.textTertiary,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
   },
   row: {
     gap: 2,

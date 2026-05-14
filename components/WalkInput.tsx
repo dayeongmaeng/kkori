@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { colors, radius, spacing } from '../constants/theme';
 
 const QUICK_MINUTES = [15, 30, 60, 90];
 
@@ -29,7 +30,7 @@ export default function WalkInput({ minutes, note, onChangeMinutes, onChangeNote
           onChangeText={handleTextChange}
           keyboardType="number-pad"
           placeholder="0"
-          placeholderTextColor="#C4B8A8"
+          placeholderTextColor={colors.textQuaternary}
           maxLength={3}
         />
         <Text style={styles.unit}>분</Text>
@@ -58,7 +59,7 @@ export default function WalkInput({ minutes, note, onChangeMinutes, onChangeNote
         value={note}
         onChangeText={onChangeNote}
         placeholder="산책 장소, 특이사항 (선택)"
-        placeholderTextColor="#C4B8A8"
+        placeholderTextColor={colors.textQuaternary}
         maxLength={100}
       />
     </View>
@@ -74,50 +75,50 @@ const styles = StyleSheet.create({
     width: 80,
     fontSize: 24,
     fontWeight: '700',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
     textAlign: 'center',
     borderBottomWidth: 2,
-    borderBottomColor: '#E8985C',
+    borderBottomColor: colors.primary,
     paddingBottom: 2,
   },
   unit: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#5C4A38',
-    marginLeft: 8,
+    color: colors.textSecondary,
+    marginLeft: spacing.sm,
   },
   quickRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
   quickBtn: {
     flex: 1,
     height: 36,
-    borderRadius: 8,
-    backgroundColor: '#F0F0F0',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickBtnSelected: {
-    backgroundColor: '#E8985C',
+    backgroundColor: colors.primary,
   },
   quickBtnText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#666666',
+    color: colors.textSecondary,
   },
   quickBtnTextSelected: {
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontWeight: '700',
   },
   noteInput: {
-    marginTop: 12,
-    backgroundColor: '#F8F8F8',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    marginTop: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     fontSize: 14,
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
 });

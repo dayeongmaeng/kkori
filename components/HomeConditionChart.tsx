@@ -1,15 +1,16 @@
 import { Platform, StyleSheet, Text, View } from 'react-native';
+import { colors, radius, shadow, spacing } from '../constants/theme';
 import { DailyLog } from '../lib/types';
 
 const BAR_MAX_HEIGHT = 72;
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
 const CONDITION_COLOR: Record<number, string> = {
-  1: '#FF6B6B',
-  2: '#FFA94D',
-  3: '#FFD43B',
-  4: '#A9E34B',
-  5: '#40C057',
+  1: colors.condition1,
+  2: colors.condition2,
+  3: colors.condition3,
+  4: colors.condition4,
+  5: colors.condition5,
 };
 
 function getLast7Dates(): string[] {
@@ -84,18 +85,13 @@ export default function HomeConditionChart({ logs }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginHorizontal: spacing.lg,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-      },
-      android: { elevation: 2 },
+      ios: shadow.sm,
+      android: { elevation: shadow.sm.elevation },
       default: {},
     }),
   },
@@ -103,25 +99,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   title: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
   avg: {
     fontSize: 13,
-    color: '#8C7B6B',
+    color: colors.textTertiary,
   },
   chartArea: {
     flexDirection: 'row',
-    gap: 4,
+    gap: spacing.xs,
   },
   column: {
     flex: 1,
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   barContainer: {
     width: '100%',
@@ -131,17 +127,17 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: '60%',
-    borderRadius: 4,
+    borderRadius: radius.sm / 2,
   },
   emptyBar: {
     width: '60%',
     height: 3,
     borderRadius: 2,
-    backgroundColor: '#EEEEEE',
+    backgroundColor: colors.divider,
   },
   dayLabel: {
     fontSize: 11,
-    color: '#B0A090',
+    color: colors.textQuaternary,
   },
   emptyArea: {
     height: BAR_MAX_HEIGHT,
@@ -150,6 +146,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
-    color: '#B0A090',
+    color: colors.textQuaternary,
   },
 });

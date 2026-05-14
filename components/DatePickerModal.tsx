@@ -1,5 +1,6 @@
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
-import { Modal, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Modal, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import { colors, radius, spacing } from '../constants/theme';
 
 LocaleConfig.locales['ko'] = {
   monthNames: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
@@ -39,7 +40,7 @@ export default function DatePickerModal({
     [selectedDate]: {
       ...(markedDates[selectedDate] ?? {}),
       selected: true,
-      selectedColor: '#E8985C',
+      selectedColor: colors.primary,
     },
   };
 
@@ -66,22 +67,22 @@ export default function DatePickerModal({
           markedDates={merged}
           onDayPress={handleDayPress}
           theme={{
-            calendarBackground: '#FFFFFF',
-            monthTextColor: '#3D2C1E',
+            calendarBackground: colors.surface,
+            monthTextColor: colors.textPrimary,
             textMonthFontWeight: '700',
             textMonthFontSize: 16,
-            dayTextColor: '#3D2C1E',
+            dayTextColor: colors.textPrimary,
             textDayFontSize: 14,
             textDayFontWeight: '500',
-            todayTextColor: '#E8985C',
+            todayTextColor: colors.accent,
             todayFontWeight: '700',
-            selectedDayBackgroundColor: '#E8985C',
-            selectedDayTextColor: '#FFFFFF',
-            dotColor: '#E8985C',
-            selectedDotColor: '#FFFFFF',
-            arrowColor: '#E8985C',
-            textDisabledColor: '#C4B8A8',
-            textSectionTitleColor: '#8C7B6B',
+            selectedDayBackgroundColor: colors.primary,
+            selectedDayTextColor: colors.textOnPrimary,
+            dotColor: colors.accent,
+            selectedDotColor: colors.textOnPrimary,
+            arrowColor: colors.primary,
+            textDisabledColor: colors.textQuaternary,
+            textSectionTitleColor: colors.textTertiary,
           }}
           style={styles.calendar}
         />
@@ -96,22 +97,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 32,
-    paddingHorizontal: 8,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.sm,
   },
   handle: {
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#E0D6C8',
+    backgroundColor: colors.border,
     alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
   calendar: {
-    borderRadius: 12,
+    borderRadius: radius.md,
   },
 });

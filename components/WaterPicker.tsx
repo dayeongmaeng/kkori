@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { colors, radius, spacing } from '../constants/theme';
 import { WaterAmount } from '../lib/types';
 
 const OPTIONS: { value: WaterAmount; label: string }[] = [
@@ -44,7 +45,7 @@ export default function WaterPicker({ water, waterNote, onChangeWater, onChangeN
         value={waterNote}
         onChangeText={onChangeNote}
         placeholder="특이사항 (선택)"
-        placeholderTextColor="#C4B8A8"
+        placeholderTextColor={colors.textQuaternary}
         maxLength={100}
       />
     </View>
@@ -54,35 +55,35 @@ export default function WaterPicker({ water, waterNote, onChangeWater, onChangeN
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   btn: {
     flex: 1,
     height: 44,
-    borderRadius: 10,
-    backgroundColor: '#F0F0F0',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnSelected: {
-    backgroundColor: '#E8985C',
+    backgroundColor: colors.primary,
   },
   btnText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#666666',
+    color: colors.textSecondary,
   },
   btnTextSelected: {
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontWeight: '700',
   },
   noteInput: {
-    marginTop: 12,
-    backgroundColor: '#F8F8F8',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    marginTop: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     fontSize: 14,
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
 });

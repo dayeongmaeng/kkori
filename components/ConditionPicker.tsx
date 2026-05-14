@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, radius } from '../constants/theme';
 import { ConditionScore } from '../lib/types';
 
 const OPTIONS: { value: ConditionScore; emoji: string }[] = [
@@ -48,12 +49,12 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     height: 56,
-    borderRadius: 12,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnSelected: {
-    backgroundColor: '#FFF4E8',
+    backgroundColor: colors.surfaceAlt,
   },
   emoji: {
     fontSize: 28,

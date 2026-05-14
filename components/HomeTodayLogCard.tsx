@@ -1,4 +1,5 @@
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, radius, shadow, spacing } from '../constants/theme';
 import { summarizeLog } from '../lib/logUtils';
 import { DailyLog } from '../lib/types';
 
@@ -42,61 +43,56 @@ export default function HomeTodayLogCard({ todayLog, onTapAdd, onTapView }: Prop
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 16,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginHorizontal: spacing.lg,
   },
   emptyCard: {
-    backgroundColor: '#FFF4E8',
+    backgroundColor: colors.surfaceAlt,
   },
   filledCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-      },
-      android: { elevation: 2 },
+      ios: shadow.sm,
+      android: { elevation: shadow.sm.elevation },
       default: {},
     }),
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   icon: {
     fontSize: 28,
   },
   textBlock: {
     flex: 1,
-    gap: 2,
+    gap: spacing.xs / 2,
   },
   mainText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
   subText: {
     fontSize: 13,
-    color: '#8C7B6B',
+    color: colors.textSecondary,
   },
   addButton: {
-    backgroundColor: '#E8985C',
-    paddingHorizontal: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: radius.full,
   },
   addButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
   },
   chevron: {
     fontSize: 22,
-    color: '#B0A090',
+    color: colors.textQuaternary,
     lineHeight: 26,
   },
 });

@@ -5,6 +5,7 @@ import AiReportPreview from '../../components/AiReportPreview';
 import HomeConditionChart from '../../components/HomeConditionChart';
 import HomeTodayLogCard from '../../components/HomeTodayLogCard';
 import HomeProfileCard from '../../components/HomeProfileCard';
+import { colors, spacing } from '../../constants/theme';
 import { getCurrentPetId, getDailyLogByDate, getDailyLogs, getPet } from '../../lib/storage';
 import { DailyLog, Pet } from '../../lib/types';
 
@@ -80,21 +81,21 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F5',
+    backgroundColor: colors.background,
   },
   content: {
-    paddingTop: 20,
-    paddingBottom: 40,
-    gap: 16,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
   },
   empty: {
-    marginHorizontal: 16,
+    marginHorizontal: spacing.lg,
     marginTop: 60,
     alignItems: 'center',
   },
   emptyText: {
     fontSize: 15,
-    color: '#8C7B6B',
+    color: colors.textTertiary,
     textAlign: 'center',
     lineHeight: 24,
   },

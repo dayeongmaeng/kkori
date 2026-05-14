@@ -1,5 +1,5 @@
 export const colors = {
-  primary: '#191F28',
+  primary: '#4E5968',
   background: '#F7F8FA',
   surface: '#FFFFFF',
   surfaceAlt: '#F2F4F6',
@@ -14,6 +14,8 @@ export const colors = {
   info: '#4A90E2',
   border: '#E5E8EB',
   divider: '#F2F4F6',
+  accent: '#E94B5A',
+  accentSoft: '#FFE5E5',
   condition1: '#E94B5A',
   condition2: '#FFB930',
   condition3: '#B0B8C1',

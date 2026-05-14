@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, radius, spacing } from '../constants/theme';
 import { uriToBase64 } from '../lib/photoUtils';
 
 const MAX_PHOTOS = 3;
@@ -59,7 +60,7 @@ export default function PhotoAttacher({ photoUris, onChangePhotoUris }: Props) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   photoWrapper: {
     width: 80,
@@ -68,7 +69,7 @@ const styles = StyleSheet.create({
   photo: {
     width: 80,
     height: 80,
-    borderRadius: 10,
+    borderRadius: radius.sm,
   },
   removeBtn: {
     position: 'absolute',
@@ -76,13 +77,13 @@ const styles = StyleSheet.create({
     right: -6,
     width: 20,
     height: 20,
-    borderRadius: 10,
-    backgroundColor: '#3D2C1E',
+    borderRadius: radius.full,
+    backgroundColor: colors.textPrimary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   removeBtnText: {
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 18,
@@ -90,17 +91,17 @@ const styles = StyleSheet.create({
   addBtn: {
     width: 80,
     height: 80,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#C4B8A8',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addBtnText: {
     fontSize: 28,
     fontWeight: '300',
-    color: '#C4B8A8',
+    color: colors.textQuaternary,
     lineHeight: 34,
   },
 });

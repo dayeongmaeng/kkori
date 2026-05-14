@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { colors, radius, spacing } from '../constants/theme';
 
 const PREVIEW_SIZE = Math.round(Dimensions.get('window').width * 0.6);
 const MAX_CAPTION = 100;
@@ -63,7 +64,7 @@ export default function CaptionModal({ visible, photoBase64, onSave, onCancel }:
               value={caption}
               onChangeText={(t) => setCaption(t.slice(0, MAX_CAPTION))}
               placeholder="오늘 어떤 하루였나요?"
-              placeholderTextColor="#C4B8A8"
+              placeholderTextColor={colors.textQuaternary}
               multiline
               returnKeyType="done"
               blurOnSubmit
@@ -94,54 +95,54 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xl,
     alignItems: 'center',
-    gap: 16,
+    gap: spacing.lg,
   },
   preview: {
     width: PREVIEW_SIZE,
     height: PREVIEW_SIZE,
-    borderRadius: 16,
+    borderRadius: radius.lg,
   },
   input: {
     width: '100%',
     minHeight: 72,
-    backgroundColor: '#FAF8F5',
-    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#E8E0D5',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     fontSize: 15,
-    color: '#3D2C1E',
+    color: colors.textPrimary,
     textAlignVertical: 'top',
   },
   counter: {
     alignSelf: 'flex-end',
     fontSize: 12,
-    color: '#B0A090',
+    color: colors.textQuaternary,
     marginTop: -8,
   },
   saveButton: {
     width: '100%',
-    backgroundColor: '#E8985C',
-    borderRadius: 16,
-    paddingVertical: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
   },
   saveButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
   },
   cancelButton: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   cancelButtonText: {
     fontSize: 15,
-    color: '#B0A090',
+    color: colors.textSecondary,
   },
 });

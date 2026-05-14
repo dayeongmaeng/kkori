@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, radius, spacing } from '../constants/theme';
 import { DailyPhoto } from '../lib/types';
 
 interface Props {
@@ -30,7 +31,7 @@ export default function TodayPhotoCard({
           onPress={onTapGallery}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="images-outline" size={18} color="#E8985C" />
+          <Ionicons name="images-outline" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
         <View style={styles.emptyCenter}>
           <Text style={styles.cameraEmoji}>📷</Text>
@@ -58,40 +59,40 @@ export default function TodayPhotoCard({
 const styles = StyleSheet.create({
   emptyCard: {
     width: '100%',
-    borderRadius: 16,
-    backgroundColor: '#FFF4E8',
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#E8985C',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   galleryButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: spacing.md,
+    right: spacing.md,
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyCenter: {
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   cameraEmoji: {
     fontSize: 48,
   },
   emptyText: {
     fontSize: 14,
-    color: '#999999',
+    color: colors.textTertiary,
   },
   photoCard: {
     width: '100%',
-    borderRadius: 16,
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    backgroundColor: '#E0D6C8',
+    backgroundColor: colors.surfaceAlt,
   },
 });

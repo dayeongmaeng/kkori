@@ -1,4 +1,5 @@
 import { StyleSheet, TextInput } from 'react-native';
+import { colors, radius, spacing } from '../constants/theme';
 
 interface Props {
   value: string;
@@ -12,7 +13,7 @@ export default function MemoInput({ value, onChangeText }: Props) {
       value={value}
       onChangeText={onChangeText}
       placeholder="오늘 특별한 일은?"
-      placeholderTextColor="#C4B8A8"
+      placeholderTextColor={colors.textQuaternary}
       multiline
       maxLength={500}
       textAlignVertical="top"
@@ -22,12 +23,12 @@ export default function MemoInput({ value, onChangeText }: Props) {
 
 const styles = StyleSheet.create({
   input: {
-    backgroundColor: '#F8F8F8',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     fontSize: 14,
-    color: '#3D2C1E',
+    color: colors.textPrimary,
     minHeight: 100,
   },
 });

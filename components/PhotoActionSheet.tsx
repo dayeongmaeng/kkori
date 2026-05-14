@@ -6,6 +6,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { colors, radius, spacing } from '../constants/theme';
 
 interface Props {
   visible: boolean;
@@ -66,41 +67,41 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    padding: 8,
+    padding: spacing.sm,
     paddingBottom: 34,
   },
   menuGroup: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     overflow: 'hidden',
   },
   menuItem: {
     height: 56,
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.lg + 4,
     justifyContent: 'center',
   },
   menuText: {
     fontSize: 16,
-    color: '#333333',
+    color: colors.textPrimary,
   },
   menuTextDanger: {
-    color: '#E74C3C',
+    color: colors.danger,
   },
   divider: {
     height: 1,
-    backgroundColor: '#F0F0F0',
-    marginHorizontal: 20,
+    backgroundColor: colors.divider,
+    marginHorizontal: spacing.lg + 4,
   },
   cancelButton: {
-    marginTop: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     alignItems: 'center',
   },
   cancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#999999',
+    color: colors.textSecondary,
   },
 });

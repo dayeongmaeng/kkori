@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, radius, shadow, spacing } from '../constants/theme';
 import { daysSince, formatAge } from '../lib/dateUtils';
 import { Pet } from '../lib/types';
 
@@ -38,36 +39,31 @@ export default function HomeProfileCard({ pet }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
-    marginHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginHorizontal: spacing.lg,
     ...Platform.select({
-      ios: {
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-      },
-      android: { elevation: 2 },
+      ios: shadow.md,
+      android: { elevation: shadow.md.elevation },
       default: {},
     }),
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: spacing.lg,
   },
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: radius.full,
   },
   avatarPlaceholder: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: '#E0D6C8',
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -76,19 +72,19 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   name: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
   breed: {
     fontSize: 14,
-    color: '#666666',
+    color: colors.textSecondary,
   },
   since: {
     fontSize: 13,
-    color: '#999999',
+    color: colors.textTertiary,
   },
 });
