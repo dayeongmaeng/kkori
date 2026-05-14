@@ -72,9 +72,7 @@ export default function LogScreen() {
   const [mealNote, setMealNote] = useState('');
   const [walkMinutes, setWalkMinutes] = useState<number | undefined>();
   const [walkNote, setWalkNote] = useState('');
-  const [pooCount, setPooCount] = useState<number | undefined>();
   const [pooCondition, setPooCondition] = useState<StoolCondition | undefined>();
-  const [peeCount, setPeeCount] = useState<number | undefined>();
   const [urineColor, setUrineColor] = useState<UrineColor | undefined>();
   const [pooNote, setPooNote] = useState('');
   const [water, setWater] = useState<WaterAmount | undefined>();
@@ -89,9 +87,7 @@ export default function LogScreen() {
     setMealNote('');
     setWalkMinutes(undefined);
     setWalkNote('');
-    setPooCount(undefined);
     setPooCondition(undefined);
-    setPeeCount(undefined);
     setUrineColor(undefined);
     setPooNote('');
     setWater(undefined);
@@ -107,9 +103,7 @@ export default function LogScreen() {
     setMealNote(log.mealNote ?? '');
     setWalkMinutes(log.walkMinutes);
     setWalkNote(log.walkNote ?? '');
-    setPooCount(log.pooCount);
     setPooCondition(log.pooCondition);
-    setPeeCount(log.peeCount);
     setUrineColor(log.urineColor);
     setPooNote(log.pooNote ?? '');
     setWater(log.water);
@@ -151,7 +145,7 @@ export default function LogScreen() {
 
   const logData = {
     condition, meal, mealNote, walkMinutes, walkNote,
-    pooCount, pooCondition, peeCount, urineColor, pooNote,
+    pooCondition, urineColor, pooNote,
     water, waterNote, memo, photoUris,
   };
 
@@ -170,10 +164,8 @@ export default function LogScreen() {
       mealNote: data.mealNote.trim() || undefined,
       walkMinutes: data.walkMinutes,
       walkNote: data.walkNote.trim() || undefined,
-      pooCount: data.pooCount,
       pooCondition: data.pooCondition,
       pooNote: data.pooNote.trim() || undefined,
-      peeCount: data.peeCount,
       urineColor: data.urineColor,
       water: data.water,
       waterNote: data.waterNote.trim() || undefined,
@@ -247,14 +239,10 @@ export default function LogScreen() {
         </Card>
         <Card title="배변">
           <PoopPicker
-            pooCount={pooCount}
             pooCondition={pooCondition}
-            peeCount={peeCount}
             urineColor={urineColor}
             pooNote={pooNote}
-            onChangePooCount={setPooCount}
             onChangePooCondition={setPooCondition}
-            onChangePeeCount={setPeeCount}
             onChangeUrineColor={setUrineColor}
             onChangePooNote={setPooNote}
           />

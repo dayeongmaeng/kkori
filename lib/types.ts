@@ -52,10 +52,8 @@ export interface DailyLog {
   waterNote?: string;
   walkMinutes?: number;
   walkNote?: string;         // 산책 메모 (장소 등)
-  pooCount?: number;
   pooCondition?: StoolCondition;
   pooNote?: string;
-  peeCount?: number;
   urineColor?: UrineColor;
   condition?: ConditionScore;
   weightKg?: number;         // 가끔 측정한 체중
