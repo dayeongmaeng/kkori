@@ -1,6 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { colors } from '../constants/theme';
+import { getCurrentPetId, getPet } from '../lib/storage';
 
 // 로고 이미지가 준비되면 아래 주석을 해제하고 텍스트 fallback 제거
 // import { Image } from 'expo-image';
@@ -10,17 +13,38 @@ const LOGO_IMAGE_READY = false; // logo.png 준비되면 true로 변경
 
 export default function AppHeader() {
   const insets = useSafeAreaInsets();
+  const [petName, setPetName] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const petId = await getCurrentPetId();
+        if (!petId) { setPetName(null); return; }
+        const pet = await getPet(petId);
+        setPetName(pet?.name ?? null);
+      })();
+    }, [])
+  );
+
+  function handlePetPress() {
+    Alert.alert('반려동물 추가 기능은 곧 출시예정이에요 🐾');
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* 좌측: 나중에 메뉴/뒤로가기 버튼 영역 */}
-      <View style={styles.side} />
+      {/* 좌측: 현재 펫 이름 + 드롭다운 화살표 */}
+      <TouchableOpacity style={styles.petButton} onPress={handlePetPress} activeOpacity={0.7}>
+        <Text style={styles.petName} numberOfLines={1}>
+          {petName ?? '반려동물 등록'}
+        </Text>
+        <Text style={styles.arrow}>▼</Text>
+      </TouchableOpacity>
 
       {/* 가운데: 비워둠 */}
       <View style={styles.center} />
 
       {/* 우측: 로고 */}
-      <View style={[styles.side, styles.logoArea]}>
+      <View style={styles.logoArea}>
         {LOGO_IMAGE_READY ? (
           // <Image source={logoSource} style={styles.logoImage} contentFit="contain" />
           null
@@ -43,8 +67,21 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingHorizontal: 16,
   },
-  side: {
-    width: 80,
+  petButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: 160,
+  },
+  petName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  arrow: {
+    fontSize: 9,
+    color: colors.textTertiary,
+    marginTop: 1,
   },
   center: {
     flex: 1,

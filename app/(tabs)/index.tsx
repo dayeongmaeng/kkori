@@ -18,11 +18,10 @@ import { uriToBase64 } from '../../lib/photoUtils';
 import {
   getCurrentPetId,
   getDailyPhotos,
-  getPet,
   saveDailyPhoto,
 } from '../../lib/storage';
-import { colors, spacing, radius } from '../../constants/theme';
-import { DailyPhoto, Pet } from '../../lib/types';
+import { colors, spacing } from '../../constants/theme';
+import { DailyPhoto } from '../../lib/types';
 
 const CELL_SIZE = Math.floor(Dimensions.get('window').width / 3);
 
@@ -43,7 +42,6 @@ function PhotoCell({ photo, onPress }: { photo: DailyPhoto; onPress: () => void 
 }
 
 export default function PhotoScreen() {
-  const [pet, setPet] = useState<Pet | null>(null);
   const [photos, setPhotos] = useState<DailyPhoto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -57,11 +55,7 @@ export default function PhotoScreen() {
   const load = useCallback(async () => {
     const petId = await getCurrentPetId();
     if (!petId) return;
-    const [loadedPet, loadedPhotos] = await Promise.all([
-      getPet(petId),
-      getDailyPhotos(petId),
-    ]);
-    setPet(loadedPet);
+    const loadedPhotos = await getDailyPhotos(petId);
     setPhotos(loadedPhotos);
   }, []);
 
@@ -194,24 +188,25 @@ export default function PhotoScreen() {
     </View>
   );
 
+  const listEmpty = (
+    <View style={styles.emptyArea}>
+      <Text style={styles.emptyText}>기록된 사진이 없습니다</Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {pet ? `${pet.name} · ${photos.length}장` : '포토'}
-        </Text>
-      </View>
-
       <FlatList
         data={pastPhotos}
         keyExtractor={(item) => item.id}
         numColumns={3}
         ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
         renderItem={({ item }) => (
           <PhotoCell photo={item} onPress={() => router.push(`/photo/${item.id}`)} />
         )}
         ItemSeparatorComponent={() => <View style={{ height: 2 }} />}
-        columnWrapperStyle={styles.row}
+        columnWrapperStyle={pastPhotos.length > 0 ? styles.row : undefined}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
@@ -234,20 +229,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
   headerSection: {
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.lg,
@@ -257,6 +238,14 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
+  },
+  emptyArea: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: colors.textTertiary,
   },
   row: {
     gap: 2,
