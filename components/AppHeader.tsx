@@ -1,15 +1,27 @@
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { colors } from '../constants/theme';
 import { getCurrentPetId, getPet } from '../lib/storage';
 
-// 로고 이미지가 준비되면 아래 주석을 해제하고 텍스트 fallback 제거
-// import { Image } from 'expo-image';
-// const logoSource = require('../assets/logo.png'); // 여기에 로고 이미지 넣으면 자동 교체
+const logoSource = require('../assets/logo.png');
 
-const LOGO_IMAGE_READY = false; // logo.png 준비되면 true로 변경
+function Logo() {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <Text style={styles.logoText}>꼬리</Text>;
+  }
+  return (
+    <Image
+      source={logoSource}
+      style={styles.logoImage}
+      contentFit="contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export default function AppHeader() {
   const insets = useSafeAreaInsets();
@@ -41,17 +53,11 @@ export default function AppHeader() {
         <Text style={styles.arrow}>▼</Text>
       </TouchableOpacity>
 
-      {/* 가운데: 비워둠 */}
       <View style={styles.center} />
 
       {/* 우측: 로고 */}
       <View style={styles.logoArea}>
-        {LOGO_IMAGE_READY ? (
-          // <Image source={logoSource} style={styles.logoImage} contentFit="contain" />
-          null
-        ) : (
-          <Text style={styles.logoText}>꼬리</Text>
-        )}
+        <Logo />
       </View>
     </View>
   );
