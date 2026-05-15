@@ -133,8 +133,23 @@ export default function PhotoScreen() {
 
   const listHeader = (
     <View>
-      <View style={styles.headerBanner}>
-        <Text style={styles.headerBannerText}>오늘의 한 장이 오래도록 남아요.</Text>
+      <View style={styles.headerBannerRow}>
+        {/* 좌측 배지 */}
+        <View style={styles.headerBadge}>
+          <Text style={styles.headerBadgeText}>오늘의 한 장이 오래도록 남아요.</Text>
+        </View>
+
+        {/* 우측 월력 버튼 */}
+        <TouchableOpacity
+          style={styles.calendarBtn}
+          onPress={() => Alert.alert('곧 출시될 기능이에요 🐾', '조금만 기다려주세요')}
+          activeOpacity={0.75}
+        >
+          <View style={styles.comingSoonBadge}>
+            <Text style={styles.comingSoonBadgeText}>출시 예정</Text>
+          </View>
+          <Text style={styles.calendarBtnText}>월력 만들기</Text>
+        </TouchableOpacity>
       </View>
       <View style={styles.headerSection}>
         <TodayPhotoCard
@@ -203,19 +218,44 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingHorizontal: spacing.lg,
   },
-  headerBanner: {
-    alignSelf: 'center',
+  headerBannerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  headerBadge: {
     backgroundColor: colors.primary,
     borderRadius: radius.full,
     paddingVertical: 5,
     paddingHorizontal: 14,
-    marginTop: 12,
-    marginBottom: 6,
     ...shadow.sm,
   },
-  headerBannerText: {
+  headerBadgeText: {
     fontSize: 12,
     color: colors.textOnPrimary,
+  },
+  calendarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  calendarBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  comingSoonBadge: {
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  comingSoonBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.accent,
   },
   sectionLabel: {
     fontSize: 13,
