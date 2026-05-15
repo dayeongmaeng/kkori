@@ -44,7 +44,7 @@ export default function AppHeader() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
       {/* 좌측: 현재 펫 이름 + 드롭다운 화살표 */}
       <TouchableOpacity style={styles.petButton} onPress={handlePetPress} activeOpacity={0.7}>
         <Text style={styles.petName} numberOfLines={1}>
@@ -65,12 +65,11 @@ export default function AppHeader() {
 
 const styles = StyleSheet.create({
   container: {
-    height: 48,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingBottom: 10,
     paddingHorizontal: 16,
   },

@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Image, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, Home, NotebookPen, PawPrint, Settings } from 'lucide-react-native';
 import AppHeader from '../../components/AppHeader';
 import { colors } from '../../constants/theme';
@@ -46,6 +47,8 @@ function TabIcon({
 }
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={{ flex: 1 }}>
       <AppHeader />
@@ -59,6 +62,8 @@ export default function TabLayout() {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
             borderTopWidth: 1,
+            paddingBottom: insets.bottom,
+            height: 56 + insets.bottom,
           },
           tabBarShowLabel: false,
         }}
