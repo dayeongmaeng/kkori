@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    fontSize: 14,
+    fontSize: 16,
     color: colors.textPrimary,
   },
 });

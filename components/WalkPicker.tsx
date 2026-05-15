@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    fontSize: 14,
+    fontSize: 16,
     color: '#3D2C1E',
   },
 });

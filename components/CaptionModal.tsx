@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    fontSize: 15,
+    fontSize: 16,
     color: colors.textPrimary,
     textAlignVertical: 'top',
   },
