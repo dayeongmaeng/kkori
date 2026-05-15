@@ -4,7 +4,8 @@ import IconImage from './IconImage';
 import { summarizeLog } from '../lib/logUtils';
 import { DailyLog } from '../lib/types';
 
-const imgCompletedLog = require('../assets/home/complated-log.png');
+const imgLogIcon = require('../assets/home/log-icon.png');
+const imgLogDoneIcon = require('../assets/home/log-done-icon.png');
 
 interface Props {
   todayLog?: DailyLog;
@@ -17,7 +18,7 @@ export default function HomeTodayLogCard({ todayLog, onTapAdd, onTapView }: Prop
     return (
       <TouchableOpacity style={[styles.card, styles.emptyCard]} onPress={onTapAdd} activeOpacity={0.85}>
         <View style={styles.row}>
-          <Text style={styles.icon}>📝</Text>
+          <IconImage source={imgLogIcon} fallback="📝" size={28} />
           <View style={styles.textBlock}>
             <Text style={styles.mainText}>오늘 기록을 안 했어요</Text>
             <Text style={styles.subText}>지금 한 줄 남겨볼까요?</Text>
@@ -33,7 +34,7 @@ export default function HomeTodayLogCard({ todayLog, onTapAdd, onTapView }: Prop
   return (
     <TouchableOpacity style={[styles.card, styles.filledCard]} onPress={onTapView} activeOpacity={0.85}>
       <View style={styles.row}>
-        <IconImage source={imgCompletedLog} fallback="✅" size={28} />
+        <IconImage source={imgLogDoneIcon} fallback="✅" size={28} />
         <View style={styles.textBlock}>
           <Text style={styles.mainText}>오늘 기록 완료</Text>
           <Text style={styles.subText} numberOfLines={1}>{summarizeLog(todayLog)}</Text>
@@ -65,9 +66,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-  },
-  icon: {
-    fontSize: 28,
   },
   textBlock: {
     flex: 1,
