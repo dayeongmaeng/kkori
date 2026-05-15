@@ -93,7 +93,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingBottom: 10,
-    paddingHorizontal: 16,
+    paddingLeft: 16,
+    paddingRight: 10,
   },
   petButton: {
     flexDirection: 'row',
@@ -117,7 +118,7 @@ const styles = StyleSheet.create({
   logoArea: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   betaBadge: {
     backgroundColor: '#FFE4D1',
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   logoImage: {
-    width: 80,
-    height: 24,
+    width: 32,
+    height: 32,
   },
 });

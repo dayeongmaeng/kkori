@@ -378,7 +378,6 @@ export default function ProfileScreen() {
 
       <SaveIndicator
         status={indicatorStatus}
-        centered
         labels={{
           saving: '저장 중...',
           saved: '저장되었습니다 ✓',
