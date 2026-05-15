@@ -11,7 +11,7 @@ interface Props {
 
 export default function PhotoAttacher({ photoUris, onChangePhotoUris }: Props) {
   async function handleAdd() {
-    const dataUri = await pickImage({ allowsEditing: false, quality: 0.8 });
+    const dataUri = await pickImage({ allowsEditing: false });
     if (!dataUri) return;
     onChangePhotoUris([...photoUris, dataUri]);
   }

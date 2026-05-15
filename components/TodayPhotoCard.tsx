@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
+import { resizeImage } from '../lib/imagePickerHelper';
 import { DailyPhoto } from '../lib/types';
 
 interface Props {
@@ -63,13 +64,10 @@ function LiveCameraCard({
     if (!cameraRef.current || capturing) return;
     setCapturing(true);
     try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.5,
-        base64: true,
-        skipProcessing: false,
-      });
-      if (!photo?.base64) throw new Error('base64 데이터가 없어요.');
-      onPhotoTaken(`data:image/jpeg;base64,${photo.base64}`);
+      const photo = await cameraRef.current.takePictureAsync({ quality: 1, skipProcessing: false });
+      if (!photo?.uri) throw new Error('촬영 데이터가 없어요.');
+      const resized = await resizeImage(photo.uri);
+      onPhotoTaken(resized);
     } catch (e: any) {
       Alert.alert('오류', `촬영 실패: ${e?.message ?? '알 수 없는 오류'}`);
     } finally {

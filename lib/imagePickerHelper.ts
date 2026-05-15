@@ -1,10 +1,24 @@
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Platform } from 'react-native';
+
+const RESIZE_WIDTH = 800;
+const COMPRESS_QUALITY = 0.6;
 
 export interface PickImageOptions {
   allowsEditing?: boolean;
   aspect?: [number, number];
-  quality?: number;
+}
+
+// URI(파일 경로 또는 data URI) → 리사이즈된 base64 data URI
+export async function resizeImage(uri: string): Promise<string> {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: RESIZE_WIDTH } }],
+    { compress: COMPRESS_QUALITY, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+  );
+  if (!result.base64) throw new Error('리사이즈 실패');
+  return `data:image/jpeg;base64,${result.base64}`;
 }
 
 function pickImageWeb(): Promise<string | null> {
@@ -19,7 +33,13 @@ function pickImageWeb(): Promise<string | null> {
         return;
       }
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = async () => {
+        try {
+          resolve(await resizeImage(reader.result as string));
+        } catch {
+          resolve(null);
+        }
+      };
       reader.onerror = () => resolve(null);
       reader.readAsDataURL(file);
     };
@@ -37,13 +57,14 @@ async function pickImageNative(options: PickImageOptions): Promise<string | null
     mediaTypes: 'images',
     allowsEditing: options.allowsEditing ?? true,
     ...(options.aspect ? { aspect: options.aspect } : {}),
-    quality: options.quality ?? 0.7,
-    base64: true,
+    quality: 1,
   });
   if (result.canceled || !result.assets?.[0]) return null;
-  const b64 = result.assets[0].base64;
-  if (!b64) return null;
-  return `data:image/jpeg;base64,${b64}`;
+  try {
+    return await resizeImage(result.assets[0].uri);
+  } catch {
+    return null;
+  }
 }
 
 export async function pickImage(options: PickImageOptions = {}): Promise<string | null> {

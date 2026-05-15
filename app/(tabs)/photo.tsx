@@ -82,7 +82,7 @@ export default function PhotoScreen() {
       return;
     }
 
-    const dataUri = await pickImage({ allowsEditing: true, aspect: [1, 1], quality: 0.5 });
+    const dataUri = await pickImage({ allowsEditing: true, aspect: [1, 1] });
     if (!dataUri) return;
     handlePhotoTaken(dataUri);
   }
