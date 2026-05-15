@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  AppState,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,6 +12,7 @@ import DatePickerModal from '../../components/DatePickerModal';
 import EmptyPetState from '../../components/EmptyPetState';
 import SaveIndicator from '../../components/SaveIndicator';
 import { useAutoSave } from '../../hooks/useAutoSave';
+import { useMidnightRefresh } from '../../hooks/useMidnightRefresh';
 import ConditionPicker from '../../components/ConditionPicker';
 import MealPicker from '../../components/MealPicker';
 import MemoInput from '../../components/MemoInput';
@@ -55,6 +57,8 @@ export default function LogScreen() {
   const [petId, setPetId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [date, setDate] = useState(getTodayString());
+  const [reloadKey, setReloadKey] = useState(0);
+  const isViewingTodayRef = useRef(true);
   const [existingLog, setExistingLog] = useState<DailyLog | null>(null);
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [markedDates, setMarkedDates] = useState<Record<string, { marked: true; dotColor: string }>>({});
@@ -79,6 +83,12 @@ export default function LogScreen() {
   const [waterNote, setWaterNote] = useState('');
   const [memo, setMemo] = useState('');
   const [photoUris, setPhotoUris] = useState<string[]>([]);
+
+  function handleDateChange(newDate: string) {
+    isViewingTodayRef.current = newDate === getTodayString();
+    setDate(newDate);
+    setReloadKey((k) => k + 1);
+  }
 
   function resetStates() {
     setExistingLog(null);
@@ -116,13 +126,16 @@ export default function LogScreen() {
     useCallback(() => {
       async function loadLog() {
         setIsLoaded(false);
+        const effectiveDate = isViewingTodayRef.current ? getTodayString() : dateRef.current;
+        if (effectiveDate !== dateRef.current) setDate(effectiveDate);
+
         const currentPetId = await getCurrentPetId();
         if (!currentPetId) { setHasPet(false); resetStates(); setIsLoaded(true); return; }
         setPetId(currentPetId);
         setHasPet(true);
 
         const [log, allLogs] = await Promise.all([
-          getDailyLogByDate(currentPetId, date),
+          getDailyLogByDate(currentPetId, effectiveDate),
           getDailyLogs(currentPetId),
         ]);
 
@@ -132,16 +145,35 @@ export default function LogScreen() {
         });
         setMarkedDates(marks);
 
-        if (log) {
-          populateStates(log);
-        } else {
-          resetStates();
-        }
+        if (log) populateStates(log);
+        else resetStates();
         setIsLoaded(true);
       }
       loadLog();
-    }, [date])
+    }, [reloadKey])
   );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (appState) => {
+      if (appState !== 'active') return;
+      if (isViewingTodayRef.current) {
+        const freshToday = getTodayString();
+        if (freshToday !== dateRef.current) setDate(freshToday);
+      }
+      setReloadKey((k) => k + 1);
+    });
+    return () => sub.remove();
+  }, []);
+
+  const handleMidnightRefresh = useCallback(() => {
+    if (isViewingTodayRef.current) {
+      const freshToday = getTodayString();
+      if (freshToday !== dateRef.current) setDate(freshToday);
+    }
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  useMidnightRefresh(handleMidnightRefresh);
 
   const logData = {
     condition, meal, mealNote, walkMinutes, walkNote,
@@ -199,7 +231,7 @@ export default function LogScreen() {
     <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.arrowBtn} onPress={() => setDate((d) => addDays(d, -1))}>
+        <TouchableOpacity style={styles.arrowBtn} onPress={() => handleDateChange(addDays(date, -1))}>
           <Text style={styles.arrowText}>{'<'}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.dateBtn} onPress={() => setIsCalendarVisible(true)}>
@@ -208,7 +240,7 @@ export default function LogScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.arrowBtn}
-          onPress={() => setDate((d) => addDays(d, 1))}
+          onPress={() => handleDateChange(addDays(date, 1))}
           disabled={isToday}
         >
           <Text style={[styles.arrowText, isToday && styles.arrowDisabled]}>{'>'}</Text>
@@ -272,7 +304,7 @@ export default function LogScreen() {
           visible={isCalendarVisible}
           selectedDate={date}
           markedDates={markedDates}
-          onSelect={(d) => { setDate(d); setIsCalendarVisible(false); }}
+          onSelect={(d) => { handleDateChange(d); setIsCalendarVisible(false); }}
           onClose={() => setIsCalendarVisible(false)}
         />
 

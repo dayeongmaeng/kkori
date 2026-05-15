@@ -1,12 +1,13 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AiReportPreview from '../../components/AiReportPreview';
 import EmptyPetState from '../../components/EmptyPetState';
 import HomeConditionChart from '../../components/HomeConditionChart';
 import HomeTodayLogCard from '../../components/HomeTodayLogCard';
 import HomeProfileCard from '../../components/HomeProfileCard';
 import { colors, spacing } from '../../constants/theme';
+import { useMidnightRefresh } from '../../hooks/useMidnightRefresh';
 import { getCurrentPetId, getDailyLogByDate, getDailyLogs, getPet } from '../../lib/storage';
 import { DailyLog, Pet } from '../../lib/types';
 
@@ -26,35 +27,41 @@ export default function HomeScreen() {
   const [recentLogs, setRecentLogs] = useState<DailyLog[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      async function loadData() {
-        const today = getTodayString();
-        const sevenDaysAgo = get6DaysAgoString();
-        const petId = await getCurrentPetId();
+  const loadData = useCallback(async () => {
+    const today = getTodayString();
+    const sevenDaysAgo = get6DaysAgoString();
+    const petId = await getCurrentPetId();
 
-        if (!petId) {
-          setPet(null);
-          setTodayLog(null);
-          setRecentLogs([]);
-          setLoaded(true);
-          return;
-        }
+    if (!petId) {
+      setPet(null);
+      setTodayLog(null);
+      setRecentLogs([]);
+      setLoaded(true);
+      return;
+    }
 
-        const [loadedPet, loadedLog, allLogs] = await Promise.all([
-          getPet(petId),
-          getDailyLogByDate(petId, today),
-          getDailyLogs(petId),
-        ]);
+    const [loadedPet, loadedLog, allLogs] = await Promise.all([
+      getPet(petId),
+      getDailyLogByDate(petId, today),
+      getDailyLogs(petId),
+    ]);
 
-        setPet(loadedPet);
-        setTodayLog(loadedLog);
-        setRecentLogs(allLogs.filter((l) => l.date >= sevenDaysAgo && l.date <= today));
-        setLoaded(true);
-      }
-      loadData();
-    }, [])
-  );
+    setPet(loadedPet);
+    setTodayLog(loadedLog);
+    setRecentLogs(allLogs.filter((l) => l.date >= sevenDaysAgo && l.date <= today));
+    setLoaded(true);
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') loadData();
+    });
+    return () => sub.remove();
+  }, [loadData]);
+
+  useMidnightRefresh(loadData);
 
   if (!loaded) return null;
 

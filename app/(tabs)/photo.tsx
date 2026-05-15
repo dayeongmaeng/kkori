@@ -3,6 +3,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  AppState,
   Dimensions,
   FlatList,
   RefreshControl,
@@ -21,6 +22,7 @@ import {
   saveDailyPhoto,
 } from '../../lib/storage';
 import { colors, spacing } from '../../constants/theme';
+import { useMidnightRefresh } from '../../hooks/useMidnightRefresh';
 import { DailyPhoto } from '../../lib/types';
 
 const CELL_SIZE = Math.floor(Dimensions.get('window').width / 3);
@@ -63,6 +65,15 @@ export default function PhotoScreen() {
   useEffect(() => { load(); }, [load]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') load();
+    });
+    return () => sub.remove();
+  }, [load]);
+
+  useMidnightRefresh(load);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
