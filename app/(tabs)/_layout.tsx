@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Image, View } from 'react-native';
-import { Camera, Home, NotebookPen, PawPrint } from 'lucide-react-native';
+import { Camera, Home, NotebookPen, PawPrint, Settings } from 'lucide-react-native';
 import AppHeader from '../../components/AppHeader';
 import { colors } from '../../constants/theme';
 
@@ -14,6 +14,13 @@ try {
   };
 } catch {
   tabIcons = null;
+}
+
+let settingsIcon: any = null;
+try {
+  settingsIcon = require('../../assets/tabs/settings.png');
+} catch {
+  settingsIcon = null;
 }
 
 function TabIcon({
@@ -90,6 +97,25 @@ export default function TabLayout() {
             tabBarIcon: ({ focused, color }) => (
               <TabIcon name="profile" focused={focused} fallback={<PawPrint size={24} color={color} />} />
             ),
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: '설정',
+            tabBarIcon: ({ focused, color }) => {
+              const tintColor = focused ? colors.primary : colors.textTertiary;
+              if (settingsIcon) {
+                return (
+                  <Image
+                    source={settingsIcon}
+                    style={{ width: 24, height: 24, tintColor }}
+                    resizeMode="contain"
+                  />
+                );
+              }
+              return <Settings size={24} color={color} />;
+            },
           }}
         />
       </Tabs>
