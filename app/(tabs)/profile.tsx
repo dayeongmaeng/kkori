@@ -213,10 +213,6 @@ export default function ProfileScreen() {
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
       >
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>반려동물 등록</Text>
-      </View>
-
       {/* 사진 */}
       <TouchableOpacity style={styles.photoWrapper} onPress={handlePickImage}>
         {photoUri ? (
@@ -375,14 +371,6 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.xl,
     paddingBottom: 200,
-  },
-  titleRow: {
-    marginBottom: spacing.xl,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   photoWrapper: {
     alignSelf: 'center',
