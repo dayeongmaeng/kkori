@@ -1,13 +1,18 @@
 import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
+import IconImage from './IconImage';
+
+const imgDoctorReport = require('../assets/home/doctor-report.png');
+const imgWeekendReport = require('../assets/home/weekend-report.png');
 
 interface CardProps {
-  icon: string;
+  imgSource: number;
+  iconFallback: string;
   title: string;
   description: string;
 }
 
-function ReportCard({ icon, title, description }: CardProps) {
+function ReportCard({ imgSource, iconFallback, title, description }: CardProps) {
   return (
     <TouchableOpacity
       style={styles.card}
@@ -19,7 +24,7 @@ function ReportCard({ icon, title, description }: CardProps) {
       </View>
       <View style={styles.row}>
         <View style={styles.iconCircle}>
-          <Text style={styles.iconEmoji}>{icon}</Text>
+          <IconImage source={imgSource} fallback={iconFallback} size={26} />
         </View>
         <View style={styles.textBlock}>
           <Text style={styles.cardTitle}>{title}</Text>
@@ -42,12 +47,14 @@ export default function AiReportPreview({ petName }: Props) {
       <Text style={styles.sectionTitle}>AI 리포트</Text>
       <View style={styles.cards}>
         <ReportCard
-          icon="🏥"
+          imgSource={imgDoctorReport}
+          iconFallback="🏥"
           title="병원 방문용 리포트"
           description="수의사 진료를 위한 건강 요약"
         />
         <ReportCard
-          icon="💚"
+          imgSource={imgWeekendReport}
+          iconFallback="💚"
           title={weekTitle}
           description="AI가 보호자를 위해 정리한 일기"
         />
@@ -107,9 +114,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconEmoji: {
-    fontSize: 26,
   },
   textBlock: {
     flex: 1,

@@ -1,7 +1,10 @@
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
+import IconImage from './IconImage';
 import { summarizeLog } from '../lib/logUtils';
 import { DailyLog } from '../lib/types';
+
+const imgCompletedLog = require('../assets/home/complated-log.png');
 
 interface Props {
   todayLog?: DailyLog;
@@ -30,7 +33,7 @@ export default function HomeTodayLogCard({ todayLog, onTapAdd, onTapView }: Prop
   return (
     <TouchableOpacity style={[styles.card, styles.filledCard]} onPress={onTapView} activeOpacity={0.85}>
       <View style={styles.row}>
-        <Text style={styles.icon}>✅</Text>
+        <IconImage source={imgCompletedLog} fallback="✅" size={28} />
         <View style={styles.textBlock}>
           <Text style={styles.mainText}>오늘 기록 완료</Text>
           <Text style={styles.subText} numberOfLines={1}>{summarizeLog(todayLog)}</Text>
