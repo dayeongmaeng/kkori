@@ -21,7 +21,7 @@ import {
   getDailyPhotos,
   saveDailyPhoto,
 } from '../../lib/storage';
-import { colors, spacing } from '../../constants/theme';
+import { colors, radius, shadow, spacing } from '../../constants/theme';
 import { useMidnightRefresh } from '../../hooks/useMidnightRefresh';
 import { DailyPhoto } from '../../lib/types';
 
@@ -132,16 +132,21 @@ export default function PhotoScreen() {
   }
 
   const listHeader = (
-    <View style={styles.headerSection}>
-      <TodayPhotoCard
-        todayPhoto={todayPhoto}
-        onPhotoTaken={handlePhotoTaken}
-        onTapGallery={handleOpenGallery}
-        onTapPhoto={handleTapTodayPhoto}
-      />
-      {pastPhotos.length > 0 && (
-        <Text style={styles.sectionLabel}>지난 사진</Text>
-      )}
+    <View>
+      <View style={styles.headerBanner}>
+        <Text style={styles.headerBannerText}>오늘의 한 장이 오래도록 남아요.</Text>
+      </View>
+      <View style={styles.headerSection}>
+        <TodayPhotoCard
+          todayPhoto={todayPhoto}
+          onPhotoTaken={handlePhotoTaken}
+          onTapGallery={handleOpenGallery}
+          onTapPhoto={handleTapTodayPhoto}
+        />
+        {pastPhotos.length > 0 && (
+          <Text style={styles.sectionLabel}>지난 사진</Text>
+        )}
+      </View>
     </View>
   );
 
@@ -195,8 +200,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   headerSection: {
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.lg,
+  },
+  headerBanner: {
+    alignSelf: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingVertical: 5,
+    paddingHorizontal: 14,
+    marginTop: 12,
+    marginBottom: 6,
+    ...shadow.sm,
+  },
+  headerBannerText: {
+    fontSize: 12,
+    color: colors.textOnPrimary,
   },
   sectionLabel: {
     fontSize: 13,
