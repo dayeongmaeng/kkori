@@ -6,8 +6,39 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useFocusEffect } from 'expo-router';
+
+const imgArrowLeft = require('../../assets/log/arrow-left.png');
+const imgArrowRight = require('../../assets/log/arrow-right.png');
+const imgCalendar = require('../../assets/log/calendar.png');
+
+function HeaderIcon({
+  source,
+  fallback,
+  tintColor,
+  size = 18,
+}: {
+  source: number;
+  fallback: string;
+  tintColor: string;
+  size?: number;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <Text style={{ fontSize: size, color: tintColor, fontWeight: '500' }}>{fallback}</Text>;
+  }
+  return (
+    <Image
+      source={source}
+      style={{ width: size, height: size }}
+      tintColor={tintColor}
+      onError={() => setFailed(true)}
+      contentFit="contain"
+    />
+  );
+}
 import DatePickerModal from '../../components/DatePickerModal';
 import EmptyPetState from '../../components/EmptyPetState';
 import SaveIndicator from '../../components/SaveIndicator';
@@ -232,18 +263,22 @@ export default function LogScreen() {
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.arrowBtn} onPress={() => handleDateChange(addDays(date, -1))}>
-          <Text style={styles.arrowText}>{'<'}</Text>
+          <HeaderIcon source={imgArrowLeft} fallback="<" tintColor={colors.primary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.dateBtn} onPress={() => setIsCalendarVisible(true)}>
           <Text style={styles.dateText}>{formatDateKorean(date)}</Text>
-          <Text style={styles.calendarIcon}>📅</Text>
+          <HeaderIcon source={imgCalendar} fallback="📅" tintColor={colors.primary} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.arrowBtn}
           onPress={() => handleDateChange(addDays(date, 1))}
           disabled={isToday}
         >
-          <Text style={[styles.arrowText, isToday && styles.arrowDisabled]}>{'>'}</Text>
+          <HeaderIcon
+            source={imgArrowRight}
+            fallback=">"
+            tintColor={isToday ? colors.textTertiary : colors.primary}
+          />
         </TouchableOpacity>
       </View>
       <SaveIndicator status={saveStatus} />
@@ -335,14 +370,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  arrowText: {
-    fontSize: 20,
-    color: colors.textPrimary,
-    fontWeight: '500',
-  },
-  arrowDisabled: {
-    color: colors.textQuaternary,
-  },
   dateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -352,9 +379,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
-  },
-  calendarIcon: {
-    fontSize: 16,
   },
   content: {
     padding: spacing.lg,
