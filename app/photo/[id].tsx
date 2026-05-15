@@ -1,24 +1,26 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  FlatList,
   Platform,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ViewToken,
 } from 'react-native';
 import { Image } from 'expo-image';
 import PhotoActionSheet from '../../components/PhotoActionSheet';
 import { base64ToTempFile } from '../../lib/photoUtils';
-import { deleteDailyPhoto, getDailyPhotoById } from '../../lib/storage';
+import { deleteDailyPhoto, getCurrentPetId, getDailyPhotos } from '../../lib/storage';
 import { DailyPhoto } from '../../lib/types';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, spacing } from '../../constants/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -29,24 +31,44 @@ function formatDateKorean(dateStr: string) {
 
 export default function PhotoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [photo, setPhoto] = useState<DailyPhoto | null | 'loading'>('loading');
+  const [photos, setPhotos] = useState<DailyPhoto[]>([]);
+  const [initialIndex, setInitialIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [listHeight, setListHeight] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const flatListRef = useRef<FlatList<DailyPhoto>>(null);
 
   useEffect(() => {
-    async function loadPhoto() {
-      const found = await getDailyPhotoById(id);
-      setPhoto(found);
+    async function load() {
+      const petId = await getCurrentPetId();
+      if (!petId) { setLoaded(true); return; }
+      const all = await getDailyPhotos(petId);
+      const idx = Math.max(0, all.findIndex((p) => p.id === id));
+      setPhotos(all);
+      setInitialIndex(idx);
+      setCurrentIndex(idx);
+      setLoaded(true);
     }
-    loadPhoto();
+    load();
   }, [id]);
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    const idx = viewableItems[0]?.index;
+    if (idx != null) setCurrentIndex(idx);
+  });
+
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 });
+
+  const currentPhoto = photos[currentIndex] ?? null;
 
   async function handleShare() {
     setActionSheetVisible(false);
-    if (photo === 'loading' || photo === null) return;
+    if (!currentPhoto) return;
     try {
       if (Platform.OS === 'web') {
         if (navigator.share) {
-          await navigator.share({ title: '오늘의 사진', text: photo.caption ?? '' });
+          await navigator.share({ title: '오늘의 사진', text: currentPhoto.caption ?? '' });
         } else {
           Alert.alert('알림', '이 브라우저에서는 공유가 지원되지 않아요.');
         }
@@ -57,7 +79,7 @@ export default function PhotoDetailScreen() {
         Alert.alert('알림', '이 기기에서는 공유 기능을 사용할 수 없어요.');
         return;
       }
-      const tempUri = await base64ToTempFile(photo.photoUri, `photo_${photo.id}.jpg`);
+      const tempUri = await base64ToTempFile(currentPhoto.photoUri, `photo_${currentPhoto.id}.jpg`);
       await Sharing.shareAsync(tempUri, { dialogTitle: '오늘의 사진 공유하기' });
     } catch {
       Alert.alert('오류', '공유 중 문제가 발생했어요.');
@@ -66,12 +88,12 @@ export default function PhotoDetailScreen() {
 
   async function handleSaveToAlbum() {
     setActionSheetVisible(false);
-    if (photo === 'loading' || photo === null) return;
+    if (!currentPhoto) return;
     try {
       if (Platform.OS === 'web') {
         const link = document.createElement('a');
-        link.href = photo.photoUri;
-        link.download = `photo_${photo.date}.jpg`;
+        link.href = currentPhoto.photoUri;
+        link.download = `photo_${currentPhoto.date}.jpg`;
         link.click();
         return;
       }
@@ -80,7 +102,7 @@ export default function PhotoDetailScreen() {
         Alert.alert('권한 필요', '사진을 저장하려면 사진첩 접근 권한이 필요해요.');
         return;
       }
-      const tempUri = await base64ToTempFile(photo.photoUri, `photo_${photo.id}.jpg`);
+      const tempUri = await base64ToTempFile(currentPhoto.photoUri, `photo_${currentPhoto.id}.jpg`);
       await MediaLibrary.saveToLibraryAsync(tempUri);
       Alert.alert('완료', '사진첩에 저장됐어요 🐾');
     } catch {
@@ -89,10 +111,15 @@ export default function PhotoDetailScreen() {
   }
 
   async function confirmDelete() {
-    if (photo === 'loading' || photo === null) return;
+    if (!currentPhoto) return;
     try {
-      await deleteDailyPhoto(id);
-      router.back();
+      await deleteDailyPhoto(currentPhoto.id);
+      const next = photos.filter((p) => p.id !== currentPhoto.id);
+      if (next.length === 0) { router.back(); return; }
+      const nextIndex = Math.min(currentIndex, next.length - 1);
+      setPhotos(next);
+      setCurrentIndex(nextIndex);
+      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: false });
     } catch {
       Alert.alert('오류', '삭제에 실패했어요. 다시 시도해주세요.');
     }
@@ -118,8 +145,7 @@ export default function PhotoDetailScreen() {
     }, 300);
   }
 
-  // 로딩 중
-  if (photo === 'loading') {
+  if (!loaded) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -127,8 +153,7 @@ export default function PhotoDetailScreen() {
     );
   }
 
-  // 사진을 찾을 수 없음
-  if (photo === null) {
+  if (photos.length === 0) {
     return (
       <SafeAreaView style={styles.center}>
         <Text style={styles.notFoundEmoji}>🔍</Text>
@@ -147,27 +172,48 @@ export default function PhotoDetailScreen() {
         <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
           <Text style={styles.headerBtnText}>← 뒤로</Text>
         </TouchableOpacity>
-
-        <Text style={styles.headerDate}>{formatDateKorean(photo.date)}</Text>
-
+        <Text style={styles.headerDate}>
+          {currentPhoto ? formatDateKorean(currentPhoto.date) : ''}
+        </Text>
         <TouchableOpacity style={styles.headerBtn} onPress={() => setActionSheetVisible(true)}>
           <Text style={styles.headerBtnText}>•••</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 사진 */}
-      <Image
-        source={{ uri: photo.photoUri }}
-        style={styles.photo}
-        contentFit="cover"
-      />
-
-      {/* 캡션 */}
-      <View style={styles.captionSection}>
-        {photo.caption ? (
-          <Text style={styles.caption}>{photo.caption}</Text>
-        ) : (
-          <Text style={styles.captionEmpty}>캡션이 없어요</Text>
+      {/* 세로 스와이프 뷰어 */}
+      <View style={styles.listContainer} onLayout={(e) => setListHeight(e.nativeEvent.layout.height)}>
+        {loaded && listHeight > 0 && (
+          <FlatList
+            ref={flatListRef}
+            data={photos}
+            keyExtractor={(item) => item.id}
+            pagingEnabled
+            showsVerticalScrollIndicator={false}
+            initialScrollIndex={initialIndex}
+            onViewableItemsChanged={onViewableItemsChanged.current}
+            viewabilityConfig={viewabilityConfig.current}
+            getItemLayout={(_, index) => ({
+              length: listHeight,
+              offset: listHeight * index,
+              index,
+            })}
+            renderItem={({ item }) => (
+              <View style={[styles.page, { height: listHeight }]}>
+                <Image
+                  source={{ uri: item.photoUri }}
+                  style={styles.photo}
+                  contentFit="cover"
+                />
+                <View style={styles.captionSection}>
+                  {item.caption ? (
+                    <Text style={styles.caption}>{item.caption}</Text>
+                  ) : (
+                    <Text style={styles.captionEmpty}>캡션이 없어요</Text>
+                  )}
+                </View>
+              </View>
+            )}
+          />
         )}
       </View>
 
@@ -219,6 +265,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  listContainer: {
+    flex: 1,
+  },
+  page: {
+    width: SCREEN_WIDTH,
   },
   photo: {
     width: SCREEN_WIDTH,
