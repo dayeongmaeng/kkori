@@ -1,7 +1,6 @@
 import { pickImage } from '../../lib/imagePickerHelper';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   Modal,
   Platform,
   StyleSheet,
@@ -17,6 +16,8 @@ import { Image } from 'expo-image';
 import { colors, radius, spacing } from '../../constants/theme';
 import { getCurrentPetId, getPet, savePet, setCurrentPetId } from '../../lib/storage';
 import { notifyPetNameChanged } from '../../lib/petNameEvents';
+import { SaveStatus } from '../../hooks/useAutoSave';
+import SaveIndicator from '../../components/SaveIndicator';
 import { Pet } from '../../lib/types';
 
 let DateTimePicker: any = null;
@@ -126,6 +127,15 @@ export default function ProfileScreen() {
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
 
+  const [indicatorStatus, setIndicatorStatus] = useState<SaveStatus>('idle');
+  const indicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showError() {
+    if (indicatorTimerRef.current) clearTimeout(indicatorTimerRef.current);
+    setIndicatorStatus('error');
+    indicatorTimerRef.current = setTimeout(() => setIndicatorStatus('idle'), 2200);
+  }
+
   useEffect(() => {
     async function loadPet() {
       const currentId = await getCurrentPetId();
@@ -157,17 +167,20 @@ export default function ProfileScreen() {
   }
 
   async function handleSave() {
-    if (!name.trim() || !breed.trim() || !birthDate.trim()) {
-      Alert.alert('필수 항목을 입력해주세요', '이름, 견종, 생일은 필수입니다.');
+    if (!name.trim() || !breed.trim() || !birthDate.trim() || !weightKg.trim()) {
+      showError();
       return;
     }
     const weight = parseFloat(weightKg);
     if (isNaN(weight) || weight <= 0) {
-      Alert.alert('체중을 확인해주세요', '올바른 체중을 입력해주세요.');
+      showError();
       return;
     }
 
     try {
+      if (indicatorTimerRef.current) clearTimeout(indicatorTimerRef.current);
+      setIndicatorStatus('saving');
+
       const now = new Date().toISOString();
       const id = petId ?? generateId();
       const savedAt = createdAt ?? now;
@@ -191,12 +204,14 @@ export default function ProfileScreen() {
         setCreatedAt(pet.createdAt);
       }
       notifyPetNameChanged();
-      Alert.alert('저장됐어요 🐾', '', [
-        { text: '확인', onPress: () => router.replace('/(tabs)/') },
-      ]);
+      setIndicatorStatus('saved');
+      indicatorTimerRef.current = setTimeout(() => {
+        setIndicatorStatus('idle');
+        router.replace('/(tabs)/');
+      }, 1500);
     } catch (e) {
       console.error('[ProfileScreen] 저장 실패:', e);
-      Alert.alert('저장 실패', '다시 시도해주세요.');
+      showError();
     }
   }
 
@@ -360,6 +375,21 @@ export default function ProfileScreen() {
           <Text style={styles.saveButtonText}>저장</Text>
         </TouchableOpacity>
       </View>
+
+      <SaveIndicator
+        status={indicatorStatus}
+        centered
+        labels={{
+          saving: '저장 중...',
+          saved: '저장되었습니다 ✓',
+          error: '필수 항목을 입력해주세요',
+        }}
+        textColors={{
+          saving: 'rgba(255,255,255,0.90)',
+          saved: 'rgba(255,255,255,0.90)',
+          error: 'rgba(255,255,255,0.90)',
+        }}
+      />
     </View>
   );
 }
