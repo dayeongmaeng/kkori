@@ -40,7 +40,7 @@ export default function AppHeader() {
   }, [loadPetName]);
 
   function handlePetPress() {
-    Alert.alert('반려동물 추가 기능은 곧 출시예정이에요 🐾');
+    Alert.alert('알림', '반려동물 추가 기능은 출시 예정이에요 🐾');
   }
 
   return (
