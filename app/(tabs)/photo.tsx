@@ -1,4 +1,4 @@
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage } from '../../lib/imagePickerHelper';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -82,27 +82,9 @@ export default function PhotoScreen() {
       return;
     }
 
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('권한 필요', '사진 접근 권한이 필요합니다.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-      base64: true,
-    });
-    if (result.canceled) return;
-
-    const b64 = result.assets[0].base64;
-    if (!b64) {
-      Alert.alert('오류', '사진을 처리하지 못했어요. 다시 시도해주세요.');
-      return;
-    }
-    handlePhotoTaken(`data:image/jpeg;base64,${b64}`);
+    const dataUri = await pickImage({ allowsEditing: true, aspect: [1, 1], quality: 0.5 });
+    if (!dataUri) return;
+    handlePhotoTaken(dataUri);
   }
 
   function handleTapTodayPhoto() {

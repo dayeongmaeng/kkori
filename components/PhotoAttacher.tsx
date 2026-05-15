@@ -1,7 +1,6 @@
-import * as ImagePicker from 'expo-image-picker';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
-import { uriToBase64 } from '../lib/photoUtils';
+import { pickImage } from '../lib/imagePickerHelper';
 
 const MAX_PHOTOS = 3;
 
@@ -12,19 +11,9 @@ interface Props {
 
 export default function PhotoAttacher({ photoUris, onChangePhotoUris }: Props) {
   async function handleAdd() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      quality: 0.8,
-      allowsEditing: false,
-    });
-    if (result.canceled || !result.assets?.[0]) return;
-
-    try {
-      const base64 = await uriToBase64(result.assets[0].uri);
-      onChangePhotoUris([...photoUris, base64]);
-    } catch {
-      // 변환 실패 시 조용히 무시
-    }
+    const dataUri = await pickImage({ allowsEditing: false, quality: 0.8 });
+    if (!dataUri) return;
+    onChangePhotoUris([...photoUris, dataUri]);
   }
 
   function handleRemove(index: number) {

@@ -1,4 +1,4 @@
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage } from '../../lib/imagePickerHelper';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -198,27 +198,10 @@ export default function ProfileScreen() {
     loadPet();
   }, []);
 
-  async function pickImage() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('권한 필요', '사진 접근 권한이 필요합니다.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-      base64: true,
-    });
-    if (result.canceled) return;
-
-    const b64 = result.assets[0].base64;
-    if (!b64) {
-      Alert.alert('오류', '사진 처리에 실패했어요. 다시 시도해주세요.');
-      return;
-    }
-    setPhotoUri(`data:image/jpeg;base64,${b64}`);
+  async function handlePickImage() {
+    const dataUri = await pickImage({ allowsEditing: true, aspect: [1, 1], quality: 0.5 });
+    if (!dataUri) return;
+    setPhotoUri(dataUri);
   }
 
   return (
@@ -235,7 +218,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* 사진 */}
-      <TouchableOpacity style={styles.photoWrapper} onPress={pickImage}>
+      <TouchableOpacity style={styles.photoWrapper} onPress={handlePickImage}>
         {photoUri ? (
           <Image source={{ uri: photoUri }} style={styles.photo} contentFit="cover" />
         ) : (
