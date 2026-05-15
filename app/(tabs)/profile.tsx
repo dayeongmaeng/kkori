@@ -1,5 +1,5 @@
 import { pickImage } from '../../lib/imagePickerHelper';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -11,13 +11,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { router } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Image } from 'expo-image';
 import { colors, radius, spacing } from '../../constants/theme';
-import { useAutoSave } from '../../hooks/useAutoSave';
 import { getCurrentPetId, getPet, savePet, setCurrentPetId } from '../../lib/storage';
+import { notifyPetNameChanged } from '../../lib/petNameEvents';
 import { Pet } from '../../lib/types';
-import SaveIndicator from '../../components/SaveIndicator';
 
 let DateTimePicker: any = null;
 try {
@@ -51,7 +51,6 @@ function storageToDate(s: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// 웹 fallback: 년/월/일 select 3개
 function WebDatePicker({
   value,
   onChange,
@@ -123,55 +122,9 @@ export default function ProfileScreen() {
   const [neutered, setNeutered] = useState(false);
   const [medicalNotes, setMedicalNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  // 날짜 피커 상태
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
-
-  // petId/createdAt은 자동저장 시 최신값 참조용 ref
-  const petIdRef = useRef<string | null>(null);
-  const createdAtRef = useRef<string | null>(null);
-  petIdRef.current = petId;
-  createdAtRef.current = createdAt;
-
-  const profileData = { name, breed, birthDate, weightKg, neutered, medicalNotes, photoUri };
-
-  const autoSavePet = useCallback(async (data: typeof profileData) => {
-    if (!data.name.trim() || !data.breed.trim() || !data.birthDate.trim()) return;
-    const weight = parseFloat(data.weightKg);
-    if (isNaN(weight) || weight <= 0) return;
-
-    const now = new Date().toISOString();
-    const id = petIdRef.current ?? generateId();
-    const savedAt = createdAtRef.current ?? now;
-    const pet: Pet = {
-      id,
-      species: 'dog',
-      name: data.name.trim(),
-      breed: data.breed.trim(),
-      birthDate: data.birthDate.trim(),
-      weightKg: weight,
-      neutered: data.neutered,
-      medicalNotes: data.medicalNotes.trim() || undefined,
-      photoUri: data.photoUri,
-      caregiverIds: [],
-      createdAt: savedAt,
-    };
-    await savePet(pet);
-    await setCurrentPetId(pet.id);
-    if (!petIdRef.current) {
-      setPetId(pet.id);
-      setCreatedAt(pet.createdAt);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const { status: saveStatus } = useAutoSave(
-    profileData,
-    autoSavePet,
-    { enabled: isLoaded && name.trim().length > 0 }
-  );
 
   useEffect(() => {
     async function loadPet() {
@@ -193,7 +146,6 @@ export default function ProfileScreen() {
           }
         }
       }
-      setIsLoaded(true);
     }
     loadPet();
   }, []);
@@ -204,161 +156,210 @@ export default function ProfileScreen() {
     setPhotoUri(dataUri);
   }
 
+  async function handleSave() {
+    if (!name.trim() || !breed.trim() || !birthDate.trim()) {
+      Alert.alert('필수 항목을 입력해주세요', '이름, 견종, 생일은 필수입니다.');
+      return;
+    }
+    const weight = parseFloat(weightKg);
+    if (isNaN(weight) || weight <= 0) {
+      Alert.alert('체중을 확인해주세요', '올바른 체중을 입력해주세요.');
+      return;
+    }
+
+    try {
+      const now = new Date().toISOString();
+      const id = petId ?? generateId();
+      const savedAt = createdAt ?? now;
+      const pet: Pet = {
+        id,
+        species: 'dog',
+        name: name.trim(),
+        breed: breed.trim(),
+        birthDate: birthDate.trim(),
+        weightKg: weight,
+        neutered,
+        medicalNotes: medicalNotes.trim() || undefined,
+        photoUri,
+        caregiverIds: [],
+        createdAt: savedAt,
+      };
+      await savePet(pet);
+      await setCurrentPetId(pet.id);
+      if (!petId) {
+        setPetId(pet.id);
+        setCreatedAt(pet.createdAt);
+      }
+      notifyPetNameChanged();
+      Alert.alert('저장됐어요 🐾', '', [
+        { text: '확인', onPress: () => router.replace('/(tabs)/') },
+      ]);
+    } catch (e) {
+      console.error('[ProfileScreen] 저장 실패:', e);
+      Alert.alert('저장 실패', '다시 시도해주세요.');
+    }
+  }
+
   return (
     <View style={styles.container}>
-      <SaveIndicator status={saveStatus} />
       <KeyboardAwareScrollView
         contentContainerStyle={styles.content}
         enableOnAndroid
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
       >
-      {/* 사진 */}
-      <TouchableOpacity style={styles.photoWrapper} onPress={handlePickImage}>
-        {photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.photo} contentFit="cover" />
-        ) : (
-          <View style={styles.photoPlaceholder}>
-            <Text style={styles.photoPlaceholderIcon}>📷</Text>
-            <Text style={styles.photoPlaceholderText}>사진 추가</Text>
-          </View>
-        )}
-      </TouchableOpacity>
+        {/* 사진 */}
+        <TouchableOpacity style={styles.photoWrapper} onPress={handlePickImage}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={styles.photo} contentFit="cover" />
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Text style={styles.photoPlaceholderIcon}>📷</Text>
+              <Text style={styles.photoPlaceholderText}>사진 추가</Text>
+            </View>
+          )}
+        </TouchableOpacity>
 
-      {/* 이름 */}
-      <View style={styles.field}>
-        <Text style={styles.label}>이름 *</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="강아지 이름"
-          placeholderTextColor={colors.textQuaternary}
-        />
-      </View>
+        {/* 이름 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>이름 *</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="강아지 이름"
+            placeholderTextColor={colors.textQuaternary}
+          />
+        </View>
 
-      {/* 견종 */}
-      <View style={styles.field}>
-        <Text style={styles.label}>견종 *</Text>
-        <TextInput
-          style={styles.input}
-          value={breed}
-          onChangeText={setBreed}
-          placeholder="예: 말티즈, 포메라니안"
-          placeholderTextColor={colors.textQuaternary}
-        />
-      </View>
+        {/* 견종 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>견종 *</Text>
+          <TextInput
+            style={styles.input}
+            value={breed}
+            onChangeText={setBreed}
+            placeholder="예: 말티즈, 포메라니안"
+            placeholderTextColor={colors.textQuaternary}
+          />
+        </View>
 
-      {/* 생일 */}
-      <View style={styles.field}>
-        <Text style={styles.label}>생일 *</Text>
-        <TouchableOpacity
-          style={[styles.input, styles.dateButton]}
-          onPress={() => {
-            const parsed = storageToDate(birthDate);
-            setPickerDate(parsed ?? new Date(2020, 0, 1));
-            setDatePickerVisible(true);
-          }}
+        {/* 생일 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>생일 *</Text>
+          <TouchableOpacity
+            style={[styles.input, styles.dateButton]}
+            onPress={() => {
+              const parsed = storageToDate(birthDate);
+              setPickerDate(parsed ?? new Date(2020, 0, 1));
+              setDatePickerVisible(true);
+            }}
+          >
+            <Text style={birthDate ? styles.dateText : styles.datePlaceholder}>
+              {birthDate ? (() => {
+                const d = storageToDate(birthDate);
+                return d ? formatBirthDate(d) : birthDate;
+              })() : '생일 선택'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 날짜 선택 모달 */}
+        <Modal
+          visible={datePickerVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setDatePickerVisible(false)}
         >
-          <Text style={birthDate ? styles.dateText : styles.datePlaceholder}>
-            {birthDate ? (() => {
-              const d = storageToDate(birthDate);
-              return d ? formatBirthDate(d) : birthDate;
-            })() : '생일 선택'}
-          </Text>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
+                  <Text style={styles.modalCancel}>취소</Text>
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>생일 선택</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setBirthDate(dateToStorage(pickerDate));
+                    setDatePickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalDone}>완료</Text>
+                </TouchableOpacity>
+              </View>
+
+              {Platform.OS === 'web' ? (
+                <View style={styles.webPickerWrapper}>
+                  <WebDatePicker value={pickerDate} onChange={setPickerDate} />
+                </View>
+              ) : DateTimePicker ? (
+                <DateTimePicker
+                  value={pickerDate}
+                  mode="date"
+                  display="spinner"
+                  locale="ko-KR"
+                  minimumDate={minDate}
+                  maximumDate={maxDate}
+                  onChange={(_: any, date?: Date) => {
+                    if (date) setPickerDate(date);
+                  }}
+                />
+              ) : null}
+            </View>
+          </View>
+        </Modal>
+
+        {/* 체중 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>체중 *</Text>
+          <View style={styles.weightRow}>
+            <TextInput
+              style={[styles.input, styles.weightInput]}
+              value={weightKg}
+              onChangeText={setWeightKg}
+              placeholder="0.0"
+              placeholderTextColor={colors.textQuaternary}
+              keyboardType="decimal-pad"
+            />
+            <Text style={styles.weightUnit}>kg</Text>
+          </View>
+        </View>
+
+        {/* 중성화 */}
+        <View style={styles.field}>
+          <View style={styles.switchRow}>
+            <Text style={styles.label}>중성화 완료</Text>
+            <Switch
+              value={neutered}
+              onValueChange={setNeutered}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+
+        {/* 건강 메모 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>건강 메모 (선택)</Text>
+          <TextInput
+            style={[styles.input, styles.textarea]}
+            value={medicalNotes}
+            onChangeText={setMedicalNotes}
+            placeholder="알레르기, 복용 중인 약, 주의사항 등"
+            placeholderTextColor={colors.textQuaternary}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+      </KeyboardAwareScrollView>
+
+      {/* 저장 버튼 */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave} activeOpacity={0.8}>
+          <Text style={styles.saveButtonText}>저장</Text>
         </TouchableOpacity>
       </View>
-
-      {/* 날짜 선택 모달 */}
-      <Modal
-        visible={datePickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDatePickerVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
-                <Text style={styles.modalCancel}>취소</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>생일 선택</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setBirthDate(dateToStorage(pickerDate));
-                  setDatePickerVisible(false);
-                }}
-              >
-                <Text style={styles.modalDone}>완료</Text>
-              </TouchableOpacity>
-            </View>
-
-            {Platform.OS === 'web' ? (
-              <View style={styles.webPickerWrapper}>
-                <WebDatePicker value={pickerDate} onChange={setPickerDate} />
-              </View>
-            ) : DateTimePicker ? (
-              <DateTimePicker
-                value={pickerDate}
-                mode="date"
-                display="spinner"
-                locale="ko-KR"
-                minimumDate={minDate}
-                maximumDate={maxDate}
-                onChange={(_: any, date?: Date) => {
-                  if (date) setPickerDate(date);
-                }}
-              />
-            ) : null}
-          </View>
-        </View>
-      </Modal>
-
-      {/* 체중 */}
-      <View style={styles.field}>
-        <Text style={styles.label}>체중 *</Text>
-        <View style={styles.weightRow}>
-          <TextInput
-            style={[styles.input, styles.weightInput]}
-            value={weightKg}
-            onChangeText={setWeightKg}
-            placeholder="0.0"
-            placeholderTextColor={colors.textQuaternary}
-            keyboardType="decimal-pad"
-          />
-          <Text style={styles.weightUnit}>kg</Text>
-        </View>
-      </View>
-
-      {/* 중성화 */}
-      <View style={styles.field}>
-        <View style={styles.switchRow}>
-          <Text style={styles.label}>중성화 완료</Text>
-          <Switch
-            value={neutered}
-            onValueChange={setNeutered}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor="#FFFFFF"
-          />
-        </View>
-      </View>
-
-      {/* 건강 메모 */}
-      <View style={styles.field}>
-        <Text style={styles.label}>건강 메모 (선택)</Text>
-        <TextInput
-          style={[styles.input, styles.textarea]}
-          value={medicalNotes}
-          onChangeText={setMedicalNotes}
-          placeholder="알레르기, 복용 중인 약, 주의사항 등"
-          placeholderTextColor={colors.textQuaternary}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
-      </View>
-
-      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.xl,
-    paddingBottom: 200,
+    paddingBottom: 100,
   },
   photoWrapper: {
     alignSelf: 'center',
@@ -491,5 +492,23 @@ const styles = StyleSheet.create({
   },
   webPickerWrapper: {
     padding: spacing.xl,
+  },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textOnPrimary,
   },
 });

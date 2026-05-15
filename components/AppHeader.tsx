@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
 import { colors } from '../constants/theme';
 import { getCurrentPetId, getPet } from '../lib/storage';
+import { subscribePetName } from '../lib/petNameEvents';
 
 const logoSource = require('../assets/logo.png');
 
@@ -27,17 +27,17 @@ export default function AppHeader() {
   const insets = useSafeAreaInsets();
   const [petName, setPetName] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      async function loadPetName() {
-        const petId = await getCurrentPetId();
-        if (!petId) { setPetName(null); return; }
-        const pet = await getPet(petId);
-        setPetName(pet?.name ?? null);
-      }
-      loadPetName();
-    }, [])
-  );
+  const loadPetName = useCallback(async () => {
+    const petId = await getCurrentPetId();
+    if (!petId) { setPetName(null); return; }
+    const pet = await getPet(petId);
+    setPetName(pet?.name ?? null);
+  }, []);
+
+  useEffect(() => {
+    loadPetName();
+    return subscribePetName(loadPetName);
+  }, [loadPetName]);
 
   function handlePetPress() {
     Alert.alert('반려동물 추가 기능은 곧 출시예정이에요 🐾');
