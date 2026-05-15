@@ -133,23 +133,26 @@ export default function PhotoScreen() {
 
   const listHeader = (
     <View>
-      <View style={styles.headerBannerRow}>
-        {/* 좌측 배지 */}
+      <View style={styles.headerBannerCol}>
+        {/* 상단: 타이틀 + 월력 버튼 */}
+        <View style={styles.headerBannerRow}>
+          <Text style={styles.headerTitle}>하루 한 장</Text>
+          <TouchableOpacity
+            style={styles.calendarBtn}
+            onPress={() => Alert.alert('곧 출시될 기능이에요 🐾', '조금만 기다려주세요')}
+            activeOpacity={0.75}
+          >
+            <View style={styles.comingSoonBadge}>
+              <Text style={styles.comingSoonBadgeText}>출시 예정</Text>
+            </View>
+            <Text style={styles.calendarBtnText}>월력 만들기</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 하단 안내 배지 */}
         <View style={styles.headerBadge}>
           <Text style={styles.headerBadgeText}>오늘의 한 장이 오래도록 남아요.</Text>
         </View>
-
-        {/* 우측 월력 버튼 */}
-        <TouchableOpacity
-          style={styles.calendarBtn}
-          onPress={() => Alert.alert('곧 출시될 기능이에요 🐾', '조금만 기다려주세요')}
-          activeOpacity={0.75}
-        >
-          <View style={styles.comingSoonBadge}>
-            <Text style={styles.comingSoonBadgeText}>출시 예정</Text>
-          </View>
-          <Text style={styles.calendarBtnText}>월력 만들기</Text>
-        </TouchableOpacity>
       </View>
       <View style={styles.headerSection}>
         <TodayPhotoCard
@@ -218,12 +221,20 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingHorizontal: spacing.lg,
   },
+  headerBannerCol: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
   headerBannerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
   headerBadge: {
     backgroundColor: colors.primary,
