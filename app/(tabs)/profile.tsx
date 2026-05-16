@@ -1,6 +1,7 @@
 import { pickImage } from '../../lib/imagePickerHelper';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Modal,
   Platform,
   StyleSheet,
@@ -14,11 +15,19 @@ import { router } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Image } from 'expo-image';
 import { colors, radius, spacing } from '../../constants/theme';
-import { getCurrentPetId, getPet, savePet, setCurrentPetId } from '../../lib/storage';
+import { petApi, PetResponse } from '../../lib/api/pet';
+import {
+  getCachedCurrentPetId,
+  getCachedPetPhoto,
+  getCachedPets,
+  setCachedCurrentPetId,
+  setCachedPetPhoto,
+  setCachedPets,
+  upsertCachedPet,
+} from '../../lib/cache/pet';
 import { notifyPetNameChanged } from '../../lib/petNameEvents';
 import { SaveStatus } from '../../hooks/useAutoSave';
 import SaveIndicator from '../../components/SaveIndicator';
-import { Pet } from '../../lib/types';
 
 let DateTimePicker: any = null;
 try {
@@ -109,13 +118,8 @@ const webPickerStyles = {
   },
 };
 
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
-
 export default function ProfileScreen() {
-  const [petId, setPetId] = useState<string | null>(null);
-  const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [externalId, setExternalId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [breed, setBreed] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -124,11 +128,22 @@ export default function ProfileScreen() {
   const [medicalNotes, setMedicalNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
 
+  const [isSaving, setIsSaving] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
 
   const [indicatorStatus, setIndicatorStatus] = useState<SaveStatus>('idle');
   const indicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function fillForm(pet: PetResponse) {
+    setExternalId(pet.externalId);
+    setName(pet.name);
+    setBreed(pet.breed ?? '');
+    setBirthDate(pet.birthDate ?? '');
+    setWeightKg(pet.weightKg !== undefined ? String(pet.weightKg) : '');
+    setNeutered(pet.neutered ?? false);
+    setMedicalNotes(pet.medicalNotes ?? '');
+  }
 
   function showError() {
     if (indicatorTimerRef.current) clearTimeout(indicatorTimerRef.current);
@@ -137,27 +152,34 @@ export default function ProfileScreen() {
   }
 
   useEffect(() => {
-    async function loadPet() {
-      const currentId = await getCurrentPetId();
-      if (currentId) {
-        const saved = await getPet(currentId);
-        if (saved) {
-          setPetId(saved.id);
-          setCreatedAt(saved.createdAt);
-          setName(saved.name);
-          setBreed(saved.breed);
-          setBirthDate(saved.birthDate);
-          setWeightKg(String(saved.weightKg));
-          setNeutered(saved.neutered);
-          setMedicalNotes(saved.medicalNotes ?? '');
-          const uri = saved.photoUri;
-          if (uri && !uri.startsWith('blob:') && !uri.startsWith('file://')) {
-            setPhotoUri(uri);
-          }
+    async function load() {
+      // 1단계: 캐시에서 즉시 로드
+      const cachedId = await getCachedCurrentPetId();
+      if (cachedId) {
+        const cached = await getCachedPets();
+        const pet = cached.find((p) => p.externalId === cachedId);
+        if (pet) {
+          fillForm(pet);
+          const photo = await getCachedPetPhoto(cachedId);
+          if (photo) setPhotoUri(photo);
         }
       }
+
+      // 2단계: 서버에서 최신 데이터 fetch (백그라운드)
+      try {
+        const serverPets = await petApi.getPets();
+        await setCachedPets(serverPets);
+
+        const targetId = cachedId;
+        if (targetId) {
+          const serverPet = serverPets.find((p) => p.externalId === targetId);
+          if (serverPet) fillForm(serverPet);
+        }
+      } catch {
+        // 오프라인 또는 서버 에러 — 캐시 유지, 에러 표시 없음
+      }
     }
-    loadPet();
+    load();
   }, []);
 
   async function handlePickImage() {
@@ -180,38 +202,41 @@ export default function ProfileScreen() {
     try {
       if (indicatorTimerRef.current) clearTimeout(indicatorTimerRef.current);
       setIndicatorStatus('saving');
+      setIsSaving(true);
 
-      const now = new Date().toISOString();
-      const id = petId ?? generateId();
-      const savedAt = createdAt ?? now;
-      const pet: Pet = {
-        id,
-        species: 'dog',
+      const body = {
         name: name.trim(),
+        species: 'dog',
         breed: breed.trim(),
         birthDate: birthDate.trim(),
         weightKg: weight,
         neutered,
         medicalNotes: medicalNotes.trim() || undefined,
-        photoUri,
-        caregiverIds: [],
-        createdAt: savedAt,
       };
-      await savePet(pet);
-      await setCurrentPetId(pet.id);
-      if (!petId) {
-        setPetId(pet.id);
-        setCreatedAt(pet.createdAt);
-      }
+
+      const response = externalId
+        ? await petApi.updatePet(externalId, body)
+        : await petApi.createPet(body);
+
+      // 캐시 업데이트
+      await upsertCachedPet(response);
+      await setCachedCurrentPetId(response.externalId);
+      if (photoUri) await setCachedPetPhoto(response.externalId, photoUri);
+
+      setExternalId(response.externalId);
       notifyPetNameChanged();
+
       setIndicatorStatus('saved');
       indicatorTimerRef.current = setTimeout(() => {
         setIndicatorStatus('idle');
         router.replace('/(tabs)/');
       }, 1500);
     } catch (e) {
-      console.error('[ProfileScreen] 저장 실패:', e);
-      showError();
+      console.error('[ProfileScreen] 서버 저장 실패:', e);
+      setIndicatorStatus('idle');
+      Alert.alert('저장 실패', '서버 연결을 확인해주세요.');
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -371,15 +396,20 @@ export default function ProfileScreen() {
 
       {/* 저장 버튼 */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave} activeOpacity={0.8}>
-          <Text style={styles.saveButtonText}>저장</Text>
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          activeOpacity={0.8}
+          disabled={isSaving}
+        >
+          <Text style={styles.saveButtonText}>{isSaving ? '저장 중...' : '저장'}</Text>
         </TouchableOpacity>
       </View>
 
       <SaveIndicator
         status={indicatorStatus}
         labels={{
-          saving: '저장 중...',
+          saving: '서버에 저장 중...',
           saved: '저장되었습니다 ✓',
           error: '필수 항목을 입력해주세요',
         }}
@@ -534,6 +564,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: 16,
     alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
   },
   saveButtonText: {
     fontSize: 16,

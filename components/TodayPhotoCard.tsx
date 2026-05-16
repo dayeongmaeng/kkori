@@ -6,10 +6,10 @@ import { useRef, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
 import { resizeImage } from '../lib/imagePickerHelper';
-import { DailyPhoto } from '../lib/types';
+import { LocalPhoto } from '../lib/cache/photo';
 
 interface Props {
-  todayPhoto?: DailyPhoto;
+  todayPhoto?: LocalPhoto;
   onPhotoTaken: (base64Uri: string) => void;
   onTapGallery: () => void;
   onTapPhoto: () => void;
@@ -171,8 +171,20 @@ export default function TodayPhotoCard({
   onTapPhoto,
   aspectRatio = 1,
 }: Props) {
-  // 사진 있을 때
+  // 사진 있을 때 — 다른 기기에서 찍어 로컬 데이터 없는 경우 회색 박스
   if (todayPhoto) {
+    if (!todayPhoto.photoUri) {
+      return (
+        <TouchableOpacity
+          style={[styles.photoCard, styles.noLocalCard, { aspectRatio }]}
+          onPress={onTapPhoto}
+          activeOpacity={0.92}
+        >
+          <Text style={styles.noLocalEmoji}>📲</Text>
+          <Text style={styles.noLocalText}>다른 기기에서 찍은 사진이에요</Text>
+        </TouchableOpacity>
+      );
+    }
     return (
       <TouchableOpacity
         style={[styles.photoCard, { aspectRatio }]}
@@ -227,6 +239,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
     backgroundColor: colors.surfaceAlt,
+  },
+  noLocalCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceAlt,
+  },
+  noLocalEmoji: {
+    fontSize: 36,
+  },
+  noLocalText: {
+    fontSize: 13,
+    color: colors.textTertiary,
+    textAlign: 'center',
   },
   overlayTopLeft: {
     position: 'absolute',

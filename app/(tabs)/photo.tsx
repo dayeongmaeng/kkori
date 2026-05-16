@@ -16,22 +16,33 @@ import { Image } from 'expo-image';
 import CaptionModal from '../../components/CaptionModal';
 import EmptyPetState from '../../components/EmptyPetState';
 import TodayPhotoCard from '../../components/TodayPhotoCard';
+import { photoApi } from '../../lib/api/photo';
 import {
-  getCurrentPetId,
-  getDailyPhotos,
-  saveDailyPhoto,
-} from '../../lib/storage';
+  getCachedPhotos,
+  LocalPhoto,
+  mergeWithLocal,
+  setCachedPhotos,
+  upsertCachedPhoto,
+} from '../../lib/cache/photo';
+import { getCachedCurrentPetId } from '../../lib/cache/pet';
+import { getCachedCurrentCaregiverId } from '../../lib/cache/caregiver';
+import { initCaregiver } from '../../lib/api/initCaregiver';
+import { savePhotoLocal } from '../../lib/photoLocalCache';
 import { colors, radius, shadow, spacing } from '../../constants/theme';
 import { useDate } from '../../contexts/DateContext';
-import { DailyPhoto } from '../../lib/types';
 
 const CELL_SIZE = Math.floor(Dimensions.get('window').width / 3);
 
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 11);
-}
-
-function PhotoCell({ photo, onPress }: { photo: DailyPhoto; onPress: () => void }) {
+function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void }) {
+  if (!photo.photoUri) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+        <View style={[styles.cell, styles.cellNoLocal]}>
+          <Text style={styles.cellNoLocalIcon}>📲</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
       <Image source={{ uri: photo.photoUri }} style={styles.cell} contentFit="cover" />
@@ -41,7 +52,7 @@ function PhotoCell({ photo, onPress }: { photo: DailyPhoto; onPress: () => void 
 
 export default function PhotoScreen() {
   const [hasPet, setHasPet] = useState<boolean | null>(null);
-  const [photos, setPhotos] = useState<DailyPhoto[]>([]);
+  const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingBase64, setPendingBase64] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -51,15 +62,27 @@ export default function PhotoScreen() {
   const pastPhotos = photos.filter((p) => p.date !== today);
 
   const load = useCallback(async () => {
-    const petId = await getCurrentPetId();
+    const petId = await getCachedCurrentPetId();
     if (!petId) { setHasPet(false); return; }
     setHasPet(true);
-    const loadedPhotos = await getDailyPhotos(petId);
-    setPhotos(loadedPhotos);
+
+    // 1단계: 캐시에서 즉시 표시
+    const cached = await getCachedPhotos(petId);
+    setPhotos(await mergeWithLocal(cached));
+
+    // 2단계: 서버에서 갱신 (백그라운드)
+    try {
+      const serverPhotos = await photoApi.getPhotos(petId);
+      console.log('[PhotoLoad] 서버 응답 원형:', JSON.stringify(serverPhotos)?.slice(0, 300));
+      await setCachedPhotos(petId, serverPhotos);
+      setPhotos(await mergeWithLocal(serverPhotos));
+    } catch (e) {
+      console.warn('[PhotoLoad] 서버 fetch 실패:', e);
+      // 오프라인 — 캐시 유지
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   useEffect(() => {
@@ -81,42 +104,56 @@ export default function PhotoScreen() {
   }
 
   async function handleOpenGallery() {
-    const petId = await getCurrentPetId();
+    const petId = await getCachedCurrentPetId();
     if (!petId) {
       Alert.alert('알림', '프로필 탭에서 반려동물을 먼저 등록해주세요.');
       return;
     }
-
     const dataUri = await pickImage({ allowsEditing: true, aspect: [1, 1] });
     if (!dataUri) return;
     handlePhotoTaken(dataUri);
   }
 
   function handleTapTodayPhoto() {
-    if (todayPhoto) router.push(`/photo/${todayPhoto.id}`);
+    if (todayPhoto) router.push(`/photo/${todayPhoto.externalId}`);
   }
 
   async function handleSavePhoto(caption: string) {
     setModalVisible(false);
-    const petId = await getCurrentPetId();
+    const petId = await getCachedCurrentPetId();
     if (!petId || !pendingBase64) return;
 
-    const photo: DailyPhoto = {
-      id: generateId(),
-      petId,
-      date: today,
-      photoUri: pendingBase64,
-      caption: caption || undefined,
-      caregiverId: '',
-      createdAt: new Date().toISOString(),
-    };
-
     try {
-      await saveDailyPhoto(photo);
+      // takenAt의 날짜 부분을 today(KST)로 고정하여 그리드 분류 일치
+      const timeStr = new Date().toISOString().split('T')[1];
+      const takenAt = `${today}T${timeStr}`;
+
+      let caregiverId = await getCachedCurrentCaregiverId();
+      console.log('[PhotoSave] caregiverId (캐시):', caregiverId);
+
+      if (!caregiverId) {
+        console.warn('[PhotoSave] caregiverId 없음 — initCaregiver 재시도');
+        await initCaregiver();
+        caregiverId = await getCachedCurrentCaregiverId();
+        console.log('[PhotoSave] caregiverId (재시도 후):', caregiverId);
+      }
+
+      const response = await photoApi.createPhoto({
+        petExternalId: petId,
+        caregiverExternalId: caregiverId ?? undefined,
+        date: today,
+        takenAt,
+        memo: caption || undefined,
+      });
+      console.log('[PhotoSave] 서버 응답:', response.externalId, '/ caregiverExternalId 전달값:', caregiverId);
+
+      await savePhotoLocal(response.externalId, pendingBase64);
+      await upsertCachedPhoto(petId, response);
+
       setPendingBase64(null);
       await load();
     } catch {
-      Alert.alert('오류', '저장에 실패했어요. 다시 시도해주세요.');
+      Alert.alert('오류', '서버에 저장하지 못했어요. 다시 시도해주세요.');
     }
   }
 
@@ -128,7 +165,6 @@ export default function PhotoScreen() {
   const listHeader = (
     <View>
       <View style={styles.headerBannerCol}>
-        {/* 상단: 타이틀 + 월력 버튼 */}
         <View style={styles.headerBannerRow}>
           <Text style={styles.headerTitle}>하루 한 장</Text>
           <TouchableOpacity
@@ -142,8 +178,6 @@ export default function PhotoScreen() {
             <Text style={styles.calendarBtnText}>월력 만들기</Text>
           </TouchableOpacity>
         </View>
-
-        {/* 하단 안내 배지 */}
         <View style={styles.headerBadge}>
           <Text style={styles.headerBadgeText}>오늘의 한 장이 오래도록 남아요.</Text>
         </View>
@@ -180,12 +214,12 @@ export default function PhotoScreen() {
     <View style={styles.container}>
       <FlatList
         data={pastPhotos}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.externalId}
         numColumns={3}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={listEmpty}
         renderItem={({ item }) => (
-          <PhotoCell photo={item} onPress={() => router.push(`/photo/${item.id}`)} />
+          <PhotoCell photo={item} onPress={() => router.push(`/photo/${item.externalId}`)} />
         )}
         ItemSeparatorComponent={() => <View style={{ height: 2 }} />}
         columnWrapperStyle={pastPhotos.length > 0 ? styles.row : undefined}
@@ -282,5 +316,13 @@ const styles = StyleSheet.create({
   cell: {
     width: CELL_SIZE,
     height: CELL_SIZE,
+  },
+  cellNoLocal: {
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cellNoLocalIcon: {
+    fontSize: 24,
   },
 });

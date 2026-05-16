@@ -9,6 +9,7 @@ import Toast from 'react-native-toast-message';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DateProvider } from '../contexts/DateContext';
+import { initApp } from '../lib/api/init';
 import { migrateLegacyData } from '../lib/storage';
 
 export const unstable_settings = {
@@ -20,6 +21,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     migrateLegacyData();
+    initApp().catch((e) => console.error('[Init] 초기화 실패:', e));
   }, []);
 
   return (

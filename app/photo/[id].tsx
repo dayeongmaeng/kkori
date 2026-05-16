@@ -18,8 +18,16 @@ import {
 import { Image } from 'expo-image';
 import PhotoActionSheet from '../../components/PhotoActionSheet';
 import { base64ToTempFile } from '../../lib/photoUtils';
-import { deleteDailyPhoto, getCurrentPetId, getDailyPhotos } from '../../lib/storage';
-import { DailyPhoto } from '../../lib/types';
+import { photoApi } from '../../lib/api/photo';
+import { getCachedCurrentPetId } from '../../lib/cache/pet';
+import {
+  getCachedPhotos,
+  LocalPhoto,
+  mergeWithLocal,
+  removeCachedPhoto,
+  setCachedPhotos,
+} from '../../lib/cache/photo';
+import { deletePhotoLocal } from '../../lib/photoLocalCache';
 import { colors, spacing } from '../../constants/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -31,24 +39,39 @@ function formatDateKorean(dateStr: string) {
 
 export default function PhotoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [photos, setPhotos] = useState<DailyPhoto[]>([]);
+  const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [initialIndex, setInitialIndex] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [listHeight, setListHeight] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
-  const flatListRef = useRef<FlatList<DailyPhoto>>(null);
+  const flatListRef = useRef<FlatList<LocalPhoto>>(null);
 
   useEffect(() => {
     async function load() {
-      const petId = await getCurrentPetId();
+      const petId = await getCachedCurrentPetId();
       if (!petId) { setLoaded(true); return; }
-      const all = await getDailyPhotos(petId);
-      const idx = Math.max(0, all.findIndex((p) => p.id === id));
-      setPhotos(all);
+
+      // 캐시에서 즉시 로드
+      const cached = await getCachedPhotos(petId);
+      const merged = await mergeWithLocal(cached);
+      const idx = Math.max(0, merged.findIndex((p) => p.externalId === id));
+      setPhotos(merged);
       setInitialIndex(idx);
       setCurrentIndex(idx);
       setLoaded(true);
+
+      // 백그라운드 서버 갱신
+      try {
+        const serverPhotos = await photoApi.getPhotos(petId);
+        await setCachedPhotos(petId, serverPhotos);
+        const serverMerged = await mergeWithLocal(serverPhotos);
+        const serverIdx = Math.max(0, serverMerged.findIndex((p) => p.externalId === id));
+        setPhotos(serverMerged);
+        setCurrentIndex(serverIdx);
+      } catch {
+        // 오프라인 — 캐시 유지
+      }
     }
     load();
   }, [id]);
@@ -65,6 +88,10 @@ export default function PhotoDetailScreen() {
   async function handleShare() {
     setActionSheetVisible(false);
     if (!currentPhoto) return;
+    if (!currentPhoto.photoUri) {
+      Alert.alert('알림', '이 사진은 다른 기기에서 촬영되어 공유할 수 없어요.');
+      return;
+    }
     try {
       if (Platform.OS === 'web') {
         if (navigator.share) {
@@ -79,7 +106,10 @@ export default function PhotoDetailScreen() {
         Alert.alert('알림', '이 기기에서는 공유 기능을 사용할 수 없어요.');
         return;
       }
-      const tempUri = await base64ToTempFile(currentPhoto.photoUri, `photo_${currentPhoto.id}.jpg`);
+      const tempUri = await base64ToTempFile(
+        currentPhoto.photoUri,
+        `photo_${currentPhoto.externalId}.jpg`,
+      );
       await Sharing.shareAsync(tempUri, { dialogTitle: '오늘의 사진 공유하기' });
     } catch {
       Alert.alert('오류', '공유 중 문제가 발생했어요.');
@@ -89,6 +119,10 @@ export default function PhotoDetailScreen() {
   async function handleSaveToAlbum() {
     setActionSheetVisible(false);
     if (!currentPhoto) return;
+    if (!currentPhoto.photoUri) {
+      Alert.alert('알림', '이 사진은 다른 기기에서 촬영되어 저장할 수 없어요.');
+      return;
+    }
     try {
       if (Platform.OS === 'web') {
         const link = document.createElement('a');
@@ -102,7 +136,10 @@ export default function PhotoDetailScreen() {
         Alert.alert('권한 필요', '사진을 저장하려면 사진첩 접근 권한이 필요해요.');
         return;
       }
-      const tempUri = await base64ToTempFile(currentPhoto.photoUri, `photo_${currentPhoto.id}.jpg`);
+      const tempUri = await base64ToTempFile(
+        currentPhoto.photoUri,
+        `photo_${currentPhoto.externalId}.jpg`,
+      );
       await MediaLibrary.saveToLibraryAsync(tempUri);
       Alert.alert('완료', '사진첩에 저장됐어요 🐾');
     } catch {
@@ -112,9 +149,14 @@ export default function PhotoDetailScreen() {
 
   async function confirmDelete() {
     if (!currentPhoto) return;
+    const petId = await getCachedCurrentPetId();
+    if (!petId) return;
     try {
-      await deleteDailyPhoto(currentPhoto.id);
-      const next = photos.filter((p) => p.id !== currentPhoto.id);
+      await photoApi.deletePhoto(currentPhoto.externalId);
+      await deletePhotoLocal(currentPhoto.externalId);
+      await removeCachedPhoto(petId, currentPhoto.externalId);
+
+      const next = photos.filter((p) => p.externalId !== currentPhoto.externalId);
       if (next.length === 0) { router.back(); return; }
       const nextIndex = Math.min(currentIndex, next.length - 1);
       setPhotos(next);
@@ -140,7 +182,7 @@ export default function PhotoDetailScreen() {
         [
           { text: '취소', style: 'cancel' },
           { text: '삭제', style: 'destructive', onPress: confirmDelete },
-        ]
+        ],
       );
     }, 300);
   }
@@ -167,7 +209,6 @@ export default function PhotoDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
           <Text style={styles.headerBtnText}>← 뒤로</Text>
@@ -180,13 +221,12 @@ export default function PhotoDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 세로 스와이프 뷰어 */}
       <View style={styles.listContainer} onLayout={(e) => setListHeight(e.nativeEvent.layout.height)}>
         {loaded && listHeight > 0 && (
           <FlatList
             ref={flatListRef}
             data={photos}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.externalId}
             pagingEnabled
             showsVerticalScrollIndicator={false}
             initialScrollIndex={initialIndex}
@@ -199,11 +239,18 @@ export default function PhotoDetailScreen() {
             })}
             renderItem={({ item }) => (
               <View style={[styles.page, { height: listHeight }]}>
-                <Image
-                  source={{ uri: item.photoUri }}
-                  style={styles.photo}
-                  contentFit="cover"
-                />
+                {item.photoUri ? (
+                  <Image
+                    source={{ uri: item.photoUri }}
+                    style={styles.photo}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.photo, styles.noLocalPhoto]}>
+                    <Text style={styles.noLocalEmoji}>📲</Text>
+                    <Text style={styles.noLocalText}>다른 기기에서 찍은 사진이에요</Text>
+                  </View>
+                )}
                 <View style={styles.captionSection}>
                   {item.caption ? (
                     <Text style={styles.caption}>{item.caption}</Text>
@@ -275,6 +322,20 @@ const styles = StyleSheet.create({
   photo: {
     width: SCREEN_WIDTH,
     aspectRatio: 1,
+  },
+  noLocalPhoto: {
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  noLocalEmoji: {
+    fontSize: 48,
+  },
+  noLocalText: {
+    fontSize: 14,
+    color: colors.textTertiary,
+    textAlign: 'center',
   },
   captionSection: {
     padding: spacing.lg,

@@ -100,6 +100,40 @@
 
 
 
+\## 서버 API
+
+\- Base URL: http://localhost:8080 (개발), 추후 환경변수로 교체
+
+\- 환경변수: EXPO\_PUBLIC\_API\_BASE\_URL (`.env` 파일)
+
+\- 헤더: `X-Device-Id` (Device 등록 엔드포인트 외 모든 요청에 필수)
+
+\- 응답 구조: `{ success, data, error, timestamp }`
+
+\- 에러 구조: HTTP status + `ErrorResponse { code, message, fields }`
+
+
+
+엔드포인트:
+
+\- POST /api/v1/devices/register
+
+\- GET /api/v1/devices/me
+
+\- GET/POST/PUT/DELETE /api/v1/caregivers
+
+\- GET/POST/PUT/DELETE /api/v1/pets
+
+\- GET/POST/PUT/DELETE /api/v1/photos (query: petExternalId)
+
+\- GET/POST/PUT/DELETE /api/v1/logs (query: petExternalId, date 필터)
+
+
+
+API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet.ts, photo.ts, log.ts)
+
+
+
 \## 절대 하지 말 것
 
 \- Expo eject 제안 금지 (Managed Workflow 유지)
