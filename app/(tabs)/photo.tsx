@@ -22,17 +22,13 @@ import {
   saveDailyPhoto,
 } from '../../lib/storage';
 import { colors, radius, shadow, spacing } from '../../constants/theme';
-import { useMidnightRefresh } from '../../hooks/useMidnightRefresh';
+import { useDate } from '../../contexts/DateContext';
 import { DailyPhoto } from '../../lib/types';
 
 const CELL_SIZE = Math.floor(Dimensions.get('window').width / 3);
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 11);
-}
-
-function getTodayString() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function PhotoCell({ photo, onPress }: { photo: DailyPhoto; onPress: () => void }) {
@@ -50,7 +46,7 @@ export default function PhotoScreen() {
   const [pendingBase64, setPendingBase64] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const today = getTodayString();
+  const today = useDate();
   const todayPhoto = photos.find((p) => p.date === today);
   const pastPhotos = photos.filter((p) => p.date !== today);
 
@@ -72,8 +68,6 @@ export default function PhotoScreen() {
     });
     return () => sub.remove();
   }, [load]);
-
-  useMidnightRefresh(load);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

@@ -43,7 +43,7 @@ import DatePickerModal from '../../components/DatePickerModal';
 import EmptyPetState from '../../components/EmptyPetState';
 import SaveIndicator from '../../components/SaveIndicator';
 import { useAutoSave } from '../../hooks/useAutoSave';
-import { useMidnightRefresh } from '../../hooks/useMidnightRefresh';
+import { useDate } from '../../contexts/DateContext';
 import ConditionPicker from '../../components/ConditionPicker';
 import MealPicker from '../../components/MealPicker';
 import MemoInput from '../../components/MemoInput';
@@ -54,10 +54,6 @@ import WaterPicker from '../../components/WaterPicker';
 import { colors, radius, spacing } from '../../constants/theme';
 import { getCurrentPetId, getDailyLogByDate, getDailyLogs, saveDailyLog } from '../../lib/storage';
 import { ConditionScore, DailyLog, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../../lib/types';
-
-function getTodayString() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function formatDateKorean(dateStr: string) {
   const [y, m, d] = dateStr.split('-');
@@ -84,10 +80,12 @@ function Card({ title, children }: { title: string; children?: React.ReactNode }
 }
 
 export default function LogScreen() {
+  const today = useDate();
+
   const [hasPet, setHasPet] = useState<boolean | null>(null);
   const [petId, setPetId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [date, setDate] = useState(getTodayString());
+  const [date, setDate] = useState(today);
   const [reloadKey, setReloadKey] = useState(0);
   const isViewingTodayRef = useRef(true);
   const [existingLog, setExistingLog] = useState<DailyLog | null>(null);
@@ -116,7 +114,7 @@ export default function LogScreen() {
   const [photoUris, setPhotoUris] = useState<string[]>([]);
 
   function handleDateChange(newDate: string) {
-    isViewingTodayRef.current = newDate === getTodayString();
+    isViewingTodayRef.current = newDate === today;
     setDate(newDate);
     setReloadKey((k) => k + 1);
   }
@@ -157,7 +155,7 @@ export default function LogScreen() {
     useCallback(() => {
       async function loadLog() {
         setIsLoaded(false);
-        const effectiveDate = isViewingTodayRef.current ? getTodayString() : dateRef.current;
+        const effectiveDate = isViewingTodayRef.current ? today : dateRef.current;
         if (effectiveDate !== dateRef.current) setDate(effectiveDate);
 
         const currentPetId = await getCurrentPetId();
@@ -181,30 +179,17 @@ export default function LogScreen() {
         setIsLoaded(true);
       }
       loadLog();
-    }, [reloadKey])
+    // today가 바뀌면(자정) 새 날짜 기준으로 재로드
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reloadKey, today])
   );
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (appState) => {
-      if (appState !== 'active') return;
-      if (isViewingTodayRef.current) {
-        const freshToday = getTodayString();
-        if (freshToday !== dateRef.current) setDate(freshToday);
-      }
-      setReloadKey((k) => k + 1);
+      if (appState === 'active') setReloadKey((k) => k + 1);
     });
     return () => sub.remove();
   }, []);
-
-  const handleMidnightRefresh = useCallback(() => {
-    if (isViewingTodayRef.current) {
-      const freshToday = getTodayString();
-      if (freshToday !== dateRef.current) setDate(freshToday);
-    }
-    setReloadKey((k) => k + 1);
-  }, []);
-
-  useMidnightRefresh(handleMidnightRefresh);
 
   const logData = {
     condition, meal, mealNote, walkMinutes, walkNote,
@@ -248,7 +233,7 @@ export default function LogScreen() {
     { enabled: isLoaded && hasPet === true }
   );
 
-  const isToday = date === getTodayString();
+  const isToday = date === today;
 
   if (hasPet === false) {
     return (

@@ -7,29 +7,26 @@ import HomeConditionChart from '../../components/HomeConditionChart';
 import HomeTodayLogCard from '../../components/HomeTodayLogCard';
 import HomeProfileCard from '../../components/HomeProfileCard';
 import { colors, spacing } from '../../constants/theme';
-import { useMidnightRefresh } from '../../hooks/useMidnightRefresh';
+import { useDate } from '../../contexts/DateContext';
 import { getCurrentPetId, getDailyLogByDate, getDailyLogs, getPet } from '../../lib/storage';
 import { DailyLog, Pet } from '../../lib/types';
 
-function getTodayString() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function get6DaysAgoString() {
-  const d = new Date();
-  d.setDate(d.getDate() - 6);
+function get6DaysAgo(today: string): string {
+  const d = new Date(today + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - 6);
   return d.toISOString().slice(0, 10);
 }
 
 export default function HomeScreen() {
+  const today = useDate();
+
   const [pet, setPet] = useState<Pet | null>(null);
   const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
   const [recentLogs, setRecentLogs] = useState<DailyLog[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const loadData = useCallback(async () => {
-    const today = getTodayString();
-    const sevenDaysAgo = get6DaysAgoString();
+    const sevenDaysAgo = get6DaysAgo(today);
     const petId = await getCurrentPetId();
 
     if (!petId) {
@@ -50,7 +47,9 @@ export default function HomeScreen() {
     setTodayLog(loadedLog);
     setRecentLogs(allLogs.filter((l) => l.date >= sevenDaysAgo && l.date <= today));
     setLoaded(true);
-  }, []);
+  // today가 바뀌면(자정) 새 날짜 기준으로 재로드
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
@@ -60,8 +59,6 @@ export default function HomeScreen() {
     });
     return () => sub.remove();
   }, [loadData]);
-
-  useMidnightRefresh(loadData);
 
   if (!loaded) return null;
 

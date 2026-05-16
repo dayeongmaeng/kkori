@@ -1,6 +1,7 @@
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
 import { Modal, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
+import { useDate } from '../contexts/DateContext';
 
 LocaleConfig.locales['ko'] = {
   monthNames: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
@@ -24,10 +25,6 @@ interface Props {
   onClose: () => void;
 }
 
-function getTodayString() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export default function DatePickerModal({
   visible,
   selectedDate,
@@ -35,6 +32,7 @@ export default function DatePickerModal({
   onSelect,
   onClose,
 }: Props) {
+  const today = useDate();
   const merged: Record<string, object> = {
     ...markedDates,
     [selectedDate]: {
@@ -63,7 +61,7 @@ export default function DatePickerModal({
         <View style={styles.handle} />
         <Calendar
           current={selectedDate}
-          maxDate={getTodayString()}
+          maxDate={today}
           markedDates={merged}
           onDayPress={handleDayPress}
           theme={{
