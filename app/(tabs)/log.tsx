@@ -242,7 +242,7 @@ export default function LogScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { status: saveStatus } = useAutoSave(
+  const { status: saveStatus, saveNow } = useAutoSave(
     logData,
     autoSaveLog,
     { enabled: isLoaded && hasPet === true }
@@ -281,10 +281,11 @@ export default function LogScreen() {
           />
         </TouchableOpacity>
       </View>
-      <SaveIndicator status={saveStatus} />
+      <SaveIndicator status={saveStatus} labels={{ saved: '저장되었습니다 ✓' }} />
 
       {/* 본문 */}
       <KeyboardAwareScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.content}
         enableOnAndroid
         extraScrollHeight={20}
@@ -344,6 +345,16 @@ export default function LogScreen() {
         />
 
       </KeyboardAwareScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.saveBtn}
+          onPress={saveNow}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.saveBtnText}>저장</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -380,10 +391,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
+  scrollView: {
+    flex: 1,
+  },
   content: {
     padding: spacing.lg,
     gap: spacing.md,
-    paddingBottom: 200,
+    paddingBottom: spacing.xl,
   },
   card: {
     backgroundColor: colors.surface,
@@ -395,5 +409,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.md,
+  },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  saveBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  saveBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textOnPrimary,
   },
 });
