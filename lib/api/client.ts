@@ -34,6 +34,16 @@ async function request<T>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
+  const contentLength = res.headers.get('Content-Length');
+  const hasBody = res.status !== 204 && contentLength !== '0';
+
+  if (!hasBody) {
+    if (!res.ok) {
+      throw new ApiError(res.status, { code: 'UNKNOWN', message: '알 수 없는 오류' });
+    }
+    return null as T;
+  }
+
   const json: ApiResponse<T> = await res.json();
 
   if (!res.ok || !json.success) {

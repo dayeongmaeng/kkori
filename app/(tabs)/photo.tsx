@@ -83,7 +83,23 @@ export default function PhotoScreen() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useFocusEffect(useCallback(() => {
+    async function loadOnFocus() {
+      const petId = await getCachedCurrentPetId();
+      if (!petId) { setHasPet(false); return; }
+      setHasPet(true);
+      try {
+        const serverPhotos = await photoApi.getPhotos(petId);
+        await setCachedPhotos(petId, serverPhotos);
+        setPhotos(await mergeWithLocal(serverPhotos));
+      } catch {
+        const cached = await getCachedPhotos(petId);
+        setPhotos(await mergeWithLocal(cached));
+      }
+    }
+    loadOnFocus();
+  }, []));
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {

@@ -37,6 +37,11 @@ function formatDateKorean(dateStr: string) {
   return `${y}년 ${Number(m)}월 ${Number(d)}일`;
 }
 
+function getTodayKST(): string {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
 export default function PhotoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
@@ -147,7 +152,7 @@ export default function PhotoDetailScreen() {
     }
   }
 
-  async function confirmDelete() {
+  async function doDelete() {
     if (!currentPhoto) return;
     const petId = await getCachedCurrentPetId();
     if (!petId) return;
@@ -155,13 +160,7 @@ export default function PhotoDetailScreen() {
       await photoApi.deletePhoto(currentPhoto.externalId);
       await deletePhotoLocal(currentPhoto.externalId);
       await removeCachedPhoto(petId, currentPhoto.externalId);
-
-      const next = photos.filter((p) => p.externalId !== currentPhoto.externalId);
-      if (next.length === 0) { router.back(); return; }
-      const nextIndex = Math.min(currentIndex, next.length - 1);
-      setPhotos(next);
-      setCurrentIndex(nextIndex);
-      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: false });
+      router.back();
     } catch {
       Alert.alert('오류', '삭제에 실패했어요. 다시 시도해주세요.');
     }
@@ -169,22 +168,23 @@ export default function PhotoDetailScreen() {
 
   function handleDelete() {
     setActionSheetVisible(false);
-    setTimeout(() => {
-      if (Platform.OS === 'web') {
-        if (window.confirm('이 사진을 삭제할까요?\n같은 날짜에 다시 추가할 수 있어요.')) {
-          confirmDelete();
-        }
-        return;
+    if (!currentPhoto) return;
+
+    const isToday = currentPhoto.date === getTodayKST();
+    const message = isToday
+      ? '오늘 사진을 삭제할까요?\n같은 날 다시 추가할 수 있어요.'
+      : '이 사진을 삭제할까요?\n해당 날짜에는 다시 추가할 수 없어요.';
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) {
+        doDelete();
       }
-      Alert.alert(
-        '삭제하시겠어요?',
-        '이 사진을 삭제할까요?\n같은 날짜에 다시 추가할 수 있어요.',
-        [
-          { text: '취소', style: 'cancel' },
-          { text: '삭제', style: 'destructive', onPress: confirmDelete },
-        ],
-      );
-    }, 300);
+      return;
+    }
+    Alert.alert('사진 삭제', message, [
+      { text: '취소', style: 'cancel' },
+      { text: '삭제', style: 'destructive', onPress: doDelete },
+    ]);
   }
 
   if (!loaded) {
@@ -201,7 +201,7 @@ export default function PhotoDetailScreen() {
         <Text style={styles.notFoundEmoji}>🔍</Text>
         <Text style={styles.notFoundText}>사진을 찾을 수 없어요</Text>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>← 돌아가기</Text>
+          <Text style={styles.backButtonText}>돌아가기</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -211,7 +211,7 @@ export default function PhotoDetailScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
-          <Text style={styles.headerBtnText}>← 뒤로</Text>
+          <Text style={styles.headerBtnText}>뒤로</Text>
         </TouchableOpacity>
         <Text style={styles.headerDate}>
           {currentPhoto ? formatDateKorean(currentPhoto.date) : ''}

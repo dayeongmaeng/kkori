@@ -32,19 +32,19 @@ export default function PhotoActionSheet({
               {/* 메뉴 그룹 */}
               <View style={styles.menuGroup}>
                 <TouchableOpacity style={styles.menuItem} onPress={onShare} activeOpacity={0.6}>
-                  <Text style={styles.menuText}>📤  공유하기</Text>
+                  <Text style={styles.menuText}>공유하기</Text>
                 </TouchableOpacity>
 
                 <View style={styles.divider} />
 
                 <TouchableOpacity style={styles.menuItem} onPress={onSaveToAlbum} activeOpacity={0.6}>
-                  <Text style={styles.menuText}>💾  사진 저장</Text>
+                  <Text style={styles.menuText}>사진 저장</Text>
                 </TouchableOpacity>
 
                 <View style={styles.divider} />
 
                 <TouchableOpacity style={styles.menuItem} onPress={onDelete} activeOpacity={0.6}>
-                  <Text style={[styles.menuText, styles.menuTextDanger]}>🗑️  삭제</Text>
+                  <Text style={[styles.menuText, styles.menuTextDanger]}>삭제</Text>
                 </TouchableOpacity>
               </View>
 
