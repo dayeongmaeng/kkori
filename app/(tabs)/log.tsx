@@ -52,8 +52,24 @@ import PoopPicker from '../../components/PoopPicker';
 import WalkInput from '../../components/WalkInput';
 import WaterPicker from '../../components/WaterPicker';
 import { colors, radius, spacing } from '../../constants/theme';
-import { getCurrentPetId, getDailyLogByDate, getDailyLogs, saveDailyLog } from '../../lib/storage';
-import { ConditionScore, DailyLog, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../../lib/types';
+import {
+  LogRequest,
+  LogResponse,
+  logApi,
+} from '../../lib/api/log';
+import { getCachedCurrentCaregiverId } from '../../lib/cache/caregiver';
+import { getCachedCurrentPetId } from '../../lib/cache/pet';
+import {
+  getCachedLogByDate,
+  getCachedLogs,
+  getLogLocalExtras,
+  getLogPhotos,
+  setCachedLogs,
+  setLogLocalExtras,
+  setLogPhotos,
+  upsertCachedLog,
+} from '../../lib/cache/log';
+import { ConditionScore, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../../lib/types';
 
 function formatDateKorean(dateStr: string) {
   const [y, m, d] = dateStr.split('-');
@@ -66,8 +82,11 @@ function addDays(dateStr: string, delta: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function generateId() {
-  return `log_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+function buildMarkedDates(logs: LogResponse[]): Record<string, { marked: true; dotColor: string }> {
+  const marks: Record<string, { marked: true; dotColor: string }> = {};
+  logs.forEach((l) => { marks[l.date] = { marked: true, dotColor: colors.accent }; });
+  return marks;
 }
 
 function Card({ title, children }: { title: string; children?: React.ReactNode }) {
@@ -88,17 +107,16 @@ export default function LogScreen() {
   const [date, setDate] = useState(today);
   const [reloadKey, setReloadKey] = useState(0);
   const isViewingTodayRef = useRef(true);
-  const [existingLog, setExistingLog] = useState<DailyLog | null>(null);
+  const [logExternalId, setLogExternalId] = useState<string | null>(null);
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [markedDates, setMarkedDates] = useState<Record<string, { marked: true; dotColor: string }>>({});
 
-  // 자동저장 시 최신값 참조용 ref
   const petIdRef = useRef<string | null>(null);
   const dateRef = useRef(date);
-  const existingLogRef = useRef<DailyLog | null>(null);
+  const logExternalIdRef = useRef<string | null>(null);
   petIdRef.current = petId;
   dateRef.current = date;
-  existingLogRef.current = existingLog;
+  logExternalIdRef.current = logExternalId;
 
   const [condition, setCondition] = useState<ConditionScore | undefined>();
   const [meal, setMeal] = useState<MealAmount | undefined>();
@@ -120,7 +138,7 @@ export default function LogScreen() {
   }
 
   function resetStates() {
-    setExistingLog(null);
+    setLogExternalId(null);
     setCondition(undefined);
     setMeal(undefined);
     setMealNote('');
@@ -135,20 +153,26 @@ export default function LogScreen() {
     setPhotoUris([]);
   }
 
-  function populateStates(log: DailyLog) {
-    setExistingLog(log);
+  async function applyLog(log: LogResponse) {
+    setLogExternalId(log.externalId);
+    logExternalIdRef.current = log.externalId;
+
     setCondition(log.condition);
     setMeal(log.meal);
-    setMealNote(log.mealNote ?? '');
     setWalkMinutes(log.walkMinutes);
-    setWalkNote(log.walkNote ?? '');
     setPooCondition(log.pooCondition);
     setUrineColor(log.urineColor);
-    setPooNote(log.pooNote ?? '');
     setWater(log.water);
-    setWaterNote(log.waterNote ?? '');
     setMemo(log.memo ?? '');
-    setPhotoUris(log.photoUris ?? []);
+
+    const extras = await getLogLocalExtras(log.externalId);
+    setMealNote(extras.mealNote ?? '');
+    setWalkNote(extras.walkNote ?? '');
+    setPooNote(extras.pooNote ?? '');
+    setWaterNote(extras.waterNote ?? '');
+
+    const photos = await getLogPhotos(log.externalId);
+    setPhotoUris(photos);
   }
 
   useFocusEffect(
@@ -158,25 +182,43 @@ export default function LogScreen() {
         const effectiveDate = isViewingTodayRef.current ? today : dateRef.current;
         if (effectiveDate !== dateRef.current) setDate(effectiveDate);
 
-        const currentPetId = await getCurrentPetId();
+        const currentPetId = await getCachedCurrentPetId();
         if (!currentPetId) { setHasPet(false); resetStates(); setIsLoaded(true); return; }
         setPetId(currentPetId);
         setHasPet(true);
 
-        const [log, allLogs] = await Promise.all([
-          getDailyLogByDate(currentPetId, effectiveDate),
-          getDailyLogs(currentPetId),
+        const [cachedLog, cachedLogs] = await Promise.all([
+          getCachedLogByDate(currentPetId, effectiveDate),
+          getCachedLogs(currentPetId),
         ]);
 
-        const marks: Record<string, { marked: true; dotColor: string }> = {};
-        allLogs.forEach((l) => {
-          marks[l.date] = { marked: true, dotColor: colors.accent };
-        });
-        setMarkedDates(marks);
+        setMarkedDates(buildMarkedDates(cachedLogs));
 
-        if (log) populateStates(log);
-        else resetStates();
+        if (cachedLog) {
+          await applyLog(cachedLog);
+        } else {
+          resetStates();
+        }
         setIsLoaded(true);
+
+        try {
+          const serverLogs = await logApi.getLogs({ petExternalId: currentPetId });
+          await setCachedLogs(currentPetId, serverLogs);
+          setMarkedDates(buildMarkedDates(serverLogs));
+
+          const serverLog = serverLogs.find((l) => l.date === effectiveDate);
+          if (serverLog) {
+            await upsertCachedLog(currentPetId, serverLog);
+            if (!cachedLog) {
+              await applyLog(serverLog);
+            } else {
+              setLogExternalId(serverLog.externalId);
+              logExternalIdRef.current = serverLog.externalId;
+            }
+          }
+        } catch {
+          // 오프라인 — 캐시 유지
+        }
       }
       loadLog();
     // today가 바뀌면(자정) 새 날짜 기준으로 재로드
@@ -201,29 +243,47 @@ export default function LogScreen() {
     const currentPetId = petIdRef.current;
     if (!currentPetId) return;
 
-    const now = new Date().toISOString();
-    const log: DailyLog = {
-      id: existingLogRef.current?.id ?? generateId(),
-      petId: currentPetId,
-      caregiverId: existingLogRef.current?.caregiverId ?? '',
+    const caregiverId = await getCachedCurrentCaregiverId();
+    if (!caregiverId) throw new Error('보호자 정보가 초기화되지 않았습니다.');
+
+    const body: LogRequest = {
+      petExternalId: currentPetId,
+      caregiverExternalId: caregiverId,
       date: dateRef.current,
-      condition: data.condition,
       meal: data.meal,
-      mealNote: data.mealNote.trim() || undefined,
-      walkMinutes: data.walkMinutes,
-      walkNote: data.walkNote.trim() || undefined,
-      pooCondition: data.pooCondition,
-      pooNote: data.pooNote.trim() || undefined,
-      urineColor: data.urineColor,
       water: data.water,
-      waterNote: data.waterNote.trim() || undefined,
+      walkMinutes: data.walkMinutes,
+      pooCondition: data.pooCondition,
+      urineColor: data.urineColor,
+      condition: data.condition,
       memo: data.memo.trim() || undefined,
-      photoUris: data.photoUris.length > 0 ? data.photoUris : undefined,
-      createdAt: existingLogRef.current?.createdAt ?? now,
-      updatedAt: now,
     };
-    await saveDailyLog(log);
-    if (!existingLogRef.current) setExistingLog(log);
+
+    const extId = logExternalIdRef.current;
+    let savedExtId = extId;
+
+    if (extId) {
+      console.log('[LogSave] updateLog payload:', JSON.stringify(body, null, 2));
+      const result = await logApi.updateLog(extId, body);
+      if (result) await upsertCachedLog(currentPetId, result);
+    } else {
+      console.log('[LogSave] createLog payload:', JSON.stringify(body, null, 2));
+      const result = await logApi.createLog(body);
+      savedExtId = result.externalId;
+      setLogExternalId(savedExtId);
+      logExternalIdRef.current = savedExtId;
+      await upsertCachedLog(currentPetId, result);
+    }
+
+    if (savedExtId) {
+      await setLogLocalExtras(savedExtId, {
+        mealNote: data.mealNote.trim() || undefined,
+        walkNote: data.walkNote.trim() || undefined,
+        pooNote: data.pooNote.trim() || undefined,
+        waterNote: data.waterNote.trim() || undefined,
+      });
+      await setLogPhotos(savedExtId, data.photoUris);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

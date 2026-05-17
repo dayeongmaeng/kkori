@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 import AiReportPreview from '../../components/AiReportPreview';
 import EmptyPetState from '../../components/EmptyPetState';
 import HomeConditionChart from '../../components/HomeConditionChart';
@@ -8,8 +8,10 @@ import HomeTodayLogCard from '../../components/HomeTodayLogCard';
 import HomeProfileCard from '../../components/HomeProfileCard';
 import { colors, spacing } from '../../constants/theme';
 import { useDate } from '../../contexts/DateContext';
-import { getCurrentPetId, getDailyLogByDate, getDailyLogs, getPet } from '../../lib/storage';
-import { DailyLog, Pet } from '../../lib/types';
+import { logApi, LogResponse } from '../../lib/api/log';
+import { PetResponse } from '../../lib/api/pet';
+import { getCachedLogByDate, getCachedLogs, setCachedLogs } from '../../lib/cache/log';
+import { getCachedCurrentPetId, getCachedPet } from '../../lib/cache/pet';
 
 function get6DaysAgo(today: string): string {
   const d = new Date(today + 'T00:00:00Z');
@@ -20,14 +22,14 @@ function get6DaysAgo(today: string): string {
 export default function HomeScreen() {
   const today = useDate();
 
-  const [pet, setPet] = useState<Pet | null>(null);
-  const [todayLog, setTodayLog] = useState<DailyLog | null>(null);
-  const [recentLogs, setRecentLogs] = useState<DailyLog[]>([]);
+  const [pet, setPet] = useState<PetResponse | null>(null);
+  const [todayLog, setTodayLog] = useState<LogResponse | null>(null);
+  const [recentLogs, setRecentLogs] = useState<LogResponse[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const loadData = useCallback(async () => {
     const sevenDaysAgo = get6DaysAgo(today);
-    const petId = await getCurrentPetId();
+    const petId = await getCachedCurrentPetId();
 
     if (!petId) {
       setPet(null);
@@ -37,16 +39,29 @@ export default function HomeScreen() {
       return;
     }
 
-    const [loadedPet, loadedLog, allLogs] = await Promise.all([
-      getPet(petId),
-      getDailyLogByDate(petId, today),
-      getDailyLogs(petId),
+    // 1단계: 캐시 즉시 표시
+    const [cachedPet, cachedLog, cachedLogs] = await Promise.all([
+      getCachedPet(petId),
+      getCachedLogByDate(petId, today),
+      getCachedLogs(petId),
     ]);
 
-    setPet(loadedPet);
-    setTodayLog(loadedLog);
-    setRecentLogs(allLogs.filter((l) => l.date >= sevenDaysAgo && l.date <= today));
+    if (cachedPet) setPet(cachedPet);
+    setTodayLog(cachedLog);
+    setRecentLogs(cachedLogs.filter((l) => l.date >= sevenDaysAgo && l.date <= today));
     setLoaded(true);
+
+    // 2단계: 서버 갱신 (백그라운드)
+    try {
+      const serverLogs = await logApi.getLogs({ petExternalId: petId });
+      await setCachedLogs(petId, serverLogs);
+
+      const serverTodayLog = serverLogs.find((l) => l.date === today) ?? null;
+      setTodayLog(serverTodayLog);
+      setRecentLogs(serverLogs.filter((l) => l.date >= sevenDaysAgo && l.date <= today));
+    } catch {
+      // 오프라인 — 캐시 유지
+    }
   // today가 바뀌면(자정) 새 날짜 기준으로 재로드
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today]);

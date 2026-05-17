@@ -1,6 +1,6 @@
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
-import { DailyLog } from '../lib/types';
+import { LogResponse } from '../lib/api/log';
 
 const BAR_MAX_HEIGHT = 72;
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -22,7 +22,7 @@ function getLast7Dates(): string[] {
 }
 
 interface Props {
-  logs: DailyLog[];
+  logs: LogResponse[];
 }
 
 export default function HomeConditionChart({ logs }: Props) {

@@ -3,16 +3,16 @@ import { colors, radius, spacing } from '../constants/theme';
 import { StoolCondition, UrineColor } from '../lib/types';
 
 const STOOL_OPTIONS: { value: StoolCondition; label: string }[] = [
-  { value: 'normal', label: '정상' },
-  { value: 'soft', label: '무름' },
-  { value: 'hard', label: '딱딱' },
-  { value: 'diarrhea', label: '설사' },
+  { value: 'NORMAL', label: '정상' },
+  { value: 'SOFT', label: '무름' },
+  { value: 'HARD', label: '딱딱' },
+  { value: 'DIARRHEA', label: '설사' },
 ];
 
 const URINE_OPTIONS: { value: UrineColor; label: string }[] = [
-  { value: 'normal', label: '정상' },
-  { value: 'pale', label: '연함' },
-  { value: 'dark', label: '진함' },
+  { value: 'PALE', label: '연함' },
+  { value: 'NORMAL', label: '정상' },
+  { value: 'DARK', label: '진함' },
 ];
 
 interface Props {

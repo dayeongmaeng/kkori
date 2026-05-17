@@ -2,13 +2,13 @@ import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { colors, radius, shadow, spacing } from '../constants/theme';
 import IconImage from './IconImage';
 import { summarizeLog } from '../lib/logUtils';
-import { DailyLog } from '../lib/types';
+import { LogResponse } from '../lib/api/log';
 
 const imgLogIcon = require('../assets/home/log-icon.png');
 const imgLogDoneIcon = require('../assets/home/log-done-icon.png');
 
 interface Props {
-  todayLog?: DailyLog;
+  todayLog?: LogResponse;
   onTapAdd: () => void;
   onTapView: () => void;
 }

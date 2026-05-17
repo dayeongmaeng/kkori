@@ -3,9 +3,9 @@ import { colors, radius, spacing } from '../constants/theme';
 import { WaterAmount } from '../lib/types';
 
 const OPTIONS: { value: WaterAmount; label: string }[] = [
-  { value: 'less', label: '적음' },
-  { value: 'normal', label: '평소' },
-  { value: 'more', label: '많음' },
+  { value: 'LESS', label: '적음' },
+  { value: 'NORMAL', label: '평소' },
+  { value: 'MORE', label: '많음' },
 ];
 
 interface Props {

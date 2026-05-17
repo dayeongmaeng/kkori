@@ -1,37 +1,17 @@
 import { api } from './client';
-
-export interface MealRecord {
-  time: string;
-  amount?: number;
-  unit?: string;
-  memo?: string;
-}
-
-export interface WalkRecord {
-  startTime: string;
-  durationMinutes?: number;
-  distanceKm?: number;
-}
-
-export interface EliminationRecord {
-  time: string;
-  type: 'urine' | 'feces' | 'both';
-  memo?: string;
-}
-
-export interface ConditionRecord {
-  score: 1 | 2 | 3 | 4 | 5;
-  memo?: string;
-}
+import { ConditionScore, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../types';
 
 export interface LogResponse {
   externalId: string;
   petExternalId: string;
   date: string;
-  meals: MealRecord[];
-  walks: WalkRecord[];
-  eliminations: EliminationRecord[];
-  condition?: ConditionRecord;
+  meal?: MealAmount;
+  water?: WaterAmount;
+  walkMinutes?: number;
+  pooCondition?: StoolCondition;
+  urineColor?: UrineColor;
+  condition?: ConditionScore;
+  weightKg?: number;
   memo?: string;
   createdAt: string;
   updatedAt: string;
@@ -39,11 +19,15 @@ export interface LogResponse {
 
 export interface LogRequest {
   petExternalId: string;
+  caregiverExternalId: string;
   date: string;
-  meals?: MealRecord[];
-  walks?: WalkRecord[];
-  eliminations?: EliminationRecord[];
-  condition?: ConditionRecord;
+  meal?: MealAmount;
+  water?: WaterAmount;
+  walkMinutes?: number;
+  pooCondition?: StoolCondition;
+  urineColor?: UrineColor;
+  condition?: ConditionScore;
+  weightKg?: number;
   memo?: string;
 }
 

@@ -3,13 +3,17 @@ import { router } from 'expo-router';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
 import { formatAge } from '../lib/dateUtils';
-import { Pet } from '../lib/types';
+import { PetResponse } from '../lib/api/pet';
 
 interface Props {
-  pet: Pet;
+  pet: PetResponse;
 }
 
 export default function HomeProfileCard({ pet }: Props) {
+  const breedAge = [pet.breed, pet.birthDate ? formatAge(pet.birthDate) : null]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -17,8 +21,8 @@ export default function HomeProfileCard({ pet }: Props) {
       activeOpacity={0.85}
     >
       <View style={styles.row}>
-        {pet.photoUri ? (
-          <Image source={{ uri: pet.photoUri }} style={styles.avatar} contentFit="cover" />
+        {pet.profileImageUrl ? (
+          <Image source={{ uri: pet.profileImageUrl }} style={styles.avatar} contentFit="cover" />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarEmoji}>🐾</Text>
@@ -27,9 +31,7 @@ export default function HomeProfileCard({ pet }: Props) {
 
         <View style={styles.info}>
           <Text style={styles.name}>{pet.name}</Text>
-          <Text style={styles.breed}>
-            {pet.breed} · {formatAge(pet.birthDate)}
-          </Text>
+          {breedAge ? <Text style={styles.breed}>{breedAge}</Text> : null}
         </View>
       </View>
     </TouchableOpacity>

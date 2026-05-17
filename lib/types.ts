@@ -1,9 +1,9 @@
 export type Species = 'dog' | 'cat';
 
-export type MealAmount = 'none' | 'less' | 'normal' | 'more';
-export type WaterAmount = 'less' | 'normal' | 'more';
-export type StoolCondition = 'normal' | 'soft' | 'hard' | 'diarrhea';
-export type UrineColor = 'pale' | 'normal' | 'dark';
+export type MealAmount = 'NONE' | 'LESS' | 'NORMAL' | 'MORE';
+export type WaterAmount = 'LESS' | 'NORMAL' | 'MORE';
+export type StoolCondition = 'NORMAL' | 'SOFT' | 'HARD' | 'DIARRHEA';
+export type UrineColor = 'PALE' | 'NORMAL' | 'DARK';
 export type ConditionScore = 1 | 2 | 3 | 4 | 5;
 
 export type CaregiverRole = 'owner' | 'family' | 'guest';

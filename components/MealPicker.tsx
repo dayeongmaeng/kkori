@@ -3,10 +3,10 @@ import { colors, radius, spacing } from '../constants/theme';
 import { MealAmount } from '../lib/types';
 
 const OPTIONS: { value: MealAmount; label: string }[] = [
-  { value: 'none', label: '안 먹음' },
-  { value: 'less', label: '적게' },
-  { value: 'normal', label: '평소' },
-  { value: 'more', label: '많이' },
+  { value: 'NONE', label: '안 먹음' },
+  { value: 'LESS', label: '적게' },
+  { value: 'NORMAL', label: '평소' },
+  { value: 'MORE', label: '많이' },
 ];
 
 interface Props {
