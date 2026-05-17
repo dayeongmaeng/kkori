@@ -1,170 +1,188 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Constants from 'expo-constants';
+import * as Haptics from 'expo-haptics';
+import { useState } from 'react';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Bell, Camera, ChevronRight, Database, FileText,
+  Image as ImageIcon, Info, MessageCircle, Newspaper,
+  PawPrint, Shield, Star, Trash2,
+} from 'lucide-react-native';
+import { colors, radius, spacing } from '../../constants/theme';
 
-import { colors } from '../../constants/theme';
-import { initDeviceId } from '../../lib/api/deviceId';
-import { petApi, PetRequest } from '../../lib/api/pet';
+const FEEDBACK_URL = 'https://open.kakao.com/o/seTWQ4ui';
+const PRIVACY_URL = 'https://kkori.app/privacy';
+const TERMS_URL = 'https://kkori.app/terms';
+const NEWS_URL = 'https://kkori.app/news';
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
-type LogEntry = { label: string; result: unknown; error?: boolean };
+function openURL(url: string) {
+  Linking.openURL(url).catch(() => Alert.alert('오류', '링크를 열 수 없어요.'));
+}
+
+function openSettings() {
+  if (Platform.OS === 'web') { Alert.alert('알림', '기기 설정에서 권한을 변경해 주세요.'); return; }
+  Linking.openSettings();
+}
+
+function GroupTitle({ label }: { label: string }) {
+  return <Text style={s.groupTitle}>{label}</Text>;
+}
+
+function ComingSoonBadge() {
+  return <View style={s.badge}><Text style={s.badgeText}>출시 예정</Text></View>;
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  return <View style={s.card}>{children}</View>;
+}
+
+interface RowProps {
+  icon: React.ReactNode;
+  label: string;
+  desc?: string;
+  right?: React.ReactNode;
+  onPress?: () => void;
+  disabled?: boolean;
+  last?: boolean;
+}
+function Row({ icon, label, desc, right, onPress, disabled, last }: RowProps) {
+  return (
+    <>
+      <TouchableOpacity
+        style={[s.row, disabled && s.rowDisabled]}
+        onPress={onPress}
+        disabled={disabled || !onPress}
+        activeOpacity={0.7}
+      >
+        <View style={s.rowIcon}>{icon}</View>
+        <View style={s.rowBody}>
+          <Text style={s.rowLabel}>{label}</Text>
+          {desc ? <Text style={s.rowDesc}>{desc}</Text> : null}
+        </View>
+        {right !== undefined ? right : (onPress ? <ChevronRight size={16} color={colors.textQuaternary} /> : null)}
+      </TouchableOpacity>
+      {!last && <View style={s.divider} />}
+    </>
+  );
+}
 
 export default function SettingsScreen() {
-  const [deviceId, setDeviceId] = useState<string | null>(null);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [wagCount, setWagCount] = useState(0);
 
-  useEffect(() => {
-    AsyncStorage.getItem('pet-care:device-id').then(setDeviceId);
-  }, []);
-
-  function addLog(label: string, result: unknown, error = false) {
-    setLogs((prev) => [{ label, result, error }, ...prev]);
-  }
-
-  async function handleInitDevice() {
-    try {
-      await initDeviceId();
-      const id = await AsyncStorage.getItem('pet-care:device-id');
-      setDeviceId(id);
-      addLog('initDeviceId()', { deviceId: id });
-    } catch (e) {
-      addLog('initDeviceId()', String(e), true);
-    }
-  }
-
-  async function handleGetPets() {
-    try {
-      const result = await petApi.getPets();
-      addLog('getPets()', result);
-    } catch (e) {
-      addLog('getPets()', String(e), true);
-    }
-  }
-
-  async function handleCreatePet() {
-    const body: PetRequest = {
-      name: '테스트 강아지',
-      species: 'dog',
-      breed: '믹스견',
-      birthDate: '2022-03-15',
-      gender: 'male',
-      weightKg: 5.2,
-    };
-    try {
-      const result = await petApi.createPet(body);
-      addLog('createPet()', result);
-    } catch (e) {
-      addLog('createPet()', String(e), true);
-    }
-  }
-
-  function handleClearLogs() {
-    Alert.alert('로그 지우기', '로그를 모두 삭제할까요?', [
+  async function handleClearCache() {
+    Alert.alert('캐시 비우기', '저장된 임시 데이터를 모두 삭제할까요?\n다음 실행 시 서버에서 다시 불러옵니다.', [
       { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => setLogs([]) },
+      { text: '비우기', style: 'destructive', onPress: async () => {
+        await AsyncStorage.clear();
+        Alert.alert('완료', '캐시를 비웠어요.');
+      }},
     ]);
   }
 
+  function handleReview() {
+    if (Platform.OS === 'ios') {
+      openURL('itms-apps://itunes.apple.com/app/id'); // TODO: 앱 출시 후 실제 ID로 교체
+    } else {
+      Alert.alert('리뷰 남기기', 'iOS 앱 출시 후 이용할 수 있어요 🐾');
+    }
+  }
+
+  async function handleWag() {
+    const next = wagCount + 1;
+    setWagCount(next);
+    if (Platform.OS !== 'web') await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    const msgs = ['🐾 꼬리가 흔들려요!', '🐾🐾 더 빠르게!', '🐾🐾🐾 멈출 수가 없어요!!'];
+    Alert.alert('', msgs[Math.min(next - 1, msgs.length - 1)]);
+  }
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>API 테스트</Text>
+    <ScrollView style={s.container} contentContainerStyle={s.content}>
+      <GroupTitle label="알림" />
+      <Card>
+        <Row icon={<Bell size={20} color={colors.textSecondary} />} label="알림 권한" desc="시스템 설정 열기" onPress={openSettings} />
+        <Row icon={<Bell size={20} color={colors.textQuaternary} />} label="약 복용 알림" right={<ComingSoonBadge />} disabled />
+        <Row icon={<Bell size={20} color={colors.textQuaternary} />} label="데일리 포토 리마인더" right={<ComingSoonBadge />} disabled last />
+      </Card>
 
-      <View style={styles.deviceBox}>
-        <Text style={styles.deviceLabel}>저장된 Device ID</Text>
-        <Text style={styles.deviceId} selectable>
-          {deviceId ?? '없음'}
-        </Text>
-      </View>
+      <GroupTitle label="권한" />
+      <Card>
+        <Row icon={<Camera size={20} color={colors.textSecondary} />} label="카메라 권한" desc="시스템 설정 열기" onPress={openSettings} />
+        <Row icon={<ImageIcon size={20} color={colors.textSecondary} />} label="사진 접근 권한" desc="시스템 설정 열기" onPress={openSettings} last />
+      </Card>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Device</Text>
-        <Btn label="initDeviceId()" onPress={handleInitDevice} />
-      </View>
+      <GroupTitle label="데이터" />
+      <Card>
+        <Row icon={<Database size={20} color={colors.textQuaternary} />} label="데이터 백업 / 내보내기" right={<ComingSoonBadge />} disabled />
+        <Row icon={<Database size={20} color={colors.textQuaternary} />} label="데이터 가져오기" right={<ComingSoonBadge />} disabled />
+        <Row icon={<Trash2 size={20} color={colors.danger} />} label="캐시 비우기" onPress={handleClearCache} last />
+      </Card>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Pet</Text>
-        <Btn label="getPets()" onPress={handleGetPets} />
-        <Btn label="createPet() — 테스트 강아지" onPress={handleCreatePet} />
-      </View>
+      <GroupTitle label="정보" />
+      <Card>
+        <Row icon={<Shield size={20} color={colors.textSecondary} />} label="개인정보 처리방침" onPress={() => openURL(PRIVACY_URL)} />
+        <Row icon={<FileText size={20} color={colors.textSecondary} />} label="이용약관" onPress={() => openURL(TERMS_URL)} />
+        <Row icon={<Info size={20} color={colors.textSecondary} />} label="버전 정보" right={<Text style={s.versionText}>꼬리 v{APP_VERSION}</Text>} last />
+      </Card>
 
-      <View style={styles.logHeader}>
-        <Text style={styles.sectionTitle}>응답 로그</Text>
-        {logs.length > 0 && (
-          <TouchableOpacity onPress={handleClearLogs}>
-            <Text style={styles.clearBtn}>지우기</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {logs.length === 0 && (
-        <Text style={styles.empty}>버튼을 눌러 API를 호출하세요.</Text>
-      )}
-
-      {logs.map((entry, i) => (
-        <View key={i} style={[styles.logEntry, entry.error && styles.logError]}>
-          <Text style={styles.logLabel}>{entry.label}</Text>
-          <Text style={styles.logValue} selectable>
-            {JSON.stringify(entry.result, null, 2)}
-          </Text>
-        </View>
-      ))}
+      <GroupTitle label="지원" />
+      <Card>
+        <Row icon={<MessageCircle size={20} color={colors.textSecondary} />} label="문의하기" desc="카카오 오픈채팅" onPress={() => openURL(FEEDBACK_URL)} />
+        <Row icon={<Newspaper size={20} color={colors.textSecondary} />} label="업데이트 소식" onPress={() => openURL(NEWS_URL)} />
+        <Row icon={<Star size={20} color={colors.textSecondary} />} label="리뷰 남기기" desc="앱스토어에서 별점 남기기" onPress={handleReview} />
+        <Row icon={<PawPrint size={20} color={colors.accent} />} label="꼬리 흔들게 하기 🐾" onPress={handleWag} last />
+      </Card>
     </ScrollView>
   );
 }
 
-function Btn({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.btn} onPress={onPress}>
-      <Text style={styles.btnText}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: 20, paddingBottom: 60, gap: 8 },
-  title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
+  content: { paddingBottom: 60 },
 
-  deviceBox: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
+  groupTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textTertiary,
+    paddingHorizontal: spacing.lg,
+    marginTop: 24,
     marginBottom: 8,
-    gap: 4,
   },
-  deviceLabel: { fontSize: 12, color: colors.textSecondary },
-  deviceId: { fontSize: 13, color: colors.textPrimary, fontFamily: 'monospace' },
 
-  section: { gap: 8, marginBottom: 8 },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
-
-  btn: {
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    padding: 13,
-    alignItems: 'center',
+  card: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
   },
-  btnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 
-  logHeader: {
+  row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 4,
+    height: 56,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
-  clearBtn: { fontSize: 13, color: colors.primary },
+  rowDisabled: { opacity: 0.45 },
 
-  empty: { color: colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 20 },
+  rowIcon: { width: 24, alignItems: 'center' },
+  rowBody: { flex: 1, justifyContent: 'center' },
+  rowLabel: { fontSize: 15, color: colors.textPrimary },
+  rowDesc: { fontSize: 12, color: colors.textTertiary, marginTop: 1 },
 
-  logEntry: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
-    gap: 4,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
+  divider: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginLeft: 52, // 16 padding + 24 icon + 12 gap
   },
-  logError: { borderLeftColor: '#E85C5C' },
-  logLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-  logValue: { fontSize: 12, color: colors.textPrimary, fontFamily: 'monospace' },
+
+  badge: {
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  badgeText: { fontSize: 11, fontWeight: '600', color: colors.accent },
+
+  versionText: { fontSize: 13, color: colors.textTertiary },
 });
