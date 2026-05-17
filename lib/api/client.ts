@@ -2,8 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ApiError, ApiResponse } from './types';
 
+const DEV_URL = 'http://localhost:8080';
+const PROD_URL = 'http://3.38.97.234:8080';
+
 const BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? (__DEV__ ? PROD_URL : PROD_URL);
 
 const DEVICE_ID_KEY = 'pet-care:device-id';
 
