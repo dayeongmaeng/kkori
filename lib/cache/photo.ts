@@ -7,7 +7,9 @@ export interface LocalPhoto {
   externalId: string;
   petExternalId: string;
   date: string;       // YYYY-MM-DD
-  photoUri?: string;  // 로컬 base64/URI. 다른 기기에서 생성된 경우 undefined
+  photoUri?: string;  // 로컬 base64. 다른 기기에서 생성된 경우 undefined
+  mediumUrl?: string;
+  thumbnailUrl?: string;
   caption?: string;
   createdAt: string;
 }
@@ -88,6 +90,8 @@ export async function mergeWithLocal(input: unknown): Promise<LocalPhoto[]> {
       petExternalId: p.petExternalId ?? '',
       date: p.takenAt ? p.takenAt.slice(0, 10) : (p.createdAt?.slice(0, 10) ?? ''),
       photoUri: await getPhotoLocal(p.externalId),
+      mediumUrl: p.mediumUrl,
+      thumbnailUrl: p.thumbnailUrl,
       caption: p.memo,
       createdAt: p.createdAt ?? '',
     })),

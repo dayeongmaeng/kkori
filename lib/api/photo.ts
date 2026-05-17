@@ -1,9 +1,12 @@
 import { api } from './client';
+import type { ThumbnailFile } from '../photoUtils';
 
 export interface PhotoResponse {
   externalId: string;
   petExternalId: string;
   imageUrl: string;
+  mediumUrl?: string;
+  thumbnailUrl?: string;
   takenAt: string;
   memo?: string;
   createdAt: string;
@@ -14,9 +17,14 @@ export interface PhotoRequest {
   petExternalId: string;
   caregiverExternalId?: string;
   date: string;       // YYYY-MM-DD (LocalDate)
-  imageUrl?: string;  // 향후 서버 업로드 구현 시 사용
+  imageUrl?: string;
   takenAt: string;
   memo?: string;
+}
+
+export interface PhotoUploadResponse {
+  mediumUrl: string;
+  thumbnailUrl: string;
 }
 
 export const photoApi = {
@@ -34,4 +42,21 @@ export const photoApi = {
 
   deletePhoto: (externalId: string) =>
     api.delete<void>(`/api/v1/photos/${externalId}`),
+
+  uploadPhoto: async (externalId: string, medium: ThumbnailFile, thumbnail: ThumbnailFile): Promise<PhotoUploadResponse> => {
+    const formData = new FormData();
+
+    function appendFile(key: string, file: ThumbnailFile) {
+      if (file.blob) {
+        formData.append(key, file.blob, file.name);
+      } else {
+        formData.append(key, { uri: file.uri, name: file.name, type: file.type } as any);
+      }
+    }
+
+    appendFile('medium', medium);
+    appendFile('thumbnail', thumbnail);
+
+    return api.postFormData<PhotoUploadResponse>(`/api/v1/photos/${externalId}/upload`, formData);
+  },
 };

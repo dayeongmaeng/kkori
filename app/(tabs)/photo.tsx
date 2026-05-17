@@ -1,4 +1,5 @@
 import { pickImage } from '../../lib/imagePickerHelper';
+import { generateThumbnails } from '../../lib/photoUtils';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -34,7 +35,8 @@ import { useDate } from '../../contexts/DateContext';
 const CELL_SIZE = Math.floor(Dimensions.get('window').width / 3);
 
 function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void }) {
-  if (!photo.photoUri) {
+  const uri = photo.thumbnailUrl ?? photo.photoUri;
+  if (!uri) {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
         <View style={[styles.cell, styles.cellNoLocal]}>
@@ -45,7 +47,7 @@ function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void 
   }
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <Image source={{ uri: photo.photoUri }} style={styles.cell} contentFit="cover" />
+      <Image source={{ uri }} style={styles.cell} contentFit="cover" />
     </TouchableOpacity>
   );
 }
@@ -139,6 +141,9 @@ export default function PhotoScreen() {
     const petId = await getCachedCurrentPetId();
     if (!petId || !pendingBase64) return;
 
+    const localBase64 = pendingBase64;
+    setPendingBase64(null);
+
     try {
       // takenAt의 날짜 부분을 today(KST)로 고정하여 그리드 분류 일치
       const timeStr = new Date().toISOString().split('T')[1];
@@ -161,13 +166,23 @@ export default function PhotoScreen() {
         takenAt,
         memo: caption || undefined,
       });
-      console.log('[PhotoSave] 서버 응답:', response.externalId, '/ caregiverExternalId 전달값:', caregiverId);
+      console.log('[PhotoSave] 메타 생성:', response.externalId);
 
-      await savePhotoLocal(response.externalId, pendingBase64);
+      // 원본 base64 로컬 저장 (월력용) + 즉시 표시
+      await savePhotoLocal(response.externalId, localBase64);
       await upsertCachedPhoto(petId, response);
-
-      setPendingBase64(null);
       await load();
+
+      // S3 업로드 (실패해도 메타데이터는 유지)
+      try {
+        const { medium, thumbnail } = await generateThumbnails(localBase64);
+        const uploadResponse = await photoApi.uploadPhoto(response.externalId, medium, thumbnail);
+        console.log('[PhotoSave] S3 업로드 완료:', uploadResponse.mediumUrl);
+        await upsertCachedPhoto(petId, { ...response, ...uploadResponse });
+        await load();
+      } catch (uploadErr) {
+        console.warn('[PhotoSave] S3 업로드 실패 (메타 유지):', uploadErr);
+      }
     } catch {
       Alert.alert('오류', '서버에 저장하지 못했어요. 다시 시도해주세요.');
     }

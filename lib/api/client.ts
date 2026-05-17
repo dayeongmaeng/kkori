@@ -6,7 +6,7 @@ const DEV_URL = 'http://localhost:8080';
 const PROD_URL = 'http://3.38.97.234:8080';
 
 const BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? (__DEV__ ? PROD_URL : PROD_URL);
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? (__DEV__ ? DEV_URL  : PROD_URL);
 
 const DEVICE_ID_KEY = 'pet-care:device-id';
 
@@ -59,6 +59,32 @@ async function request<T>(
   return json.data;
 }
 
+async function requestFormData<T>(path: string, formData: FormData): Promise<T> {
+  const headers: Record<string, string> = {};
+  const deviceId = await getDeviceId();
+  if (deviceId) headers['X-Device-Id'] = deviceId;
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  const contentLength = res.headers.get('Content-Length');
+  const hasBody = res.status !== 204 && contentLength !== '0';
+
+  if (!hasBody) {
+    if (!res.ok) throw new ApiError(res.status, { code: 'UNKNOWN', message: '알 수 없는 오류' });
+    return null as T;
+  }
+
+  const json: ApiResponse<T> = await res.json();
+  if (!res.ok || !json.success) {
+    throw new ApiError(res.status, json.error ?? { code: 'UNKNOWN', message: '알 수 없는 오류' });
+  }
+  return json.data;
+}
+
 export const api = {
   get: <T>(path: string, skipDeviceId = false) =>
     request<T>('GET', path, undefined, skipDeviceId),
@@ -68,4 +94,6 @@ export const api = {
     request<T>('PUT', path, body),
   delete: <T>(path: string) =>
     request<T>('DELETE', path),
+  postFormData: <T>(path: string, formData: FormData) =>
+    requestFormData<T>(path, formData),
 };

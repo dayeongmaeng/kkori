@@ -1,5 +1,54 @@
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
+
+export interface ThumbnailFile {
+  uri: string;
+  name: string;
+  type: string;
+  blob?: Blob; // web 전용
+}
+
+export interface ThumbnailResult {
+  medium: ThumbnailFile;
+  thumbnail: ThumbnailFile;
+}
+
+function base64ToBlob(base64: string): Blob {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: 'image/jpeg' });
+}
+
+export async function generateThumbnails(uri: string): Promise<ThumbnailResult> {
+  const isWeb = Platform.OS === 'web';
+
+  const [mediumRes, thumbRes] = await Promise.all([
+    ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1080 } }],
+      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: isWeb },
+    ),
+    ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 300 } }],
+      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: isWeb },
+    ),
+  ]);
+
+  if (isWeb) {
+    return {
+      medium: { uri: mediumRes.uri, name: 'medium.jpg', type: 'image/jpeg', blob: base64ToBlob(mediumRes.base64!) },
+      thumbnail: { uri: thumbRes.uri, name: 'thumbnail.jpg', type: 'image/jpeg', blob: base64ToBlob(thumbRes.base64!) },
+    };
+  }
+
+  return {
+    medium: { uri: mediumRes.uri, name: 'medium.jpg', type: 'image/jpeg' },
+    thumbnail: { uri: thumbRes.uri, name: 'thumbnail.jpg', type: 'image/jpeg' },
+  };
+}
 
 const MAX_SIZE = 800;
 const JPEG_QUALITY = 0.7;
