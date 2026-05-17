@@ -25,7 +25,7 @@ import {
   setCachedPets,
   upsertCachedPet,
 } from '../../lib/cache/pet';
-import { notifyPetNameChanged } from '../../lib/petNameEvents';
+import { useCurrentPet } from '../../contexts/PetContext';
 import { SaveStatus } from '../../hooks/useAutoSave';
 import SaveIndicator from '../../components/SaveIndicator';
 
@@ -119,6 +119,7 @@ const webPickerStyles = {
 };
 
 export default function ProfileScreen() {
+  const { setCurrentPet } = useCurrentPet();
   const [externalId, setExternalId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [breed, setBreed] = useState('');
@@ -224,7 +225,7 @@ export default function ProfileScreen() {
       if (photoUri) await setCachedPetPhoto(response.externalId, photoUri);
 
       setExternalId(response.externalId);
-      notifyPetNameChanged();
+      setCurrentPet(response);
 
       setIndicatorStatus('saved');
       indicatorTimerRef.current = setTimeout(() => {

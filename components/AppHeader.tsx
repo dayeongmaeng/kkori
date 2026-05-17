@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../constants/theme';
-import { getCurrentPetId, getPet } from '../lib/storage';
-import { subscribePetName } from '../lib/petNameEvents';
+import { useCurrentPet } from '../contexts/PetContext';
 
 const FEEDBACK_URL = 'https://open.kakao.com/o/seTWQ4ui';
 
@@ -27,19 +26,8 @@ function Logo() {
 
 export default function AppHeader() {
   const insets = useSafeAreaInsets();
-  const [petName, setPetName] = useState<string | null>(null);
-
-  const loadPetName = useCallback(async () => {
-    const petId = await getCurrentPetId();
-    if (!petId) { setPetName(null); return; }
-    const pet = await getPet(petId);
-    setPetName(pet?.name ?? null);
-  }, []);
-
-  useEffect(() => {
-    loadPetName();
-    return subscribePetName(loadPetName);
-  }, [loadPetName]);
+  const { currentPet } = useCurrentPet();
+  const petName = currentPet?.name ?? null;
 
   function handlePetPress() {
     Alert.alert('알림', '반려동물 추가 기능은 출시 예정이에요 🐾');

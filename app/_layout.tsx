@@ -9,6 +9,7 @@ import Toast from 'react-native-toast-message';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DateProvider } from '../contexts/DateContext';
+import { PetProvider } from '../contexts/PetContext';
 import { initApp } from '../lib/api/init';
 import { migrateLegacyData } from '../lib/storage';
 
@@ -27,6 +28,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <DateProvider>
+        <PetProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Head>
             <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
@@ -39,6 +41,7 @@ export default function RootLayout() {
           <StatusBar style="auto" />
           <Toast />
         </ThemeProvider>
+        </PetProvider>
       </DateProvider>
     </SafeAreaProvider>
   );
