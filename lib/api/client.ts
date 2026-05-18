@@ -4,6 +4,7 @@ import { ApiError, ApiResponse } from './types';
 
 const DEV_API_BASE_URL = 'http://localhost:8080';
 const FALLBACK_API_BASE_URL = 'https://api.kkori.co.kr';
+export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://kkori.co.kr';
 
 const API_BASE_URL =
   __DEV__
@@ -94,6 +95,8 @@ export const api = {
     request<T>('POST', path, body, skipDeviceId),
   put: <T>(path: string, body: unknown) =>
     request<T>('PUT', path, body),
+  patch: <T>(path: string, body: unknown) =>
+    request<T>('PATCH', path, body),
   delete: <T>(path: string) =>
     request<T>('DELETE', path),
   postFormData: <T>(path: string, formData: FormData) =>

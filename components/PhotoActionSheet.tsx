@@ -12,6 +12,7 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onShare: () => void;
+  onEditCaption?: () => void;
   onSaveToAlbum: () => void;
   onDelete: () => void;
 }
@@ -20,6 +21,7 @@ export default function PhotoActionSheet({
   visible,
   onClose,
   onShare,
+  onEditCaption,
   onSaveToAlbum,
   onDelete,
 }: Props) {
@@ -36,6 +38,16 @@ export default function PhotoActionSheet({
                 </TouchableOpacity>
 
                 <View style={styles.divider} />
+
+                {onEditCaption && (
+                  <>
+                    <TouchableOpacity style={styles.menuItem} onPress={onEditCaption} activeOpacity={0.6}>
+                      <Text style={styles.menuText}>캡션 수정</Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.divider} />
+                  </>
+                )}
 
                 <TouchableOpacity style={styles.menuItem} onPress={onSaveToAlbum} activeOpacity={0.6}>
                   <Text style={styles.menuText}>사진 저장</Text>

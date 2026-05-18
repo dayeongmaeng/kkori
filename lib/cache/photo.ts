@@ -11,7 +11,9 @@ export interface LocalPhoto {
   mediumUrl?: string;
   thumbnailUrl?: string;
   caption?: string;
+  edited?: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 function cacheKey(petExternalId: string) {
@@ -88,12 +90,14 @@ export async function mergeWithLocal(input: unknown): Promise<LocalPhoto[]> {
     valid.map(async (p) => ({
       externalId: p.externalId,
       petExternalId: p.petExternalId ?? '',
-      date: p.takenAt ? p.takenAt.slice(0, 10) : (p.createdAt?.slice(0, 10) ?? ''),
+      date: p.date ?? (p.takenAt ? p.takenAt.slice(0, 10) : (p.createdAt?.slice(0, 10) ?? '')),
       photoUri: await getPhotoLocal(p.externalId),
       mediumUrl: p.mediumUrl,
       thumbnailUrl: p.thumbnailUrl,
-      caption: p.memo,
+      caption: p.caption ?? p.memo,
+      edited: p.edited ?? (Boolean(p.createdAt && p.updatedAt) && p.createdAt !== p.updatedAt),
       createdAt: p.createdAt ?? '',
+      updatedAt: p.updatedAt ?? '',
     })),
   );
 

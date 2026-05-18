@@ -1,16 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as MediaLibrary from 'expo-media-library';
-import * as Sharing from 'expo-sharing';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Linking,
+  Modal,
   Platform,
+  Pressable,
   SafeAreaView,
+  Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   ViewToken,
@@ -19,6 +25,7 @@ import { Image } from 'expo-image';
 import PhotoActionSheet from '../../components/PhotoActionSheet';
 import { base64ToTempFile } from '../../lib/photoUtils';
 import { photoApi } from '../../lib/api/photo';
+import { WEB_BASE_URL } from '../../lib/api/client';
 import { getCachedCurrentPetId } from '../../lib/cache/pet';
 import {
   getCachedPhotos,
@@ -26,11 +33,13 @@ import {
   mergeWithLocal,
   removeCachedPhoto,
   setCachedPhotos,
+  upsertCachedPhoto,
 } from '../../lib/cache/photo';
 import { deletePhotoLocal } from '../../lib/photoLocalCache';
 import { colors, spacing } from '../../constants/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const MAX_CAPTION = 100;
 
 function formatDateKorean(dateStr: string) {
   const [y, m, d] = dateStr.split('-');
@@ -42,6 +51,10 @@ function getTodayKST(): string {
   return kst.toISOString().slice(0, 10);
 }
 
+function buildPhotoShareUrl(externalId: string) {
+  return `${WEB_BASE_URL.replace(/\/$/, '')}/photos/${encodeURIComponent(externalId)}`;
+}
+
 export default function PhotoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
@@ -50,6 +63,11 @@ export default function PhotoDetailScreen() {
   const [listHeight, setListHeight] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const [sharePreviewVisible, setSharePreviewVisible] = useState(false);
+  const [captionModalVisible, setCaptionModalVisible] = useState(false);
+  const [captionDraft, setCaptionDraft] = useState('');
+  const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
+  const [isSavingCaption, setIsSavingCaption] = useState(false);
   const flatListRef = useRef<FlatList<LocalPhoto>>(null);
 
   useEffect(() => {
@@ -90,34 +108,77 @@ export default function PhotoDetailScreen() {
 
   const currentPhoto = photos[currentIndex] ?? null;
 
-  async function handleShare() {
+  function openSharePreview() {
     setActionSheetVisible(false);
     if (!currentPhoto) return;
-    if (!currentPhoto.photoUri) {
-      Alert.alert('알림', '이 사진은 다른 기기에서 촬영되어 공유할 수 없어요.');
-      return;
-    }
+    setSharePreviewVisible(true);
+  }
+
+  async function sharePhotoLink() {
+    if (!currentPhoto) return;
+    const url = buildPhotoShareUrl(currentPhoto.externalId);
     try {
       if (Platform.OS === 'web') {
         if (navigator.share) {
-          await navigator.share({ title: '오늘의 사진', text: currentPhoto.caption ?? '' });
+          await navigator.share({ title: '꼬리 사진', text: currentPhoto.caption ?? '', url });
         } else {
-          Alert.alert('알림', '이 브라우저에서는 공유가 지원되지 않아요.');
+          await Linking.openURL(url);
         }
         return;
       }
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (!isAvailable) {
-        Alert.alert('알림', '이 기기에서는 공유 기능을 사용할 수 없어요.');
-        return;
-      }
-      const tempUri = await base64ToTempFile(
-        currentPhoto.photoUri,
-        `photo_${currentPhoto.externalId}.jpg`,
-      );
-      await Sharing.shareAsync(tempUri, { dialogTitle: '오늘의 사진 공유하기' });
+      await Share.share({
+        title: '꼬리 사진',
+        message: currentPhoto.caption ? `${currentPhoto.caption}\n${url}` : url,
+        url,
+      });
     } catch {
-      Alert.alert('오류', '공유 중 문제가 발생했어요.');
+      Alert.alert('오류', '공유 링크를 만들지 못했어요.');
+    }
+  }
+
+  async function openShareUrl() {
+    if (!currentPhoto) return;
+    const url = buildPhotoShareUrl(currentPhoto.externalId);
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(
+        '링크를 열 수 없어요',
+        '공유 웹 도메인이 아직 연결되지 않았을 수 있어요. Vercel 도메인 연결 후 다시 확인해주세요.',
+      );
+    }
+  }
+
+  function openCaptionEditor() {
+    setActionSheetVisible(false);
+    if (!currentPhoto) return;
+    setEditingPhotoId(currentPhoto.externalId);
+    setCaptionDraft(currentPhoto.caption ?? '');
+    setCaptionModalVisible(true);
+  }
+
+  async function handleSaveCaption() {
+    const targetPhoto = photos.find((photo) => photo.externalId === editingPhotoId) ?? currentPhoto;
+    if (!targetPhoto || isSavingCaption) return;
+    const petId = await getCachedCurrentPetId();
+    if (!petId) return;
+
+    setIsSavingCaption(true);
+    try {
+      const updated = await photoApi.updatePhoto(targetPhoto.externalId, {
+        caption: captionDraft.trim() || undefined,
+      });
+      await upsertCachedPhoto(petId, updated);
+      const merged = await mergeWithLocal(await getCachedPhotos(petId));
+      const nextIndex = Math.max(0, merged.findIndex((p) => p.externalId === targetPhoto.externalId));
+      setPhotos(merged);
+      setCurrentIndex(nextIndex);
+      setCaptionModalVisible(false);
+      setEditingPhotoId(null);
+    } catch {
+      Alert.alert('저장 실패', '캡션을 저장하지 못했어요. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsSavingCaption(false);
     }
   }
 
@@ -239,9 +300,9 @@ export default function PhotoDetailScreen() {
             })}
             renderItem={({ item }) => (
               <View style={[styles.page, { height: listHeight }]}>
-                {item.photoUri ? (
+                {item.photoUri || item.mediumUrl ? (
                   <Image
-                    source={{ uri: item.photoUri }}
+                    source={{ uri: item.photoUri ?? item.mediumUrl }}
                     style={styles.photo}
                     contentFit="cover"
                   />
@@ -252,6 +313,27 @@ export default function PhotoDetailScreen() {
                   </View>
                 )}
                 <View style={styles.captionSection}>
+                  <View style={styles.captionHeader}>
+                    <View style={styles.captionMeta}>
+                      <Text style={styles.captionLabel}>캡션</Text>
+                      {item.edited && (
+                        <View style={styles.editedBadge}>
+                          <Text style={styles.editedBadgeText}>수정됨</Text>
+                        </View>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={styles.captionEditBtn}
+                      onPress={() => {
+                        setEditingPhotoId(item.externalId);
+                        setCaptionDraft(item.caption ?? '');
+                        setCaptionModalVisible(true);
+                      }}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={styles.captionEditBtnText}>수정</Text>
+                    </TouchableOpacity>
+                  </View>
                   {item.caption ? (
                     <Text style={styles.caption}>{item.caption}</Text>
                   ) : (
@@ -267,10 +349,119 @@ export default function PhotoDetailScreen() {
       <PhotoActionSheet
         visible={actionSheetVisible}
         onClose={() => setActionSheetVisible(false)}
-        onShare={handleShare}
+        onShare={openSharePreview}
+        onEditCaption={openCaptionEditor}
         onSaveToAlbum={handleSaveToAlbum}
         onDelete={handleDelete}
       />
+
+      <Modal
+        visible={sharePreviewVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSharePreviewVisible(false)}
+      >
+        <View style={styles.shareBackdrop}>
+          <View style={styles.shareSheet}>
+            <View style={styles.shareHeader}>
+              <View>
+                <Text style={styles.shareEyebrow}>공유 미리보기</Text>
+                <Text style={styles.shareTitle}>하루 한 장</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.shareCloseBtn}
+                onPress={() => setSharePreviewVisible(false)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.shareCloseText}>닫기</Text>
+              </TouchableOpacity>
+            </View>
+
+            {currentPhoto && (
+              <>
+                {currentPhoto.mediumUrl || currentPhoto.photoUri ? (
+                  <Image
+                    source={{ uri: currentPhoto.mediumUrl ?? currentPhoto.photoUri }}
+                    style={styles.sharePhoto}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.sharePhoto, styles.sharePhotoEmpty]}>
+                    <Text style={styles.sharePhotoEmptyText}>사진을 불러올 수 없어요</Text>
+                  </View>
+                )}
+                <View style={styles.shareContent}>
+                  <Text style={styles.shareDate}>{formatDateKorean(currentPhoto.date)}</Text>
+                  {currentPhoto.caption ? (
+                    <Text style={styles.shareCaption}>{currentPhoto.caption}</Text>
+                  ) : (
+                    <Text style={styles.shareEmptyCaption}>캡션이 없는 사진이에요.</Text>
+                  )}
+                  <Text style={styles.shareUrl} numberOfLines={1}>
+                    {buildPhotoShareUrl(currentPhoto.externalId)}
+                  </Text>
+                </View>
+              </>
+            )}
+
+            <TouchableOpacity style={styles.sharePrimaryBtn} onPress={sharePhotoLink} activeOpacity={0.82}>
+              <Text style={styles.sharePrimaryText}>링크 공유하기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.shareSecondaryBtn} onPress={openShareUrl} activeOpacity={0.82}>
+              <Text style={styles.shareSecondaryText}>브라우저에서 보기</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={captionModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setCaptionModalVisible(false);
+          setEditingPhotoId(null);
+        }}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={Keyboard.dismiss}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalKeyboardView}
+          >
+            <View style={styles.captionSheet}>
+              <Text style={styles.captionSheetTitle}>캡션 수정</Text>
+              <TextInput
+                style={styles.captionInput}
+                value={captionDraft}
+                onChangeText={(text) => setCaptionDraft(text.slice(0, MAX_CAPTION))}
+                placeholder="오늘 어떤 하루였나요?"
+                placeholderTextColor={colors.textQuaternary}
+                multiline
+                textAlignVertical="top"
+              />
+              <Text style={styles.captionCounter}>{captionDraft.length}/{MAX_CAPTION}</Text>
+              <TouchableOpacity
+                style={[styles.captionSaveBtn, isSavingCaption && styles.captionSaveBtnDisabled]}
+                onPress={handleSaveCaption}
+                disabled={isSavingCaption}
+                activeOpacity={0.82}
+              >
+                <Text style={styles.captionSaveBtnText}>{isSavingCaption ? '저장 중...' : '저장'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.captionCancelBtn}
+                onPress={() => {
+                  setCaptionModalVisible(false);
+                  setEditingPhotoId(null);
+                }}
+                disabled={isSavingCaption}
+              >
+                <Text style={styles.captionCancelBtnText}>취소</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -340,6 +531,44 @@ const styles = StyleSheet.create({
   captionSection: {
     padding: spacing.lg,
   },
+  captionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  captionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  captionLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textTertiary,
+  },
+  editedBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  editedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+  captionEditBtn: {
+    borderRadius: 999,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+  },
+  captionEditBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
   caption: {
     fontSize: 16,
     lineHeight: 24,
@@ -366,5 +595,165 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.primary,
     fontWeight: '600',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalKeyboardView: {
+    justifyContent: 'flex-end',
+  },
+  captionSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  captionSheetTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  captionInput: {
+    minHeight: 96,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+  captionCounter: {
+    alignSelf: 'flex-end',
+    marginTop: -spacing.xs,
+    fontSize: 12,
+    color: colors.textQuaternary,
+  },
+  captionSaveBtn: {
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  captionSaveBtnDisabled: {
+    opacity: 0.5,
+  },
+  captionSaveBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textOnPrimary,
+  },
+  captionCancelBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  captionCancelBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  shareBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  shareSheet: {
+    maxHeight: '92%',
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  shareHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  shareEyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textTertiary,
+  },
+  shareTitle: {
+    marginTop: 2,
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  shareCloseBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  shareCloseText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  sharePhoto: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+  },
+  sharePhotoEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sharePhotoEmptyText: {
+    fontSize: 14,
+    color: colors.textTertiary,
+  },
+  shareContent: {
+    gap: spacing.sm,
+  },
+  shareDate: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textTertiary,
+  },
+  shareCaption: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.textPrimary,
+  },
+  shareEmptyCaption: {
+    fontSize: 15,
+    color: colors.textTertiary,
+    fontStyle: 'italic',
+  },
+  shareUrl: {
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  sharePrimaryBtn: {
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  sharePrimaryText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.textOnPrimary,
+  },
+  shareSecondaryBtn: {
+    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  shareSecondaryText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
 });

@@ -173,7 +173,8 @@ export default function TodayPhotoCard({
 }: Props) {
   // 사진 있을 때 — 다른 기기에서 찍어 로컬 데이터 없는 경우 회색 박스
   if (todayPhoto) {
-    if (!todayPhoto.photoUri) {
+    const displayUri = todayPhoto.photoUri ?? todayPhoto.mediumUrl ?? todayPhoto.thumbnailUrl;
+    if (!displayUri) {
       return (
         <TouchableOpacity
           style={[styles.photoCard, styles.noLocalCard, { aspectRatio }]}
@@ -192,7 +193,7 @@ export default function TodayPhotoCard({
         activeOpacity={0.92}
       >
         <Image
-          source={{ uri: todayPhoto.photoUri }}
+          source={{ uri: displayUri }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
         />

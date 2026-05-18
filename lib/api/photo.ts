@@ -3,12 +3,17 @@ import type { ThumbnailFile } from '../photoUtils';
 
 export interface PhotoResponse {
   externalId: string;
-  petExternalId: string;
-  imageUrl: string;
+  petExternalId?: string;
+  petId?: number;
+  caregiverId?: number;
+  imageUrl?: string;
+  date?: string;
   mediumUrl?: string;
   thumbnailUrl?: string;
-  takenAt: string;
+  takenAt?: string;
+  caption?: string;
   memo?: string;
+  edited?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,8 +23,20 @@ export interface PhotoRequest {
   caregiverExternalId?: string;
   date: string;       // YYYY-MM-DD (LocalDate)
   imageUrl?: string;
-  takenAt: string;
+  takenAt?: string;
+  caption?: string;
   memo?: string;
+}
+
+export interface PhotoUpdateRequest {
+  caption?: string;
+}
+
+export interface PhotoShareResponse {
+  petName: string;
+  date: string;
+  caption?: string;
+  mediumUrl: string;
 }
 
 export interface PhotoUploadResponse {
@@ -37,8 +54,14 @@ export const photoApi = {
   createPhoto: (body: PhotoRequest) =>
     api.post<PhotoResponse>('/api/v1/photos', body),
 
-  updatePhoto: (externalId: string, body: Partial<PhotoRequest>) =>
+  updatePhoto: (externalId: string, body: PhotoUpdateRequest) =>
+    api.patch<PhotoResponse>(`/api/v1/photos/${externalId}`, body),
+
+  updatePhotoCompat: (externalId: string, body: PhotoUpdateRequest) =>
     api.put<PhotoResponse>(`/api/v1/photos/${externalId}`, body),
+
+  getSharedPhoto: (externalId: string) =>
+    api.get<PhotoShareResponse>(`/api/v1/photos/${externalId}/share`, true),
 
   deletePhoto: (externalId: string) =>
     api.delete<void>(`/api/v1/photos/${externalId}`),

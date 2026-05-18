@@ -41,6 +41,11 @@ function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void 
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
         <View style={[styles.cell, styles.cellNoLocal]}>
           <Text style={styles.cellNoLocalIcon}>📲</Text>
+          {photo.edited && (
+            <View style={styles.editedBadge}>
+              <Text style={styles.editedBadgeText}>수정됨</Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -48,8 +53,18 @@ function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
       <Image source={{ uri }} style={styles.cell} contentFit="cover" />
+      {photo.edited && (
+        <View style={styles.editedBadge}>
+          <Text style={styles.editedBadgeText}>수정됨</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
+}
+
+function formatDateKorean(dateStr: string) {
+  const [y, m, d] = dateStr.split('-');
+  return `${y}년 ${Number(m)}월 ${Number(d)}일`;
 }
 
 export default function PhotoScreen() {
@@ -164,7 +179,7 @@ export default function PhotoScreen() {
         caregiverExternalId: caregiverId ?? undefined,
         date: today,
         takenAt,
-        memo: caption || undefined,
+        caption: caption || undefined,
       });
       console.log('[PhotoSave] 메타 생성:', response.externalId);
 
@@ -197,7 +212,10 @@ export default function PhotoScreen() {
     <View>
       <View style={styles.headerBannerCol}>
         <View style={styles.headerBannerRow}>
-          <Text style={styles.headerTitle}>하루 한 장</Text>
+          <View>
+            <Text style={styles.headerTitle}>하루 한 장</Text>
+            <Text style={styles.todayText}>{formatDateKorean(today)}</Text>
+          </View>
           <TouchableOpacity
             style={styles.calendarBtn}
             onPress={() => Alert.alert('곧 출시될 기능이에요 🐾', '조금만 기다려주세요')}
@@ -295,6 +313,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
+  todayText: {
+    marginTop: 3,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
   headerBadge: {
     backgroundColor: colors.primary,
     borderRadius: radius.full,
@@ -347,6 +371,20 @@ const styles = StyleSheet.create({
   cell: {
     width: CELL_SIZE,
     height: CELL_SIZE,
+  },
+  editedBadge: {
+    position: 'absolute',
+    left: spacing.xs,
+    bottom: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(25,31,40,0.68)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  editedBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textOnPrimary,
   },
   cellNoLocal: {
     backgroundColor: colors.surfaceAlt,
