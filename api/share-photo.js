@@ -1,5 +1,5 @@
 const DEFAULT_API_BASE_URL = 'https://api.kkori.co.kr';
-const DEFAULT_WEB_BASE_URL = 'https://kkori.co.kr';
+const DEFAULT_WEB_BASE_URL = 'https://test-kkori.vercel.app';
 
 function escapeHtml(value = '') {
   return String(value)
