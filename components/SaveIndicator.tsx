@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text } from 'react-native';
-import { colors, radius } from '../constants/theme';
+import { radius } from '../constants/theme';
 import { SaveStatus } from '../hooks/useAutoSave';
 
 interface Props {
   status: SaveStatus;
   labels?: Partial<Record<Exclude<SaveStatus, 'idle'>, string>>;
+  backgroundColors?: Partial<Record<Exclude<SaveStatus, 'idle'>, string>>;
   textColors?: Partial<Record<Exclude<SaveStatus, 'idle'>, string>>;
   centered?: boolean;
 }
@@ -16,7 +17,7 @@ const config: Record<Exclude<SaveStatus, 'idle'>, { label: string; bg: string; t
   error:  { label: '저장 실패',   bg: 'rgba(0,0,0,0.55)', textColor: '#FF8A8A' },
 };
 
-export default function SaveIndicator({ status, labels, textColors, centered }: Props) {
+export default function SaveIndicator({ status, labels, backgroundColors, textColors, centered }: Props) {
   const [visible, setVisible] = useState(false);
   const [displayStatus, setDisplayStatus] = useState<Exclude<SaveStatus, 'idle'>>('saving');
   const scale = useRef(new Animated.Value(0.8)).current;
@@ -41,7 +42,7 @@ export default function SaveIndicator({ status, labels, textColors, centered }: 
   if (!visible) return null;
 
   const cfg = config[displayStatus];
-  const { bg } = cfg;
+  const bg = backgroundColors?.[displayStatus] ?? cfg.bg;
   const label = labels?.[displayStatus] ?? cfg.label;
   const textColor = textColors?.[displayStatus] ?? cfg.textColor;
 

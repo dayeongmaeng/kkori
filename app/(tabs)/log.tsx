@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   AppState,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -9,6 +11,37 @@ import {
 import { Image } from 'expo-image';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useFocusEffect } from 'expo-router';
+import DatePickerModal from '../../components/DatePickerModal';
+import EmptyPetState from '../../components/EmptyPetState';
+import SaveIndicator from '../../components/SaveIndicator';
+import { useDate } from '../../contexts/DateContext';
+import ConditionPicker from '../../components/ConditionPicker';
+import MealPicker from '../../components/MealPicker';
+import MemoInput from '../../components/MemoInput';
+import PhotoAttacher from '../../components/PhotoAttacher';
+import PoopPicker from '../../components/PoopPicker';
+import WalkInput from '../../components/WalkInput';
+import WaterPicker from '../../components/WaterPicker';
+import { colors, radius, spacing } from '../../constants/theme';
+import {
+  LogRequest,
+  LogResponse,
+  logApi,
+} from '../../lib/api/log';
+import { getCachedCurrentCaregiverId } from '../../lib/cache/caregiver';
+import { getCachedCurrentPetId } from '../../lib/cache/pet';
+import {
+  getCachedLogByDate,
+  getCachedLogs,
+  getLogLocalExtras,
+  getLogPhotos,
+  removeCachedLog,
+  setCachedLogs,
+  setLogLocalExtras,
+  setLogPhotos,
+  upsertCachedLog,
+} from '../../lib/cache/log';
+import { ConditionScore, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../../lib/types';
 
 const imgArrowLeft = require('../../assets/log/arrow-left.png');
 const imgArrowRight = require('../../assets/log/arrow-right.png');
@@ -39,38 +72,24 @@ function HeaderIcon({
     />
   );
 }
-import DatePickerModal from '../../components/DatePickerModal';
-import EmptyPetState from '../../components/EmptyPetState';
-import SaveIndicator from '../../components/SaveIndicator';
-import { useDate } from '../../contexts/DateContext';
-import ConditionPicker from '../../components/ConditionPicker';
-import MealPicker from '../../components/MealPicker';
-import MemoInput from '../../components/MemoInput';
-import PhotoAttacher from '../../components/PhotoAttacher';
-import PoopPicker from '../../components/PoopPicker';
-import WalkInput from '../../components/WalkInput';
-import WaterPicker from '../../components/WaterPicker';
-import { colors, radius, spacing } from '../../constants/theme';
-import {
-  LogRequest,
-  LogResponse,
-  logApi,
-} from '../../lib/api/log';
-import { getCachedCurrentCaregiverId } from '../../lib/cache/caregiver';
-import { getCachedCurrentPetId } from '../../lib/cache/pet';
-import {
-  getCachedLogByDate,
-  getCachedLogs,
-  getLogLocalExtras,
-  getLogPhotos,
-  setCachedLogs,
-  setLogLocalExtras,
-  setLogPhotos,
-  upsertCachedLog,
-} from '../../lib/cache/log';
-import { ConditionScore, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../../lib/types';
 
 type LogSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type LogFormData = {
+  date: string;
+  logExternalId: string | null;
+  condition: ConditionScore | undefined;
+  meal: MealAmount | undefined;
+  mealNote: string;
+  walkMinutes: number | undefined;
+  walkNote: string;
+  pooCondition: StoolCondition | undefined;
+  urineColor: UrineColor | undefined;
+  pooNote: string;
+  water: WaterAmount | undefined;
+  waterNote: string;
+  memo: string;
+  photoUris: string[];
+};
 
 function formatDateKorean(dateStr: string) {
   const [y, m, d] = dateStr.split('-');
@@ -111,6 +130,7 @@ export default function LogScreen() {
   const [logExternalId, setLogExternalId] = useState<string | null>(null);
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [markedDates, setMarkedDates] = useState<Record<string, { marked: true; dotColor: string }>>({});
+  const loadSeqRef = useRef(0);
 
   const petIdRef = useRef<string | null>(null);
   const dateRef = useRef(date);
@@ -132,12 +152,18 @@ export default function LogScreen() {
   const [memo, setMemo] = useState('');
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [saveStatus, setSaveStatus] = useState<LogSaveStatus>('idle');
+  const [successMessage, setSuccessMessage] = useState('저장되었습니다 ✓');
+  const [successBgColor, setSuccessBgColor] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleDateChange(newDate: string) {
+    if (isSaving || isDeleting || !isLoaded) return;
     isViewingTodayRef.current = newDate === today;
+    setIsLoaded(false);
     setDate(newDate);
+    setSaveStatus('idle');
     setReloadKey((k) => k + 1);
   }
 
@@ -182,11 +208,13 @@ export default function LogScreen() {
   useFocusEffect(
     useCallback(() => {
       async function loadLog() {
+        const seq = ++loadSeqRef.current;
         setIsLoaded(false);
         const effectiveDate = isViewingTodayRef.current ? today : dateRef.current;
         if (effectiveDate !== dateRef.current) setDate(effectiveDate);
 
         const currentPetId = await getCachedCurrentPetId();
+        if (seq !== loadSeqRef.current) return;
         if (!currentPetId) { setHasPet(false); resetStates(); setIsLoaded(true); return; }
         setPetId(currentPetId);
         setHasPet(true);
@@ -203,22 +231,21 @@ export default function LogScreen() {
         } else {
           resetStates();
         }
+        if (seq !== loadSeqRef.current) return;
         setIsLoaded(true);
 
         try {
           const serverLogs = await logApi.getLogs({ petExternalId: currentPetId });
+          if (seq !== loadSeqRef.current) return;
           await setCachedLogs(currentPetId, serverLogs);
           setMarkedDates(buildMarkedDates(serverLogs));
 
           const serverLog = serverLogs.find((l) => l.date === effectiveDate);
           if (serverLog) {
             await upsertCachedLog(currentPetId, serverLog);
-            if (!cachedLog) {
-              await applyLog(serverLog);
-            } else {
-              setLogExternalId(serverLog.externalId);
-              logExternalIdRef.current = serverLog.externalId;
-            }
+            await applyLog(serverLog);
+          } else {
+            resetStates();
           }
         } catch {
           // 오프라인 — 캐시 유지
@@ -243,13 +270,15 @@ export default function LogScreen() {
     };
   }, []);
 
-  const logData = {
+  const logData: LogFormData = {
+    date,
+    logExternalId,
     condition, meal, mealNote, walkMinutes, walkNote,
     pooCondition, urineColor, pooNote,
     water, waterNote, memo, photoUris,
   };
 
-  const saveLog = useCallback(async (data: typeof logData) => {
+  const saveLog = useCallback(async (data: LogFormData) => {
     const currentPetId = petIdRef.current;
     if (!currentPetId) return;
 
@@ -259,7 +288,7 @@ export default function LogScreen() {
     const body: LogRequest = {
       petExternalId: currentPetId,
       caregiverExternalId: caregiverId,
-      date: dateRef.current,
+      date: data.date,
       meal: data.meal,
       water: data.water,
       walkMinutes: data.walkMinutes,
@@ -269,7 +298,7 @@ export default function LogScreen() {
       memo: data.memo.trim() || undefined,
     };
 
-    const extId = logExternalIdRef.current;
+    const extId = data.logExternalId;
     let savedExtId = extId;
 
     if (extId) {
@@ -280,8 +309,10 @@ export default function LogScreen() {
       console.log('[LogSave] createLog payload:', JSON.stringify(body, null, 2));
       const result = await logApi.createLog(body);
       savedExtId = result.externalId;
-      setLogExternalId(savedExtId);
-      logExternalIdRef.current = savedExtId;
+      if (dateRef.current === data.date) {
+        setLogExternalId(savedExtId);
+        logExternalIdRef.current = savedExtId;
+      }
       await upsertCachedLog(currentPetId, result);
     }
 
@@ -297,7 +328,7 @@ export default function LogScreen() {
   }, []);
 
   async function handleSave() {
-    if (!isLoaded || hasPet !== true || isSaving) return;
+    if (!isLoaded || hasPet !== true || isSaving || isDeleting) return;
 
     if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
     setSaveStatus('saving');
@@ -305,6 +336,8 @@ export default function LogScreen() {
 
     try {
       await saveLog(logData);
+      setSuccessMessage('저장되었습니다 ✓');
+      setSuccessBgColor(undefined);
       setSaveStatus('saved');
       saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     } catch {
@@ -314,7 +347,55 @@ export default function LogScreen() {
     }
   }
 
+  function confirmDelete() {
+    if (!logExternalId || !petId || isDeleting || isSaving) return;
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`${formatDateKorean(date)} 기록을 삭제할까요?`);
+      if (confirmed) {
+        void handleDelete();
+      }
+      return;
+    }
+
+    Alert.alert(
+      '기록을 삭제할까요?',
+      `${formatDateKorean(date)} 기록이 사라져요.`,
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '삭제', style: 'destructive', onPress: handleDelete },
+      ],
+    );
+  }
+
+  async function handleDelete() {
+    const currentPetId = petIdRef.current;
+    const currentLogExternalId = logExternalIdRef.current;
+    const currentDate = dateRef.current;
+    if (!currentPetId || !currentLogExternalId || isDeleting) return;
+
+    setIsDeleting(true);
+    setSaveStatus('saving');
+    try {
+      await logApi.deleteLog(currentLogExternalId);
+      await removeCachedLog(currentPetId, currentLogExternalId, currentDate);
+      resetStates();
+      setMarkedDates(buildMarkedDates(await getCachedLogs(currentPetId)));
+      setSuccessMessage('삭제되었습니다 ✓');
+      setSuccessBgColor('rgba(233,75,90,0.88)');
+      setSaveStatus('saved');
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch {
+      setSaveStatus('error');
+      Alert.alert('삭제 실패', '기록을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   const isToday = date === today;
+  const isBusy = isSaving || isDeleting || !isLoaded;
+  const hasLog = Boolean(logExternalId);
 
   if (hasPet === false) {
     return (
@@ -328,17 +409,17 @@ export default function LogScreen() {
     <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.arrowBtn} onPress={() => handleDateChange(addDays(date, -1))}>
+        <TouchableOpacity style={styles.arrowBtn} onPress={() => handleDateChange(addDays(date, -1))} disabled={isBusy}>
           <HeaderIcon source={imgArrowLeft} fallback="<" tintColor={colors.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.dateBtn} onPress={() => setIsCalendarVisible(true)}>
+        <TouchableOpacity style={styles.dateBtn} onPress={() => setIsCalendarVisible(true)} disabled={isBusy}>
           <Text style={styles.dateText}>{formatDateKorean(date)}</Text>
           <HeaderIcon source={imgCalendar} fallback="📅" tintColor={colors.primary} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.arrowBtn}
           onPress={() => handleDateChange(addDays(date, 1))}
-          disabled={isToday}
+          disabled={isToday || isBusy}
         >
           <HeaderIcon
             source={imgArrowRight}
@@ -347,7 +428,16 @@ export default function LogScreen() {
           />
         </TouchableOpacity>
       </View>
-      <SaveIndicator status={saveStatus} labels={{ saved: '저장되었습니다 ✓' }} />
+      {!isToday && (
+        <View style={styles.pastDateNotice}>
+          <Text style={styles.pastDateNoticeText}>지난 날짜의 기록을 보고 있어요</Text>
+        </View>
+      )}
+      <SaveIndicator
+        status={saveStatus}
+        labels={{ saved: successMessage }}
+        backgroundColors={{ saved: successBgColor }}
+      />
 
       {/* 본문 */}
       <KeyboardAwareScrollView
@@ -414,13 +504,23 @@ export default function LogScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
+          style={[styles.saveBtn, isBusy && styles.saveBtnDisabled]}
           onPress={handleSave}
           activeOpacity={0.8}
-          disabled={isSaving}
+          disabled={isBusy}
         >
           <Text style={styles.saveBtnText}>{isSaving ? '저장 중...' : '저장'}</Text>
         </TouchableOpacity>
+        {hasLog && (
+          <TouchableOpacity
+            style={[styles.deleteBtn, (isSaving || isDeleting) && styles.deleteBtnDisabled]}
+            onPress={confirmDelete}
+            activeOpacity={0.8}
+            disabled={isSaving || isDeleting}
+          >
+            <Text style={styles.deleteBtnText}>{isDeleting ? '삭제 중...' : '기록 삭제'}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -458,6 +558,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
+  pastDateNotice: {
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.background,
+  },
+  pastDateNoticeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
   scrollView: {
     flex: 1,
   },
@@ -483,6 +594,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    gap: spacing.sm,
   },
   saveBtn: {
     backgroundColor: colors.primary,
@@ -497,5 +609,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.textOnPrimary,
+  },
+  deleteBtn: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  deleteBtnDisabled: {
+    opacity: 0.5,
+  },
+  deleteBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.danger,
   },
 });
