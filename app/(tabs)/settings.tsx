@@ -1,13 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
-import { useState } from 'react';
-import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   Bell, Camera, ChevronRight, Database, FileText,
   Image as ImageIcon, Info, MessageCircle, Newspaper,
   PawPrint, Shield, Star, Trash2,
 } from 'lucide-react-native';
+import { useState } from 'react';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
 
 const FEEDBACK_URL = 'https://open.kakao.com/o/seTWQ4ui';
@@ -101,8 +101,8 @@ export default function SettingsScreen() {
       <GroupTitle label="알림" />
       <Card>
         <Row icon={<Bell size={20} color={colors.textSecondary} />} label="알림 권한" desc="시스템 설정 열기" onPress={openSettings} />
-        <Row icon={<Bell size={20} color={colors.textQuaternary} />} label="약 복용 알림" right={<ComingSoonBadge />} disabled />
-        <Row icon={<Bell size={20} color={colors.textQuaternary} />} label="데일리 포토 리마인더" right={<ComingSoonBadge />} disabled last />
+        {/* <Row icon={<Bell size={20} color={colors.textQuaternary} />} label="약 복용 알림" right={<ComingSoonBadge />} disabled /> */}
+        {/* <Row icon={<Bell size={20} color={colors.textQuaternary} />} label="데일리 포토 리마인더" right={<ComingSoonBadge />} disabled last /> */}
       </Card>
 
       <GroupTitle label="권한" />
@@ -122,7 +122,7 @@ export default function SettingsScreen() {
       <Card>
         <Row icon={<Shield size={20} color={colors.textSecondary} />} label="개인정보 처리방침" onPress={() => openURL(PRIVACY_URL)} />
         <Row icon={<FileText size={20} color={colors.textSecondary} />} label="이용약관" onPress={() => openURL(TERMS_URL)} />
-        <Row icon={<Info size={20} color={colors.textSecondary} />} label="버전 정보" right={<Text style={s.versionText}>꼬리 v{APP_VERSION}</Text>} last />
+        <Row icon={<Info size={20} color={colors.textSecondary} />} label="버전 정보" right={<Text style={s.versionText}>v{APP_VERSION}</Text>} last />
       </Card>
 
       <GroupTitle label="지원" />
