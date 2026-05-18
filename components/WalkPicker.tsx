@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 const QUICK_MINUTES = [15, 30, 60];
 
 interface Props {
-  walkMinutes?: number;
+  walkMinutes?: number | null;
   walkNote?: string;
   onChangeMinutes: (value: number | undefined) => void;
   onChangeNote: (value: string) => void;
@@ -11,7 +11,12 @@ interface Props {
 
 export default function WalkPicker({ walkMinutes, walkNote, onChangeMinutes, onChangeNote }: Props) {
   function handleTextChange(text: string) {
-    const num = parseInt(text, 10);
+    const cleaned = text.replace(/[^0-9]/g, '');
+    if (cleaned === '') {
+      onChangeMinutes(undefined);
+      return;
+    }
+    const num = parseInt(cleaned, 10);
     onChangeMinutes(isNaN(num) ? undefined : num);
   }
 
@@ -25,10 +30,10 @@ export default function WalkPicker({ walkMinutes, walkNote, onChangeMinutes, onC
         <View style={styles.inputGroup}>
           <TextInput
             style={styles.minutesInput}
-            value={walkMinutes !== undefined ? String(walkMinutes) : ''}
+            value={walkMinutes == null ? '' : String(walkMinutes)}
             onChangeText={handleTextChange}
             keyboardType="number-pad"
-            placeholder="0"
+            placeholder="-"
             placeholderTextColor="#C4B8A8"
             maxLength={3}
           />

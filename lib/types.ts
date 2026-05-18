@@ -50,7 +50,7 @@ export interface DailyLog {
   mealNote?: string;         // 사료 종류, 간식 등 자유 메모
   water?: WaterAmount;
   waterNote?: string;
-  walkMinutes?: number;
+  walkMinutes?: number | null;
   walkNote?: string;         // 산책 메모 (장소 등)
   pooCondition?: StoolCondition;
   pooNote?: string;

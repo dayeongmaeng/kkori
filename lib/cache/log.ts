@@ -13,17 +13,27 @@ export interface LogLocalExtras {
   waterNote?: string;
 }
 
+function normalizeLog(log: LogResponse): LogResponse {
+  return {
+    ...log,
+    walkMinutes: log.walkMinutes ?? null,
+  };
+}
+
 export async function getCachedLogs(petExternalId: string): Promise<LogResponse[]> {
   try {
     const json = await AsyncStorage.getItem(logsKey(petExternalId));
-    return json ? (JSON.parse(json) as LogResponse[]) : [];
+    if (!json) return [];
+    const parsed = JSON.parse(json) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return (parsed as LogResponse[]).map(normalizeLog);
   } catch {
     return [];
   }
 }
 
 export async function setCachedLogs(petExternalId: string, logs: LogResponse[]): Promise<void> {
-  await AsyncStorage.setItem(logsKey(petExternalId), JSON.stringify(logs));
+  await AsyncStorage.setItem(logsKey(petExternalId), JSON.stringify(logs.map(normalizeLog)));
 }
 
 export async function getCachedLogByDate(petExternalId: string, date: string): Promise<LogResponse | null> {
@@ -34,7 +44,8 @@ export async function getCachedLogByDate(petExternalId: string, date: string): P
 export async function upsertCachedLog(petExternalId: string, log: LogResponse): Promise<void> {
   const logs = await getCachedLogs(petExternalId);
   const idx = logs.findIndex((l) => l.date === log.date);
-  if (idx >= 0) logs[idx] = log; else logs.push(log);
+  const normalizedLog = normalizeLog(log);
+  if (idx >= 0) logs[idx] = normalizedLog; else logs.push(normalizedLog);
   await setCachedLogs(petExternalId, logs);
 }
 

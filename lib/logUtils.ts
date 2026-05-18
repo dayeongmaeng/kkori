@@ -17,7 +17,7 @@ export function summarizeLog(log: LogResponse): string {
   const items: string[] = [];
 
   if (log.condition != null) items.push(`컨디션 ${CONDITION_EMOJI[log.condition]}`);
-  if (log.walkMinutes != null && log.walkMinutes > 0) items.push(`산책 ${log.walkMinutes}분`);
+  if (log.walkMinutes != null && log.walkMinutes >= 0) items.push(`산책 ${log.walkMinutes}분`);
   if (log.meal != null) items.push(MEAL_LABEL[log.meal]);
   if (log.water != null) items.push(WATER_LABEL[log.water]);
   if (log.pooCondition != null) items.push('배변 기록');

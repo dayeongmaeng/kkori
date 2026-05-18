@@ -136,6 +136,10 @@ function toReadyLogPhotos(photos: LogPhotoAttachment[]): LogPhotoResponse[] {
     }));
 }
 
+function toEditableWalkMinutes(value: number | null | undefined): number | undefined {
+  return value == null ? undefined : value;
+}
+
 export default function LogScreen() {
   const today = useDate();
 
@@ -209,7 +213,7 @@ export default function LogScreen() {
 
     setCondition(log.condition);
     setMeal(log.meal);
-    setWalkMinutes(log.walkMinutes);
+    setWalkMinutes(toEditableWalkMinutes(log.walkMinutes));
     setPooCondition(log.pooCondition);
     setUrineColor(log.urineColor);
     setWater(log.water);
@@ -313,7 +317,7 @@ export default function LogScreen() {
       date: data.date,
       meal: data.meal,
       water: data.water,
-      walkMinutes: data.walkMinutes,
+      walkMinutes: data.walkMinutes ?? null,
       pooCondition: data.pooCondition,
       urineColor: data.urineColor,
       condition: data.condition,

@@ -4,7 +4,7 @@ import { colors, radius, spacing } from '../constants/theme';
 const QUICK_MINUTES = [15, 30, 60, 90];
 
 interface Props {
-  minutes?: number;
+  minutes?: number | null;
   note?: string;
   onChangeMinutes: (value: number | undefined) => void;
   onChangeNote: (value: string) => void;
@@ -26,10 +26,10 @@ export default function WalkInput({ minutes, note, onChangeMinutes, onChangeNote
       <View style={styles.inputRow}>
         <TextInput
           style={styles.minutesInput}
-          value={minutes !== undefined ? String(minutes) : ''}
+          value={minutes == null ? '' : String(minutes)}
           onChangeText={handleTextChange}
           keyboardType="number-pad"
-          placeholder="0"
+          placeholder="-"
           placeholderTextColor={colors.textQuaternary}
           maxLength={3}
         />

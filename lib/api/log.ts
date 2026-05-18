@@ -21,7 +21,7 @@ export interface LogResponse {
   date: string;
   meal?: MealAmount;
   water?: WaterAmount;
-  walkMinutes?: number;
+  walkMinutes?: number | null;
   pooCondition?: StoolCondition;
   urineColor?: UrineColor;
   condition?: ConditionScore;
@@ -38,7 +38,7 @@ export interface LogRequest {
   date: string;
   meal?: MealAmount;
   water?: WaterAmount;
-  walkMinutes?: number;
+  walkMinutes?: number | null;
   pooCondition?: StoolCondition;
   urineColor?: UrineColor;
   condition?: ConditionScore;
