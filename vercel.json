@@ -2,8 +2,9 @@
   "buildCommand": "expo export -p web",
   "outputDirectory": "dist",
   "framework": null,
-  "rewrites": [
-    { "source": "/photos/:externalId", "destination": "/api/share-photo?externalId=:externalId" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/photos/([^/]+)", "dest": "/api/share-photo?externalId=$1" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

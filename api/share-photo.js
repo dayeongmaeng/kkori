@@ -263,6 +263,7 @@ module.exports = async function handler(req, res) {
   if (!externalId) {
     res.statusCode = 404;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Kkori-Share-Page', '1');
     res.end(renderPage({ photo: null, externalId: '' }));
     return;
   }
@@ -278,6 +279,7 @@ module.exports = async function handler(req, res) {
     if (!apiRes.ok) {
       res.statusCode = apiRes.status === 404 ? 404 : 502;
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('X-Kkori-Share-Page', '1');
       res.end(renderPage({ photo: null, externalId, status: res.statusCode }));
       return;
     }
@@ -288,17 +290,20 @@ module.exports = async function handler(req, res) {
     if (!photo?.mediumUrl && !photo?.thumbnailUrl) {
       res.statusCode = 404;
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('X-Kkori-Share-Page', '1');
       res.end(renderPage({ photo: null, externalId, status: 404 }));
       return;
     }
 
     res.statusCode = 200;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Kkori-Share-Page', '1');
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600');
     res.end(renderPage({ photo, externalId, status: 200 }));
   } catch {
     res.statusCode = 502;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('X-Kkori-Share-Page', '1');
     res.end(renderPage({ photo: null, externalId, status: 502 }));
   }
 };
