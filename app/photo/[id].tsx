@@ -11,7 +11,6 @@ import {
   Linking,
   Modal,
   Platform,
-  Pressable,
   SafeAreaView,
   Share,
   StyleSheet,
@@ -69,6 +68,7 @@ export default function PhotoDetailScreen() {
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
   const [isSavingCaption, setIsSavingCaption] = useState(false);
   const flatListRef = useRef<FlatList<LocalPhoto>>(null);
+  const captionInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     async function load() {
@@ -98,6 +98,16 @@ export default function PhotoDetailScreen() {
     }
     load();
   }, [id]);
+
+  useEffect(() => {
+    if (!captionModalVisible) return;
+
+    const timer = setTimeout(() => {
+      captionInputRef.current?.focus();
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [captionModalVisible]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     const idx = viewableItems[0]?.index;
@@ -165,6 +175,7 @@ export default function PhotoDetailScreen() {
 
     setIsSavingCaption(true);
     try {
+      Keyboard.dismiss();
       const updated = await photoApi.updatePhoto(targetPhoto.externalId, {
         caption: captionDraft.trim() || undefined,
       });
@@ -419,24 +430,31 @@ export default function PhotoDetailScreen() {
         transparent
         animationType="slide"
         onRequestClose={() => {
+          Keyboard.dismiss();
           setCaptionModalVisible(false);
           setEditingPhotoId(null);
         }}
       >
-        <Pressable style={styles.modalBackdrop} onPress={Keyboard.dismiss}>
+        <View style={styles.modalBackdrop}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
             style={styles.modalKeyboardView}
           >
             <View style={styles.captionSheet}>
               <Text style={styles.captionSheetTitle}>캡션 수정</Text>
               <TextInput
+                ref={captionInputRef}
                 style={styles.captionInput}
                 value={captionDraft}
                 onChangeText={(text) => setCaptionDraft(text.slice(0, MAX_CAPTION))}
                 placeholder="오늘 어떤 하루였나요?"
                 placeholderTextColor={colors.textQuaternary}
                 multiline
+                autoFocus
+                keyboardType="default"
+                returnKeyType="done"
+                blurOnSubmit
                 textAlignVertical="top"
               />
               <Text style={styles.captionCounter}>{captionDraft.length}/{MAX_CAPTION}</Text>
@@ -451,6 +469,7 @@ export default function PhotoDetailScreen() {
               <TouchableOpacity
                 style={styles.captionCancelBtn}
                 onPress={() => {
+                  Keyboard.dismiss();
                   setCaptionModalVisible(false);
                   setEditingPhotoId(null);
                 }}
@@ -460,7 +479,7 @@ export default function PhotoDetailScreen() {
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
-        </Pressable>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -602,9 +621,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalKeyboardView: {
+    flex: 1,
     justifyContent: 'flex-end',
   },
   captionSheet: {
+    maxHeight: '82%',
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
