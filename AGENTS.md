@@ -131,6 +131,7 @@
 - GET/POST/PUT/DELETE /api/v1/pets
 - GET/POST/PUT/DELETE /api/v1/photos (query: petExternalId)
 - GET/POST/PUT/DELETE /api/v1/logs (query: petExternalId, date 필터)
+- DELETE /api/v1/logs/{externalId}: 일일 기록 삭제, `X-Device-Id` 필수, 성공 시 204 No Content
 
 API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet.ts, photo.ts, log.ts)
 
@@ -139,6 +140,11 @@ API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet
 - 최종 API URL `https://api.kkori.co.kr` 기준 클라이언트 검증 완료
 - 펫 조회 정상 확인
 - 일일 기록 저장/조회 정상 확인
+- 기록 탭 자동저장 제거 완료: 사용자가 `저장` 버튼을 눌렀을 때만 저장
+- 기록 삭제 버튼 API 연동 완료: `logApi.deleteLog(externalId)` -> `DELETE /api/v1/logs/{externalId}`
+- 기록 삭제 후 서버/캐시 데이터 삭제 및 화면 초기화 처리 완료
+- 웹에서 기록 삭제 확인창은 `Alert.alert` 대신 `window.confirm` 사용
+- 기록 삭제 성공 알림 문구는 `삭제되었습니다 ✓`, 반투명 붉은 배경 사용
 - 사진 메타 생성 정상 확인
 - 사진 업로드 정상 확인
 - 앱 재실행 후 서버/캐시 데이터 확인 완료
