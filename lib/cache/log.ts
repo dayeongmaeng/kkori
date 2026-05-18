@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LogResponse } from '../api/log';
+import { LogPhotoResponse, LogResponse } from '../api/log';
 
 const logsKey = (petId: string) => `pet-care:api:logs:${petId}`;
 const logExtrasKey = (id: string) => `pet-care:log-extras:${id}`;
@@ -63,15 +63,24 @@ export async function setLogLocalExtras(logExternalId: string, extras: LogLocalE
   await AsyncStorage.setItem(logExtrasKey(logExternalId), JSON.stringify(extras));
 }
 
-export async function getLogPhotos(logExternalId: string): Promise<string[]> {
+export async function getLogPhotos(logExternalId: string): Promise<LogPhotoResponse[]> {
   try {
     const json = await AsyncStorage.getItem(logPhotosKey(logExternalId));
-    return json ? (JSON.parse(json) as string[]) : [];
+    if (!json) return [];
+    const parsed = JSON.parse(json) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((p): p is LogPhotoResponse => {
+      return typeof p === 'object'
+        && p !== null
+        && 'externalId' in p
+        && 'mediumUrl' in p
+        && 'thumbnailUrl' in p;
+    });
   } catch {
     return [];
   }
 }
 
-export async function setLogPhotos(logExternalId: string, uris: string[]): Promise<void> {
-  await AsyncStorage.setItem(logPhotosKey(logExternalId), JSON.stringify(uris));
+export async function setLogPhotos(logExternalId: string, photos: LogPhotoResponse[]): Promise<void> {
+  await AsyncStorage.setItem(logPhotosKey(logExternalId), JSON.stringify(photos));
 }

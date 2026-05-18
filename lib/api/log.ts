@@ -1,5 +1,19 @@
 import { api } from './client';
 import { ConditionScore, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../types';
+import type { ThumbnailFile } from '../photoUtils';
+
+export interface LogPhotoResponse {
+  externalId: string;
+  dailyLogId?: number;
+  petId?: number;
+  caregiverId?: number;
+  date?: string;
+  mediumUrl: string;
+  thumbnailUrl: string;
+  sortOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface LogResponse {
   externalId: string;
@@ -13,6 +27,7 @@ export interface LogResponse {
   condition?: ConditionScore;
   weightKg?: number;
   memo?: string;
+  photos?: LogPhotoResponse[];
   createdAt: string;
   updatedAt: string;
 }
@@ -56,4 +71,31 @@ export const logApi = {
 
   deleteLog: (externalId: string) =>
     api.delete<void>(`/api/v1/logs/${externalId}`),
+
+  uploadLogPhoto: async (
+    logExternalId: string,
+    medium: ThumbnailFile,
+    thumbnail: ThumbnailFile,
+  ): Promise<LogPhotoResponse> => {
+    const formData = new FormData();
+
+    function appendFile(key: string, file: ThumbnailFile) {
+      if (file.blob) {
+        formData.append(key, file.blob, file.name);
+      } else {
+        formData.append(key, { uri: file.uri, name: file.name, type: file.type } as any);
+      }
+    }
+
+    appendFile('medium', medium);
+    appendFile('thumbnail', thumbnail);
+
+    return api.postFormData<LogPhotoResponse>(
+      `/api/v1/logs/${logExternalId}/photos/upload`,
+      formData,
+    );
+  },
+
+  deleteLogPhoto: (logExternalId: string, photoExternalId: string) =>
+    api.delete<void>(`/api/v1/logs/${logExternalId}/photos/${photoExternalId}`),
 };

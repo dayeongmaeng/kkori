@@ -19,12 +19,14 @@ import ConditionPicker from '../../components/ConditionPicker';
 import MealPicker from '../../components/MealPicker';
 import MemoInput from '../../components/MemoInput';
 import PhotoAttacher from '../../components/PhotoAttacher';
+import type { LogPhotoAttachment } from '../../components/PhotoAttacher';
 import PoopPicker from '../../components/PoopPicker';
 import WalkInput from '../../components/WalkInput';
 import WaterPicker from '../../components/WaterPicker';
 import { colors, radius, spacing } from '../../constants/theme';
 import {
   LogRequest,
+  LogPhotoResponse,
   LogResponse,
   logApi,
 } from '../../lib/api/log';
@@ -88,7 +90,6 @@ type LogFormData = {
   water: WaterAmount | undefined;
   waterNote: string;
   memo: string;
-  photoUris: string[];
 };
 
 function formatDateKorean(dateStr: string) {
@@ -118,6 +119,23 @@ function Card({ title, children }: { title: string; children?: React.ReactNode }
   );
 }
 
+function toReadyLogPhotos(photos: LogPhotoAttachment[]): LogPhotoResponse[] {
+  return photos
+    .filter((photo) => photo.status !== 'uploading' && photo.status !== 'error' && !photo.tempId)
+    .map((photo) => ({
+      externalId: photo.externalId,
+      dailyLogId: photo.dailyLogId,
+      petId: photo.petId,
+      caregiverId: photo.caregiverId,
+      date: photo.date,
+      mediumUrl: photo.mediumUrl,
+      thumbnailUrl: photo.thumbnailUrl,
+      sortOrder: photo.sortOrder,
+      createdAt: photo.createdAt,
+      updatedAt: photo.updatedAt,
+    }));
+}
+
 export default function LogScreen() {
   const today = useDate();
 
@@ -135,6 +153,7 @@ export default function LogScreen() {
   const petIdRef = useRef<string | null>(null);
   const dateRef = useRef(date);
   const logExternalIdRef = useRef<string | null>(null);
+  const logPhotosRef = useRef<LogPhotoAttachment[]>([]);
   petIdRef.current = petId;
   dateRef.current = date;
   logExternalIdRef.current = logExternalId;
@@ -150,7 +169,8 @@ export default function LogScreen() {
   const [water, setWater] = useState<WaterAmount | undefined>();
   const [waterNote, setWaterNote] = useState('');
   const [memo, setMemo] = useState('');
-  const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [logPhotos, setLogPhotosState] = useState<LogPhotoAttachment[]>([]);
+  logPhotosRef.current = logPhotos;
   const [saveStatus, setSaveStatus] = useState<LogSaveStatus>('idle');
   const [successMessage, setSuccessMessage] = useState('저장되었습니다 ✓');
   const [successBgColor, setSuccessBgColor] = useState<string | undefined>();
@@ -180,7 +200,7 @@ export default function LogScreen() {
     setWater(undefined);
     setWaterNote('');
     setMemo('');
-    setPhotoUris([]);
+    setLogPhotosState([]);
   }
 
   async function applyLog(log: LogResponse) {
@@ -201,8 +221,10 @@ export default function LogScreen() {
     setPooNote(extras.pooNote ?? '');
     setWaterNote(extras.waterNote ?? '');
 
-    const photos = await getLogPhotos(log.externalId);
-    setPhotoUris(photos);
+    const cachedPhotos = await getLogPhotos(log.externalId);
+    const serverPhotos = log.photos ?? [];
+    const photos = serverPhotos.length > 0 ? serverPhotos : cachedPhotos;
+    setLogPhotosState(photos.map((photo) => ({ ...photo, status: 'ready' as const })));
   }
 
   useFocusEffect(
@@ -275,12 +297,12 @@ export default function LogScreen() {
     logExternalId,
     condition, meal, mealNote, walkMinutes, walkNote,
     pooCondition, urineColor, pooNote,
-    water, waterNote, memo, photoUris,
+    water, waterNote, memo,
   };
 
-  const saveLog = useCallback(async (data: LogFormData) => {
+  const saveLog = useCallback(async (data: LogFormData): Promise<string | null> => {
     const currentPetId = petIdRef.current;
-    if (!currentPetId) return;
+    if (!currentPetId) return null;
 
     const caregiverId = await getCachedCurrentCaregiverId();
     if (!caregiverId) throw new Error('보호자 정보가 초기화되지 않았습니다.');
@@ -304,7 +326,10 @@ export default function LogScreen() {
     if (extId) {
       console.log('[LogSave] updateLog payload:', JSON.stringify(body, null, 2));
       const result = await logApi.updateLog(extId, body);
-      if (result) await upsertCachedLog(currentPetId, result);
+      if (result) {
+        const photos = result.photos?.length ? result.photos : toReadyLogPhotos(logPhotosRef.current);
+        await upsertCachedLog(currentPetId, { ...result, photos });
+      }
     } else {
       console.log('[LogSave] createLog payload:', JSON.stringify(body, null, 2));
       const result = await logApi.createLog(body);
@@ -313,7 +338,8 @@ export default function LogScreen() {
         setLogExternalId(savedExtId);
         logExternalIdRef.current = savedExtId;
       }
-      await upsertCachedLog(currentPetId, result);
+      const photos = result.photos?.length ? result.photos : toReadyLogPhotos(logPhotosRef.current);
+      await upsertCachedLog(currentPetId, { ...result, photos });
     }
 
     if (savedExtId) {
@@ -323,8 +349,9 @@ export default function LogScreen() {
         pooNote: data.pooNote.trim() || undefined,
         waterNote: data.waterNote.trim() || undefined,
       });
-      await setLogPhotos(savedExtId, data.photoUris);
     }
+
+    return savedExtId;
   }, []);
 
   async function handleSave() {
@@ -342,6 +369,57 @@ export default function LogScreen() {
       saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     } catch {
       setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function persistLogPhotos(nextPhotos: LogPhotoAttachment[]) {
+    const currentPetId = petIdRef.current;
+    const currentLogExternalId = logExternalIdRef.current;
+    if (!currentPetId || !currentLogExternalId) return;
+
+    const readyPhotos = toReadyLogPhotos(nextPhotos);
+    await setLogPhotos(currentLogExternalId, readyPhotos);
+
+    const cachedLog = await getCachedLogByDate(currentPetId, dateRef.current);
+    if (cachedLog) {
+      await upsertCachedLog(currentPetId, { ...cachedLog, photos: readyPhotos });
+    }
+  }
+
+  async function ensureLogExternalIdForPhoto() {
+    if (logExternalIdRef.current) return logExternalIdRef.current;
+    if (!isLoaded || hasPet !== true || isSaving || isDeleting) return null;
+
+    if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
+    setSaveStatus('saving');
+    setIsSaving(true);
+
+    try {
+      const savedId = await saveLog({
+        date: dateRef.current,
+        logExternalId: logExternalIdRef.current,
+        condition,
+        meal,
+        mealNote,
+        walkMinutes,
+        walkNote,
+        pooCondition,
+        urineColor,
+        pooNote,
+        water,
+        waterNote,
+        memo,
+      });
+      setSuccessMessage('기록을 먼저 저장했어요 ✓');
+      setSuccessBgColor(undefined);
+      setSaveStatus('saved');
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+      return savedId;
+    } catch {
+      setSaveStatus('error');
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -485,7 +563,13 @@ export default function LogScreen() {
           />
         </Card>
         <Card title="기록 사진 (선택)">
-          <PhotoAttacher photoUris={photoUris} onChangePhotoUris={setPhotoUris} />
+          <PhotoAttacher
+            photos={logPhotos}
+            disabled={isBusy}
+            onChangePhotos={setLogPhotosState}
+            onEnsureLogExternalId={ensureLogExternalIdForPhoto}
+            onUploaded={persistLogPhotos}
+          />
         </Card>
         <Card title="오늘의 메모">
           <MemoInput value={memo} onChangeText={setMemo} />
