@@ -147,6 +147,16 @@ API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet
 - 기록 삭제 성공 알림 문구는 `삭제되었습니다 ✓`, 반투명 붉은 배경 사용
 - 사진 메타 생성 정상 확인
 - 사진 업로드 정상 확인
+- Phase E 및 후속 업로드 UX 안정화 완료
+- 기록 사진 기능 추가 완료
+  - DailyLog별 최대 3장
+  - 선택 즉시 서버/S3 업로드
+  - 클라이언트에서 하루 한장과 동일하게 medium 1080px, thumbnail 300px 리사이즈 후 업로드
+  - DailyLog 조회 응답의 사진 목록을 기록탭에 반영
+  - 썸네일 목록 표시
+  - 썸네일 클릭 시 medium 이미지를 크게 보기
+  - 업로드 로딩/실패/재시도/삭제 UX 추가
+  - 기록 사진 삭제 버튼 우측 상단 X 잘림 문제 해결
 - 앱 재실행 후 서버/캐시 데이터 확인 완료
 
 ## S3 및 업로드 디버깅 메모
@@ -170,10 +180,9 @@ API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet
 ## 다음 작업 후보
 
 - 8080 외부 포트 닫기 확인
-- 업로드 실패/재시도 UX 정리
 - Vercel에 kkori.co.kr / www.kkori.co.kr 연결
 - 개인정보처리방침/계정삭제 안내 페이지 준비
-- Phase D 로그인/회원가입 설계
+- Phase D 회원가입 설계
 
 ## 절대 하지 말 것
 
