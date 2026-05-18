@@ -44,7 +44,7 @@ export default function PhotoActionSheet({
                 )}
 
                 <TouchableOpacity style={styles.menuItem} onPress={onSaveToAlbum} activeOpacity={0.6}>
-                  <Text style={styles.menuText}>사진 저장</Text>
+                  <Text style={styles.menuText}>저장하기</Text>
                 </TouchableOpacity>
 
                 <View style={styles.divider} />

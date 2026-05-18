@@ -22,19 +22,28 @@ function formatDateKorean(dateStr: string) {
   return `${y}년 ${Number(m)}월 ${Number(d)}일`;
 }
 
+function getImageUrl(photo: PhotoShareResponse) {
+  return photo.mediumUrl ?? photo.thumbnailUrl;
+}
+
 export default function SharedPhotoScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { externalId } = useLocalSearchParams<{ externalId: string }>();
   const [photo, setPhoto] = useState<PhotoShareResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     async function load() {
-      if (!id) return;
+      if (!externalId) {
+        setHasError(true);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setHasError(false);
       try {
-        const result = await photoApi.getSharedPhoto(id);
+        const result = await photoApi.getSharedPhoto(externalId);
         setPhoto(result);
       } catch {
         setHasError(true);
@@ -44,8 +53,9 @@ export default function SharedPhotoScreen() {
     }
 
     load();
-  }, [id]);
+  }, [externalId]);
 
+  const imageUrl = photo ? getImageUrl(photo) : undefined;
   const title = photo ? `${photo.petName}의 하루 한 장` : '꼬리 사진 공유';
   const description = photo?.caption ?? '반려동물의 소중한 순간을 꼬리에서 공유했어요.';
 
@@ -88,21 +98,37 @@ export default function SharedPhotoScreen() {
         <meta name="description" content={description} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
-        <meta property="og:image" content={photo.mediumUrl} />
+        {imageUrl ? <meta property="og:image" content={imageUrl} /> : null}
       </Head>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.shell}>
           <View style={styles.topBar}>
-            <Text style={styles.brand}>꼬리</Text>
-            <Text style={styles.dateText}>{formatDateKorean(photo.date)}</Text>
+            <View>
+              <Text style={styles.brand}>꼬리</Text>
+              <Text style={styles.dateText}>{formatDateKorean(photo.date)}</Text>
+            </View>
+            <View style={styles.shareBadge}>
+              <Text style={styles.shareBadgeText}>사진 공유</Text>
+            </View>
           </View>
 
-          <Image source={{ uri: photo.mediumUrl }} style={styles.photo} contentFit="cover" />
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.photo} contentFit="cover" />
+          ) : (
+            <View style={[styles.photo, styles.emptyPhoto]}>
+              <Text style={styles.emptyPhotoText}>사진을 불러올 수 없어요</Text>
+            </View>
+          )}
 
           <View style={styles.content}>
-            <Text style={styles.eyebrow}>사진 공유</Text>
+            <Text style={styles.eyebrow}>KKORI PHOTO</Text>
             <Text style={styles.title}>{photo.petName}의 하루 한 장</Text>
+            {photo.edited && (
+              <View style={styles.editedBadge}>
+                <Text style={styles.editedBadgeText}>수정됨</Text>
+              </View>
+            )}
             {photo.caption ? (
               <Text style={styles.caption}>{photo.caption}</Text>
             ) : (
@@ -117,7 +143,7 @@ export default function SharedPhotoScreen() {
               onPress={() => Linking.openURL(WEB_BASE_URL)}
               activeOpacity={0.82}
             >
-              <Text style={styles.primaryButtonText}>꼬리 둘러보기</Text>
+              <Text style={styles.primaryButtonText}>꼬리에서 기록하기</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -177,6 +203,10 @@ const styles = StyleSheet.create({
     }),
   },
   topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.lg,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
@@ -193,10 +223,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textTertiary,
   },
+  shareBadge: {
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  shareBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.textSecondary,
+  },
   photo: {
     width: '100%',
     aspectRatio: 1,
     backgroundColor: colors.surfaceAlt,
+  },
+  emptyPhoto: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyPhotoText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textTertiary,
   },
   content: {
     padding: spacing.xl,
@@ -212,6 +262,18 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: colors.textPrimary,
     lineHeight: 32,
+  },
+  editedBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.full,
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  editedBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.accent,
   },
   caption: {
     fontSize: 17,

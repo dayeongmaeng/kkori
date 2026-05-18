@@ -36,7 +36,9 @@ export interface PhotoShareResponse {
   petName: string;
   date: string;
   caption?: string;
-  mediumUrl: string;
+  mediumUrl?: string;
+  thumbnailUrl?: string;
+  edited?: boolean;
 }
 
 export interface PhotoUploadResponse {
@@ -60,8 +62,19 @@ export const photoApi = {
   updatePhotoCompat: (externalId: string, body: PhotoUpdateRequest) =>
     api.put<PhotoResponse>(`/api/v1/photos/${externalId}`, body),
 
-  getSharedPhoto: (externalId: string) =>
-    api.get<PhotoShareResponse>(`/api/v1/photos/${externalId}/share`, true),
+  getSharedPhoto: async (externalId: string): Promise<PhotoShareResponse> => {
+    const baseUrl = (process.env.EXPO_PUBLIC_SHARE_API_URL ?? 'https://api.kkori.co.kr').replace(/\/$/, '');
+    const res = await fetch(`${baseUrl}/api/v1/photos/${encodeURIComponent(externalId)}/share`, {
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+      throw new Error(`공유 사진 조회 실패: ${res.status}`);
+    }
+
+    const json = await res.json();
+    return json?.data ?? json;
+  },
 
   deletePhoto: (externalId: string) =>
     api.delete<void>(`/api/v1/photos/${externalId}`),
