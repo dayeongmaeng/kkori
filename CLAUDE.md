@@ -74,12 +74,15 @@
 - HTTPS 적용 완료
 - HTTPS 구성: Let's Encrypt + Certbot + Nginx
 - 인증서 도메인: api.kkori.co.kr
+- Certbot 인증서 발급 완료
 - certbot renew --dry-run 성공
+- 새 서버에서 HTTPS 직접 확인 완료
+- Spring Boot API 컨테이너와 PostgreSQL 컨테이너 정상 구동 확인
 - 무료 HTTPS 인증서는 Let's Encrypt로 충분하다고 결정
 
 ## 도메인 역할
 
-- kkori.co.kr / www.kkori.co.kr: Vercel 웹/정책/공유 페이지 용도
+- kkori.co.kr / www.kkori.co.kr: Vercel 웹 랜딩, 개인정보처리방침, 계정삭제 안내, 가족 공유/메모리얼 페이지 용도
 - api.kkori.co.kr: Lightsail Spring Boot API 용도
 - 향후 가족 공유 링크/메모리얼 웹 페이지 가능성을 고려해 kkori.co.kr 전용 도메인 사용
 - 앱 클라이언트는 운영 API 기준으로 https://api.kkori.co.kr에 요청
@@ -90,7 +93,7 @@
 -> https://api.kkori.co.kr
 -> Nginx 443
 -> Spring Boot 8080
--> PostgreSQL
+-> PostgreSQL 16
 -> S3
 
 ## 서버 포트
@@ -103,7 +106,7 @@
 
 향후 HTTPS 확인 후 닫아도 되는 포트:
 
-- 8080: Spring Boot 직접 접근 포트. 최종적으로 외부 공개는 닫는 방향
+- 8080: Spring Boot 직접 접근 포트. 최종적으로 외부 공개는 닫는 방향이며, 현재 닫힘 여부 확인 필요
 
 ## 서버 비용 및 배포 메모
 
@@ -131,10 +134,40 @@
 
 API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet.ts, photo.ts, log.ts)
 
+## 클라이언트 검증 상태
+
+- 최종 API URL `https://api.kkori.co.kr` 기준 클라이언트 검증 완료
+- 펫 조회 정상 확인
+- 일일 기록 저장/조회 정상 확인
+- 사진 메타 생성 정상 확인
+- 사진 업로드 정상 확인
+- 앱 재실행 후 서버/캐시 데이터 확인 완료
+
 ## S3 및 업로드 디버깅 메모
 
+- S3 사진 업로드 정상 동작 확인 완료
 - AWS Lightsail에서 S3 접근 시 IAM Role을 따로 붙인 게 아니라면 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET` 환경변수가 필요함
-- S3 업로드 문제를 볼 때 `NoResourceFoundException: No static resource api/v1/photos/.../upload`는 access key 문제가 아니라 서버 Controller 매핑 또는 배포 코드 불일치 가능성이 높음
+- 사진 업로드 중 `S3Exception: The specified bucket is not valid`가 발생했으며, 원인은 IAM access key 자체 문제가 아니라 Docker 컨테이너 안에 AWS/S3 환경변수가 전달되지 않던 문제였음
+- `docker-compose.yml`의 `api.environment`에 아래 환경변수를 추가해 해결함
+  - `AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}`
+  - `AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}`
+  - `AWS_REGION: ${AWS_REGION}`
+  - `AWS_S3_BUCKET: ${AWS_S3_BUCKET}`
+- `.env`에는 아래 값들이 필요하며, 민감정보 값은 문서에 기록하지 않음
+  - `AWS_ACCESS_KEY_ID=...`
+  - `AWS_SECRET_ACCESS_KEY=...`
+  - `AWS_REGION=ap-northeast-2`
+  - `AWS_S3_BUCKET=버킷명만`
+- `AWS_S3_BUCKET`은 `s3://`, URL, 경로 없이 순수 버킷명만 넣어야 함
+- `NoResourceFoundException: No static resource api/v1/photos/.../upload`는 access key 문제가 아니라 서버 Controller 매핑 또는 배포 코드 불일치 가능성이 높음
+
+## 다음 작업 후보
+
+- 8080 외부 포트 닫기 확인
+- 업로드 실패/재시도 UX 정리
+- Vercel에 kkori.co.kr / www.kkori.co.kr 연결
+- 개인정보처리방침/계정삭제 안내 페이지 준비
+- Phase D 로그인/회원가입 설계
 
 ## 절대 하지 말 것
 
