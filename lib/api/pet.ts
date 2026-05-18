@@ -10,7 +10,7 @@ export interface PetResponse {
   weightKg?: number;
   neutered?: boolean;
   medicalNotes?: string;
-  profileImageUrl?: string;
+  photoBase64?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,7 +24,7 @@ export interface PetRequest {
   weightKg?: number;
   neutered?: boolean;
   medicalNotes?: string;
-  profileImageUrl?: string;
+  photoBase64?: string;
 }
 
 export const petApi = {

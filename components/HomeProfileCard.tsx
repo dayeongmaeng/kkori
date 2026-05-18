@@ -21,8 +21,8 @@ export default function HomeProfileCard({ pet }: Props) {
       activeOpacity={0.85}
     >
       <View style={styles.row}>
-        {pet.profileImageUrl ? (
-          <Image source={{ uri: pet.profileImageUrl }} style={styles.avatar} contentFit="cover" />
+        {pet.photoBase64 ? (
+          <Image source={{ uri: pet.photoBase64 }} style={styles.avatar} contentFit="cover" />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarEmoji}>🐾</Text>

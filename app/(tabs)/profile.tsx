@@ -144,6 +144,7 @@ export default function ProfileScreen() {
     setWeightKg(pet.weightKg !== undefined ? String(pet.weightKg) : '');
     setNeutered(pet.neutered ?? false);
     setMedicalNotes(pet.medicalNotes ?? '');
+    if (pet.photoBase64) setPhotoUri(pet.photoBase64);
   }
 
   function showError() {
@@ -213,6 +214,7 @@ export default function ProfileScreen() {
         weightKg: weight,
         neutered,
         medicalNotes: medicalNotes.trim() || undefined,
+        photoBase64: photoUri,
       };
 
       const response = externalId
