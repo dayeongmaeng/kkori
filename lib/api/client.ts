@@ -2,10 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ApiError, ApiResponse } from './types';
 
+const DEV_API_BASE_URL = 'http://localhost:8080';
 const FALLBACK_API_BASE_URL = 'https://api.kkori.co.kr';
 
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? FALLBACK_API_BASE_URL;
+  __DEV__
+    ? DEV_API_BASE_URL
+    : process.env.EXPO_PUBLIC_API_URL ?? FALLBACK_API_BASE_URL;
 
 const DEVICE_ID_KEY = 'pet-care:device-id';
 

@@ -38,6 +38,18 @@ export async function upsertCachedLog(petExternalId: string, log: LogResponse): 
   await setCachedLogs(petExternalId, logs);
 }
 
+export async function removeCachedLog(
+  petExternalId: string,
+  logExternalId: string,
+  date?: string,
+): Promise<void> {
+  const logs = await getCachedLogs(petExternalId);
+  const filtered = logs.filter((l) => l.externalId !== logExternalId && (!date || l.date !== date));
+  await setCachedLogs(petExternalId, filtered);
+  await AsyncStorage.removeItem(logExtrasKey(logExternalId));
+  await AsyncStorage.removeItem(logPhotosKey(logExternalId));
+}
+
 export async function getLogLocalExtras(logExternalId: string): Promise<LogLocalExtras> {
   try {
     const json = await AsyncStorage.getItem(logExtrasKey(logExternalId));
