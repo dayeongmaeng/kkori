@@ -42,7 +42,6 @@ function HeaderIcon({
 import DatePickerModal from '../../components/DatePickerModal';
 import EmptyPetState from '../../components/EmptyPetState';
 import SaveIndicator from '../../components/SaveIndicator';
-import { useAutoSave } from '../../hooks/useAutoSave';
 import { useDate } from '../../contexts/DateContext';
 import ConditionPicker from '../../components/ConditionPicker';
 import MealPicker from '../../components/MealPicker';
@@ -70,6 +69,8 @@ import {
   upsertCachedLog,
 } from '../../lib/cache/log';
 import { ConditionScore, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../../lib/types';
+
+type LogSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 function formatDateKorean(dateStr: string) {
   const [y, m, d] = dateStr.split('-');
@@ -130,6 +131,9 @@ export default function LogScreen() {
   const [waterNote, setWaterNote] = useState('');
   const [memo, setMemo] = useState('');
   const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [saveStatus, setSaveStatus] = useState<LogSaveStatus>('idle');
+  const [isSaving, setIsSaving] = useState(false);
+  const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleDateChange(newDate: string) {
     isViewingTodayRef.current = newDate === today;
@@ -233,13 +237,19 @@ export default function LogScreen() {
     return () => sub.remove();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
+    };
+  }, []);
+
   const logData = {
     condition, meal, mealNote, walkMinutes, walkNote,
     pooCondition, urineColor, pooNote,
     water, waterNote, memo, photoUris,
   };
 
-  const autoSaveLog = useCallback(async (data: typeof logData) => {
+  const saveLog = useCallback(async (data: typeof logData) => {
     const currentPetId = petIdRef.current;
     if (!currentPetId) return;
 
@@ -284,14 +294,25 @@ export default function LogScreen() {
       });
       await setLogPhotos(savedExtId, data.photoUris);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { status: saveStatus, saveNow } = useAutoSave(
-    logData,
-    autoSaveLog,
-    { enabled: isLoaded && hasPet === true }
-  );
+  async function handleSave() {
+    if (!isLoaded || hasPet !== true || isSaving) return;
+
+    if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
+    setSaveStatus('saving');
+    setIsSaving(true);
+
+    try {
+      await saveLog(logData);
+      setSaveStatus('saved');
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   const isToday = date === today;
 
@@ -393,11 +414,12 @@ export default function LogScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.saveBtn}
-          onPress={saveNow}
+          style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
+          onPress={handleSave}
           activeOpacity={0.8}
+          disabled={isSaving}
         >
-          <Text style={styles.saveBtnText}>저장</Text>
+          <Text style={styles.saveBtnText}>{isSaving ? '저장 중...' : '저장'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -467,6 +489,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: 16,
     alignItems: 'center',
+  },
+  saveBtnDisabled: {
+    opacity: 0.5,
   },
   saveBtnText: {
     fontSize: 16,
