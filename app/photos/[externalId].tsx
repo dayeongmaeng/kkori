@@ -17,6 +17,8 @@ import { PhotoShareResponse, photoApi } from '../../lib/api/photo';
 import { WEB_BASE_URL } from '../../lib/api/client';
 import { colors, radius, spacing } from '../../constants/theme';
 
+const logoImage = require('../../assets/logo.png');
+
 function formatDateKorean(dateStr: string) {
   const [y, m, d] = dateStr.split('-');
   return `${y}년 ${Number(m)}월 ${Number(d)}일`;
@@ -105,7 +107,7 @@ export default function SharedPhotoScreen() {
         <View style={styles.shell}>
           <View style={styles.topBar}>
             <View>
-              <Text style={styles.brand}>꼬리</Text>
+              <Image source={logoImage} style={styles.logoImage} contentFit="contain" />
               <Text style={styles.dateText}>{formatDateKorean(photo.date)}</Text>
             </View>
             <View style={styles.shareBadge}>
@@ -212,10 +214,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     backgroundColor: colors.surface,
   },
-  brand: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: colors.textPrimary,
+  logoImage: {
+    width: 82,
+    height: 28,
   },
   dateText: {
     marginTop: 4,

@@ -1,5 +1,17 @@
 const DEFAULT_API_BASE_URL = 'https://api.kkori.co.kr';
 const DEFAULT_WEB_BASE_URL = 'https://test-kkori.vercel.app';
+const fs = require('fs');
+const path = require('path');
+
+function getLogoDataUri() {
+  try {
+    const logoPath = path.join(process.cwd(), 'assets', 'logo.png');
+    const logo = fs.readFileSync(logoPath).toString('base64');
+    return `data:image/png;base64,${logo}`;
+  } catch {
+    return '';
+  }
+}
 
 function escapeHtml(value = '') {
   return String(value)
@@ -26,6 +38,7 @@ function renderPage({ photo, externalId, status = 200 }) {
   const edited = Boolean(photo?.edited);
   const title = photo ? `${petName}의 하루 한 장` : '사진을 찾을 수 없어요';
   const description = caption || (photo ? '꼬리에서 공유한 반려동물의 소중한 순간이에요.' : '공유 링크가 만료되었거나 삭제된 사진일 수 있어요.');
+  const logoDataUri = getLogoDataUri();
 
   return `<!doctype html>
 <html lang="ko">
@@ -87,10 +100,11 @@ function renderPage({ photo, externalId, status = 200 }) {
       justify-content: space-between;
       gap: 16px;
     }
-    .logo {
-      font-size: 24px;
-      font-weight: 900;
-      line-height: 1;
+    .logo-img {
+      display: block;
+      width: 82px;
+      height: 28px;
+      object-fit: contain;
     }
     .badge {
       border-radius: 999px;
@@ -225,7 +239,7 @@ function renderPage({ photo, externalId, status = 200 }) {
       <article class="page">
         <header class="topbar">
           <div class="brand">
-            <div class="logo">꼬리</div>
+            ${logoDataUri ? `<img class="logo-img" src="${logoDataUri}" alt="" />` : `<span aria-hidden="true"></span>`}
             <div class="badge">사진 공유</div>
           </div>
           <div class="date">${escapeHtml(dateText)}</div>
