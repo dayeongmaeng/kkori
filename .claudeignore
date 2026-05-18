@@ -1,0 +1,10 @@
+node_modules
+build
+dist
+.gradle
+target
+coverage
+.idea
+.vscode
+*.log
+*.lock
