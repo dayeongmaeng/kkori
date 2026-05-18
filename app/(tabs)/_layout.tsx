@@ -38,7 +38,8 @@ function TabIcon({
     return (
       <Image
         source={tabIcons[name]}
-        style={{ width: 24, height: 24, tintColor }}
+        style={{ width: 24, height: 24 }}
+        tintColor={tintColor}
         resizeMode="contain"
       />
     );
@@ -114,7 +115,8 @@ export default function TabLayout() {
                 return (
                   <Image
                     source={settingsIcon}
-                    style={{ width: 24, height: 24, tintColor }}
+                    style={{ width: 24, height: 24 }}
+                    tintColor={tintColor}
                     resizeMode="contain"
                   />
                 );

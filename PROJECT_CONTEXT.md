@@ -10,16 +10,17 @@
 ## 스택
 - **클라이언트**: React Native + Expo, TypeScript strict, Expo Router, AsyncStorage 캐시
 - **서버**: Spring Boot 3.5.14, Java 21, PostgreSQL 16, JPA, Gradle, Lombok
-- **인프라**: AWS Lightsail (Seoul, Ubuntu 24.04, 512MB+2GB Swap), Docker Compose, S3
+- **인프라**: AWS Lightsail (Seoul, Ubuntu 24.04, 1GB), Nginx, Let's Encrypt/Certbot, Docker Compose, S3
 - **도구**: ClaudeCode (양쪽 저장소 각각 실행), GitHub Desktop
 
 ## 진행 상태
 - ✅ Phase A: 서버 API CRUD (Device/Caregiver/Pet/DailyPhoto/DailyLog) + 디바이스 격리
 - ✅ Phase B: 클라이언트 연동 (서버 우선 + AsyncStorage 캐시)
-- ✅ Phase C: Lightsail Docker 배포, 외부 8080 접속, DBeaver SSH 터널
+- ✅ Phase C: Lightsail Docker 배포, 도메인/API HTTPS 연결, DBeaver SSH 터널
+- ✅ 도메인/HTTPS: api.kkori.co.kr, Let's Encrypt + Certbot + Nginx 적용 완료
 - 🔄 Phase E: S3 사진 업로드 (medium 1080 + thumb 300) - **진행 중**
 - ⬜ Phase D: 회원가입 (디바이스ID → User 전환)
-- ⬜ 도메인 + HTTPS, 심박/호흡 측정, AI 리포트, 약 관리, 메모리얼, 결제
+- ⬜ 심박/호흡 측정, AI 리포트, 약 관리, 메모리얼, 결제
 
 ## 데이터 모델 (서버)
 5개 엔티티 모두 BaseEntity 상속 (createdAt/updatedAt, KST):
@@ -55,14 +56,27 @@
 
 ## 환경 정보
 - 로컬 DB: docker-compose, 5432
-- Lightsail Public IP: 3.38.97.234
-- DBeaver: SSH 터널 (ssh -i C:\dev\lightsail-key.pem -L 5432:localhost:5432 ubuntu@3.38.97.234)
-- 클라이언트 BASE_URL: 아직 localhost (Lightsail 전환 대기)
-- S3 버킷/IAM: 생성 완료, IntelliJ Run Config에 환경변수 4개 추가 필요
+- 서비스 도메인: kkori.co.kr
+- API 도메인: api.kkori.co.kr
+- DNS A 레코드: api.kkori.co.kr → 13.124.220.29
+- 최종 운영 API URL: https://api.kkori.co.kr
+- 클라이언트 환경변수: EXPO_PUBLIC_API_URL=https://api.kkori.co.kr
+- 새 Lightsail Public IP: 13.124.220.29
+- 기존 서버 IP 3.38.97.234는 이전 서버 IP이며, 현재 운영 기준 IP가 아님
+- DBeaver: SSH 터널 (ssh -i C:\dev\lightsail-key.pem -L 5432:localhost:5432 ubuntu@13.124.220.29)
+- HTTPS: Let's Encrypt + Certbot + Nginx 적용 완료, certbot renew --dry-run 성공
+- 도메인 역할: kkori.co.kr / www.kkori.co.kr은 Vercel 웹/정책/공유 페이지, api.kkori.co.kr은 Lightsail Spring Boot API
+- 서버 포트: 22 SSH, 80 HTTP/Certbot/redirect, 443 HTTPS API는 열어둠. 8080은 HTTPS 확인 후 외부 공개 닫는 방향
+- S3 버킷/IAM: 생성 완료. Lightsail에 IAM Role을 따로 붙인 것이 아니라면 AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_S3_BUCKET 환경변수 필요
 
 ## 의사결정 기록
 - DB ddl-auto: update (Flyway 추후 검토)
 - 호스팅: Lightsail (S3 통합 위해 AWS 생태계)
+- 512MB Lightsail 서버에서 Docker/Gradle 빌드가 매우 느려 1GB Lightsail 서버로 이전
+- Spring Boot + PostgreSQL + Docker 운영에는 최소 1GB 이상이 필요하다고 판단
+- 가능하면 추후 서버에서 직접 빌드하지 않고 로컬/GitHub Actions에서 빌드 후 배포하는 방식 검토
+- 무료 HTTPS 인증서는 Let's Encrypt로 충분하다고 결정
+- kkori.co.kr은 향후 가족 공유 링크/메모리얼 웹 페이지 가능성을 고려해 Vercel용 도메인으로 유지
 - 회원가입 보류, X-Device-Id로 시작
 - LocalDateTime 유지 + Jackson timezone Asia/Seoul
 - Caregiver 데이터 모델만 도입, UI는 Phase 2+
@@ -85,9 +99,10 @@
 - DailyPhoto 흐름 정상화되면 해결될 가능성
 - 캐시 또는 mediumUrl 매핑 점검 필요
 
-### PENDING 3: 클라이언트 BASE_URL을 Lightsail로 전환
-- 현재 localhost
-- 환경별 분기 (__DEV__) 또는 EXPO_PUBLIC_API_URL
+### PENDING 3: S3 업로드 API 배포/매핑 확인
+- `NoResourceFoundException: No static resource api/v1/photos/.../upload`는 access key 문제가 아니라 서버 Controller 매핑 또는 배포 코드 불일치 가능성이 높음
+- 서버에 실제 배포된 코드에 POST /api/v1/photos/{externalId}/upload 매핑이 포함되어 있는지 확인 필요
+- 클라이언트는 EXPO_PUBLIC_API_URL=https://api.kkori.co.kr 기준
 
 ## 작업 스타일
 - 사용자: 인디 해커, Spring Boot 경험 풍부, React Native 처음
@@ -99,7 +114,7 @@
 ## 다음 세션 첫 작업
 1. Pet photoBase64 저장 디버그 (PENDING 1)
 2. 홈탭 사진 표시 (PENDING 2)
-3. 클라이언트 BASE_URL 전환 + 도메인/HTTPS
+3. S3 업로드 API Controller 매핑/배포 코드 일치 여부 확인 (PENDING 3)
 
 ## 정서적 맥락
 사용자는 17년 키운 말티즈를 심장병으로 떠나보낸 경험에서 이 앱을 만들기 시작함. 노령견 보호자에게 진짜 도움 되는 도구를 만들고 싶어함. 메모리얼 모드(떠난 후 사진 책자, 추모)는 단순 기능이 아니라 프로젝트의 정서적 뿌리.

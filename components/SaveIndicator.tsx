@@ -46,7 +46,7 @@ export default function SaveIndicator({ status, labels, textColors, centered }: 
   const textColor = textColors?.[displayStatus] ?? cfg.textColor;
 
   return (
-    <Animated.View style={[styles.overlay, centered && styles.overlayCentered]} pointerEvents="none">
+    <Animated.View style={[styles.overlay, centered && styles.overlayCentered]}>
       <Animated.View
         style={[styles.toast, { backgroundColor: bg, opacity, transform: [{ scale }] }]}
       >
@@ -64,6 +64,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingTop: '25%',
     zIndex: 100,
+    pointerEvents: 'none',
   },
   overlayCentered: {
     justifyContent: 'center',
