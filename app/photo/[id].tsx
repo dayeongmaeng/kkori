@@ -640,14 +640,14 @@ const styles = StyleSheet.create({
   },
   editedBadge: {
     borderRadius: 999,
-    backgroundColor: colors.accentSoft,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
   editedBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
-    color: colors.accent,
+    color: colors.textTertiary,
   },
   captionEditBtn: {
     borderRadius: 999,

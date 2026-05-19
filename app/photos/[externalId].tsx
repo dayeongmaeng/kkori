@@ -111,7 +111,7 @@ export default function SharedPhotoScreen() {
                 source={logoImage}
                 style={styles.logoImage}
                 contentFit="contain"
-                contentPosition="left center"
+                contentPosition="right center"
               />
               <Text style={styles.dateText}>{formatDateKorean(photo.date)}</Text>
             </View>
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
     paddingLeft: 4,
-    paddingRight: spacing.lg,
+    paddingRight: 4,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
     backgroundColor: colors.surface,
@@ -270,14 +270,14 @@ const styles = StyleSheet.create({
   editedBadge: {
     alignSelf: 'flex-start',
     borderRadius: radius.full,
-    backgroundColor: colors.accentSoft,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
   editedBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.accent,
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textTertiary,
   },
   caption: {
     fontSize: 16,

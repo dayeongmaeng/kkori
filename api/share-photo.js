@@ -91,7 +91,7 @@ function renderPage({ photo, externalId, status = 200 }) {
       min-height: 100vh;
     }
     .topbar {
-      padding: max(14px, env(safe-area-inset-top)) 18px 10px 4px;
+      padding: max(14px, env(safe-area-inset-top)) 4px 10px 4px;
       border-bottom: 1px solid var(--line);
     }
     .brand {
@@ -105,7 +105,7 @@ function renderPage({ photo, externalId, status = 200 }) {
       width: 32px;
       height: 32px;
       object-fit: contain;
-      object-position: left center;
+      object-position: right center;
     }
     .badge {
       border-radius: 999px;
@@ -152,11 +152,11 @@ function renderPage({ photo, externalId, status = 200 }) {
       display: inline-flex;
       margin-top: 8px;
       border-radius: 999px;
-      background: var(--danger-soft);
-      color: #E94B5A;
-      font-size: 11px;
-      font-weight: 900;
-      padding: 4px 9px;
+      background: var(--subtle);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
     }
     .caption {
       margin: 10px 0 0;
