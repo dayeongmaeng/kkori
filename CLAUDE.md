@@ -174,3 +174,66 @@ API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet
 - Expo eject 제안 금지 (Managed Workflow 유지)
 - 사용하지 않는 의존성 추가 금지
 - 영어 UI 텍스트 사용 금지
+
+## 2026-05-19 작업 메모
+
+### 클라이언트 개발/운영 API 환경
+
+- 개발 환경은 로컬 API를 사용하고, 운영 환경은 `https://api.kkori.co.kr`을 사용한다.
+- Expo/React Native에서는 `__DEV__`로 개발/배포 환경을 구분할 수 있다.
+- 실기기 개발 시 `localhost`는 개발 PC가 아니라 폰 자신을 의미한다.
+- 실기기에서 로컬 Spring Boot API를 호출하려면 PC LAN IP 또는 `EXPO_PUBLIC_DEV_API_URL`을 사용한다.
+
+### 로컬 서버/DB 실행 메모
+
+- `Connection to localhost:5432 refused`는 보통 로컬 PostgreSQL 미실행 또는 datasource URL 문제다.
+- Spring Boot를 직접 실행할 때 DB URL은 `localhost:5432` 기준이다.
+- Docker Compose 내부 API 컨테이너에서 DB URL은 `postgres:5432` 기준이다.
+- Windows Docker 오류가 나면 Docker Desktop 미실행 여부를 먼저 확인한다.
+- Docker Desktop 실행 후 로컬 Docker Compose 환경이 정상화된 이력이 있다.
+
+### 포토탭 고도화 프롬프트 메모
+
+- 상단에 오늘/선택 날짜를 표시한다.
+- 캡션 수정 기능을 제공하되 사진 자체 수정은 지원하지 않는다.
+- 캡션 등 수정 이력이 있으면 `수정됨` 표시를 보여준다.
+- 공유하기 버튼 및 공유 링크 생성 UI를 제공한다.
+- 삭제 완료 시 기록탭과 동일하게 `삭제되었습니다` 문구를 표시한다.
+
+### 공유 전용 UI 조정 메모
+
+- 주요 대상 파일: `components/CaptionModal.tsx`, `app/photos/[externalId].tsx`, `app/photo/[id].tsx`, `api/share-photo.js`.
+- 공유 미리보기 모달과 실제 공유화면을 최대한 일치시키는 방향으로 조정한다.
+- `공유화면 미리보기` 타이틀 제거/조정 요청 이력이 있다.
+- `{반려동물이름}의 하루 한 장` 문구는 추가/삭제/복원 조정 이력이 있으며, 최종 기준은 공유 미리보기 모달에 실제 공유화면을 맞추는 방향이다.
+- 날짜, 이미지, 캡션, 홍보문구, 버튼 여백을 일관되게 맞춘다.
+- 미리보기/공유화면 모두 가능하면 스크롤 없이 한 화면에 들어오도록 압축한다.
+- 공유 API/조회 로직은 UI 수정 중 변경하지 않는다.
+
+### 공유 UI 세부 스타일
+
+- 좌측 상단 로고와 `꼬리에서 공유됨` 뱃지의 여백을 일관되게 관리한다.
+- 로고 이미지는 변경하지 않는다.
+- 로고 크기 기준은 `32px x 32px`이다.
+- 웹 HTML 로고는 `object-fit: contain`, `object-position: right center` 기준으로 맞춘다.
+- Expo Image 로고도 `contentFit="contain"`, `contentPosition="right center"` 기준으로 맞춘다.
+- 이미지가 컨테이너 안에서 기준 방향에 맞게 정렬되도록 처리한다.
+- `수정됨` 표시는 너무 눈에 띄지 않도록 작고 약하게 표시한다.
+- `꼬리에서 공유됨` 뱃지는 우측에 더 가깝게 붙이는 방향으로 조정한 이력이 있다.
+
+### 클라이언트 오류 메모
+
+- `Error while reading cache, falling back to a full crawl: Unable to deserialize cloned data`는 Expo/Metro 캐시 손상 가능성이 높다.
+- 우선 해결 명령:
+  ```bash
+  npx expo start -c
+  ```
+- 필요 시 `.expo`, `node_modules/.cache`, temp metro/haste-map 캐시를 삭제한다.
+
+### 프롬프트 작성/작업 스타일
+
+- 앞으로 client/api 프롬프트에는 “직접 화면을 열어서 실행/확인”하라는 문구를 넣지 않는다.
+- 화면 확인은 사용자가 직접 진행한다.
+- 프롬프트의 검증은 “검증 포인트/기대 동작” 중심으로 작성한다.
+- 불필요한 리팩터링은 하지 않는다.
+- React Native + Expo + TypeScript strict를 유지한다.
