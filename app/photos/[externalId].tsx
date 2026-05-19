@@ -252,15 +252,15 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
     gap: spacing.sm,
   },
   title: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '900',
     color: colors.textPrimary,
-    lineHeight: 29,
+    lineHeight: 28,
   },
   editedBadge: {
     alignSelf: 'flex-start',
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   footer: {
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
+    paddingTop: 0,
     paddingBottom: spacing.lg,
   },
   footerText: {

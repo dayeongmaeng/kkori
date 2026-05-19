@@ -91,14 +91,14 @@ function renderPage({ photo, externalId, status = 200 }) {
       min-height: 100vh;
     }
     .topbar {
-      padding: max(18px, env(safe-area-inset-top)) 20px 14px;
+      padding: max(14px, env(safe-area-inset-top)) 18px 10px 10px;
       border-bottom: 1px solid var(--line);
     }
     .brand {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 12px;
     }
     .logo-img {
       display: block;
@@ -112,14 +112,14 @@ function renderPage({ photo, externalId, status = 200 }) {
       color: var(--primary);
       font-size: 12px;
       font-weight: 800;
-      padding: 6px 10px;
+      padding: 6px 9px;
       white-space: nowrap;
     }
     .date {
-      margin-top: 8px;
-      color: var(--muted);
+      margin-top: 4px;
+      color: var(--primary);
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 800;
     }
     .photo {
       display: block;
@@ -139,35 +139,29 @@ function renderPage({ photo, externalId, status = 200 }) {
       font-weight: 700;
     }
     .content {
-      padding: 24px 24px 10px;
-    }
-    .eyebrow {
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 900;
-      margin-bottom: 8px;
+      padding: 16px 20px 4px;
     }
     h1 {
       margin: 0;
-      font-size: 26px;
-      line-height: 1.25;
+      font-size: 21px;
+      line-height: 1.32;
       font-weight: 900;
     }
     .edited {
       display: inline-flex;
-      margin-top: 12px;
+      margin-top: 8px;
       border-radius: 999px;
       background: var(--danger-soft);
       color: #E94B5A;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 900;
-      padding: 5px 10px;
+      padding: 4px 9px;
     }
     .caption {
-      margin: 18px 0 0;
+      margin: 10px 0 0;
       color: var(--primary);
-      font-size: 17px;
-      line-height: 1.6;
+      font-size: 16px;
+      line-height: 1.45;
       white-space: pre-wrap;
     }
     .caption.empty {
@@ -175,18 +169,18 @@ function renderPage({ photo, externalId, status = 200 }) {
       font-style: italic;
     }
     .footer {
-      padding: 20px 24px 28px;
+      padding: 8px 20px 20px;
     }
     .footer-copy {
-      margin: 0 0 14px;
+      margin: 0 0 10px;
       color: var(--muted);
       font-size: 13px;
-      line-height: 1.5;
+      line-height: 1.38;
     }
     .cta {
       display: flex;
       width: 100%;
-      min-height: 54px;
+      min-height: 48px;
       align-items: center;
       justify-content: center;
       border-radius: 16px;
@@ -223,7 +217,10 @@ function renderPage({ photo, externalId, status = 200 }) {
       line-height: 1.55;
     }
     @media (min-width: 720px) {
-      main { padding: 42px 18px; }
+      main {
+        align-items: center;
+        padding: 16px;
+      }
       .page {
         min-height: auto;
         border-radius: 24px;
@@ -240,13 +237,12 @@ function renderPage({ photo, externalId, status = 200 }) {
         <header class="topbar">
           <div class="brand">
             ${logoDataUri ? `<img class="logo-img" src="${logoDataUri}" alt="" />` : `<span aria-hidden="true"></span>`}
-            <div class="badge">사진 공유</div>
+            <div class="badge">꼬리에서 공유됨</div>
           </div>
           <div class="date">${escapeHtml(dateText)}</div>
         </header>
         ${imageUrl ? `<img class="photo" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(petName)}의 사진" />` : `<div class="empty-photo">사진을 불러올 수 없어요</div>`}
         <section class="content">
-          <div class="eyebrow">KKORI PHOTO</div>
           <h1>${escapeHtml(petName)}의 하루 한 장</h1>
           ${edited ? `<div class="edited">수정됨</div>` : ''}
           ${caption ? `<p class="caption">${escapeHtml(caption)}</p>` : `<p class="caption empty">캡션이 없는 사진이에요.</p>`}
