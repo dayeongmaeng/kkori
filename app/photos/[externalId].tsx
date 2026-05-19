@@ -107,7 +107,12 @@ export default function SharedPhotoScreen() {
         <View style={styles.shell}>
           <View style={styles.topBar}>
             <View>
-              <Image source={logoImage} style={styles.logoImage} contentFit="contain" />
+              <Image
+                source={logoImage}
+                style={styles.logoImage}
+                contentFit="contain"
+                contentPosition="left center"
+              />
               <Text style={styles.dateText}>{formatDateKorean(photo.date)}</Text>
             </View>
             <View style={styles.shareBadge}>
@@ -209,15 +214,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
-    paddingLeft: spacing.sm,
+    paddingLeft: 4,
     paddingRight: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
     backgroundColor: colors.surface,
   },
   logoImage: {
-    width: 82,
-    height: 28,
+    width: 32,
+    height: 32,
   },
   dateText: {
     marginTop: 2,

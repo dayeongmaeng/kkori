@@ -91,7 +91,7 @@ function renderPage({ photo, externalId, status = 200 }) {
       min-height: 100vh;
     }
     .topbar {
-      padding: max(14px, env(safe-area-inset-top)) 18px 10px 10px;
+      padding: max(14px, env(safe-area-inset-top)) 18px 10px 4px;
       border-bottom: 1px solid var(--line);
     }
     .brand {
@@ -102,9 +102,10 @@ function renderPage({ photo, externalId, status = 200 }) {
     }
     .logo-img {
       display: block;
-      width: 82px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
       object-fit: contain;
+      object-position: left center;
     }
     .badge {
       border-radius: 999px;
