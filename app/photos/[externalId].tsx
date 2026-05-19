@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
-    paddingLeft: spacing.md,
+    paddingLeft: spacing.sm,
     paddingRight: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   photo: {
     width: '100%',
-    aspectRatio: 1.06,
+    aspectRatio: 1,
     backgroundColor: colors.surfaceAlt,
   },
   emptyPhoto: {
