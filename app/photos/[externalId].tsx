@@ -111,7 +111,7 @@ export default function SharedPhotoScreen() {
               <Text style={styles.dateText}>{formatDateKorean(photo.date)}</Text>
             </View>
             <View style={styles.shareBadge}>
-              <Text style={styles.shareBadgeText}>사진 공유</Text>
+              <Text style={styles.shareBadgeText}>꼬리에서 공유됨</Text>
             </View>
           </View>
 
@@ -124,7 +124,6 @@ export default function SharedPhotoScreen() {
           )}
 
           <View style={styles.content}>
-            <Text style={styles.eyebrow}>KKORI PHOTO</Text>
             <Text style={styles.title}>{photo.petName}의 하루 한 장</Text>
             {photo.edited && (
               <View style={styles.editedBadge}>
@@ -188,8 +187,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
-    paddingVertical: Platform.OS === 'web' ? 40 : 0,
-    paddingHorizontal: Platform.OS === 'web' ? spacing.lg : 0,
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-start',
+    paddingVertical: Platform.OS === 'web' ? spacing.md : 0,
+    paddingHorizontal: Platform.OS === 'web' ? spacing.md : 0,
   },
   shell: {
     width: '100%',
@@ -208,10 +208,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    gap: spacing.md,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     backgroundColor: colors.surface,
   },
   logoImage: {
@@ -219,16 +220,16 @@ const styles = StyleSheet.create({
     height: 28,
   },
   dateText: {
-    marginTop: 4,
+    marginTop: 2,
     fontSize: 13,
     fontWeight: '700',
-    color: colors.textTertiary,
+    color: colors.textSecondary,
   },
   shareBadge: {
     borderRadius: radius.full,
     backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
   },
   shareBadgeText: {
     fontSize: 12,
@@ -237,7 +238,7 @@ const styles = StyleSheet.create({
   },
   photo: {
     width: '100%',
-    aspectRatio: 1,
+    aspectRatio: 1.06,
     backgroundColor: colors.surfaceAlt,
   },
   emptyPhoto: {
@@ -250,19 +251,16 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
   },
   content: {
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.accent,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+    gap: spacing.sm,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     color: colors.textPrimary,
-    lineHeight: 32,
+    lineHeight: 29,
   },
   editedBadge: {
     alignSelf: 'flex-start',
@@ -277,8 +275,8 @@ const styles = StyleSheet.create({
     color: colors.accent,
   },
   caption: {
-    fontSize: 17,
-    lineHeight: 26,
+    fontSize: 16,
+    lineHeight: 23,
     color: colors.textSecondary,
   },
   emptyCaption: {
@@ -287,19 +285,20 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   footer: {
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.lg,
   },
   footerText: {
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18,
     color: colors.textTertiary,
   },
   primaryButton: {
     borderRadius: radius.lg,
     backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     alignItems: 'center',
   },
   primaryButtonText: {
