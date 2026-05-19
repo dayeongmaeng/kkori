@@ -41,11 +41,6 @@ function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void 
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
         <View style={[styles.cell, styles.cellNoLocal]}>
           <Text style={styles.cellNoLocalIcon}>📲</Text>
-          {photo.edited && (
-            <View style={styles.editedBadge}>
-              <Text style={styles.editedBadgeText}>수정됨</Text>
-            </View>
-          )}
         </View>
       </TouchableOpacity>
     );
@@ -53,11 +48,6 @@ function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
       <Image source={{ uri }} style={styles.cell} contentFit="cover" />
-      {photo.edited && (
-        <View style={styles.editedBadge}>
-          <Text style={styles.editedBadgeText}>수정됨</Text>
-        </View>
-      )}
     </TouchableOpacity>
   );
 }
@@ -371,20 +361,6 @@ const styles = StyleSheet.create({
   cell: {
     width: CELL_SIZE,
     height: CELL_SIZE,
-  },
-  editedBadge: {
-    position: 'absolute',
-    left: spacing.xs,
-    bottom: spacing.xs,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(25,31,40,0.68)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-  },
-  editedBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textOnPrimary,
   },
   cellNoLocal: {
     backgroundColor: colors.surfaceAlt,

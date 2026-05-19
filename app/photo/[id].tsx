@@ -12,6 +12,7 @@ import {
   Modal,
   Platform,
   SafeAreaView,
+  ScrollView,
   Share,
   StyleSheet,
   Text,
@@ -130,7 +131,7 @@ export default function PhotoDetailScreen() {
     try {
       if (Platform.OS === 'web') {
         if (navigator.share) {
-          await navigator.share({ title: '꼬리 사진', text: currentPhoto.caption ?? '', url });
+          await navigator.share({ title: '꼬리 사진', url });
         } else {
           await Linking.openURL(url);
         }
@@ -138,7 +139,7 @@ export default function PhotoDetailScreen() {
       }
       await Share.share({
         title: '꼬리 사진',
-        message: currentPhoto.caption ? `${currentPhoto.caption}\n${url}` : url,
+        message: url,
         url,
       });
     } catch {
@@ -374,6 +375,11 @@ export default function PhotoDetailScreen() {
       >
         <View style={styles.shareBackdrop}>
           <View style={styles.shareSheet}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.shareScrollContent}
+            >
             <View style={styles.shareHeader}>
               <View>
                 <Text style={styles.shareEyebrow}>공유 미리보기</Text>
@@ -421,6 +427,7 @@ export default function PhotoDetailScreen() {
             <TouchableOpacity style={styles.shareSecondaryBtn} onPress={openShareUrl} activeOpacity={0.82}>
               <Text style={styles.shareSecondaryText}>브라우저에서 보기</Text>
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -437,10 +444,15 @@ export default function PhotoDetailScreen() {
       >
         <View style={styles.modalBackdrop}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
             style={styles.modalKeyboardView}
           >
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              contentContainerStyle={styles.captionScrollContent}
+            >
             <View style={styles.captionSheet}>
               <Text style={styles.captionSheetTitle}>캡션 수정</Text>
               <TextInput
@@ -478,6 +490,7 @@ export default function PhotoDetailScreen() {
                 <Text style={styles.captionCancelBtnText}>취소</Text>
               </TouchableOpacity>
             </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -624,12 +637,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
+  captionScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+  },
   captionSheet: {
-    maxHeight: '82%',
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
     gap: spacing.md,
   },
   captionSheetTitle: {
@@ -683,12 +700,16 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   shareSheet: {
-    maxHeight: '92%',
+    maxHeight: '88%',
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: spacing.lg,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
+  },
+  shareScrollContent: {
     gap: spacing.md,
+    paddingBottom: spacing.sm,
   },
   shareHeader: {
     flexDirection: 'row',

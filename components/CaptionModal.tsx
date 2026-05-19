@@ -1,12 +1,11 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
-  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
-  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -27,6 +26,17 @@ interface Props {
 
 export default function CaptionModal({ visible, photoBase64, onSave, onCancel }: Props) {
   const [caption, setCaption] = useState('');
+  const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [visible]);
 
   function handleSave() {
     onSave(caption.trim());
@@ -45,11 +55,17 @@ export default function CaptionModal({ visible, photoBase64, onSave, onCancel }:
       animationType="slide"
       onRequestClose={handleCancel}
     >
-      <Pressable style={styles.backdrop} onPress={Keyboard.dismiss}>
+      <View style={styles.backdrop}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
           style={styles.keyboardView}
         >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            contentContainerStyle={styles.scrollContent}
+          >
           <View style={styles.sheet}>
             {/* 미리보기 */}
             <Image
@@ -60,12 +76,15 @@ export default function CaptionModal({ visible, photoBase64, onSave, onCancel }:
 
             {/* 캡션 입력 */}
             <TextInput
+              ref={inputRef}
               style={styles.input}
               value={caption}
               onChangeText={(t) => setCaption(t.slice(0, MAX_CAPTION))}
               placeholder="오늘 어떤 하루였나요?"
               placeholderTextColor={colors.textQuaternary}
               multiline
+              editable
+              autoFocus
               returnKeyType="done"
               blurOnSubmit
             />
@@ -79,8 +98,9 @@ export default function CaptionModal({ visible, photoBase64, onSave, onCancel }:
               <Text style={styles.cancelButtonText}>취소</Text>
             </TouchableOpacity>
           </View>
+          </ScrollView>
         </KeyboardAvoidingView>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -92,6 +112,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   keyboardView: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'flex-end',
   },
   sheet: {
@@ -99,6 +124,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     padding: spacing.xl,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
     alignItems: 'center',
     gap: spacing.lg,
   },
