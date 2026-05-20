@@ -3,12 +3,13 @@ import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import {
   Bell, Camera, ChevronRight, Database, FileText,
-  Heart, Image as ImageIcon, Info, MessageCircle, Newspaper,
+  Heart, Image as ImageIcon, Info, LogOut, MessageCircle, Newspaper,
   PawPrint, Shield, Star, Trash2,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
+import { useAuth } from '../../contexts/AuthContext';
 
 const FEEDBACK_URL = 'https://open.kakao.com/o/seTWQ4ui';
 const PRIVACY_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80909f5aef93dd5f7b72';
@@ -87,6 +88,7 @@ function Row({ icon, label, desc, right, onPress, disabled, last }: RowProps) {
 
 export default function SettingsScreen() {
   const [wagCount, setWagCount] = useState(0);
+  const { logout } = useAuth();
 
   async function handleClearCache() {
     Alert.alert('캐시 비우기', '저장된 임시 데이터를 모두 삭제할까요?\n다음 실행 시 서버에서 다시 불러옵니다.', [
@@ -125,6 +127,23 @@ export default function SettingsScreen() {
     );
   }
 
+  function handleLogout() {
+    Alert.alert('로그아웃', '현재 계정에서 로그아웃할까요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await logout();
+          } catch {
+            Alert.alert('오류', '로그아웃하지 못했어요');
+          }
+        },
+      },
+    ]);
+  }
+
   async function handleWag() {
     const next = wagCount + 1;
     setWagCount(next);
@@ -135,6 +154,11 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content}>
+      <GroupTitle label="계정" />
+      <Card>
+        <Row icon={<LogOut size={20} color={colors.textSecondary} />} label="로그아웃" onPress={handleLogout} last />
+      </Card>
+
     {/*
            <GroupTitle label="알림" />
             <Card>

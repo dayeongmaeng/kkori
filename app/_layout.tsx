@@ -8,6 +8,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import AuthGate from '../components/AuthGate';
+import { AuthProvider } from '../contexts/AuthContext';
 import { DateProvider } from '../contexts/DateContext';
 import { PetProvider } from '../contexts/PetContext';
 import { initApp } from '../lib/api/init';
@@ -27,23 +29,27 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <DateProvider>
-        <PetProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Head>
-            <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-          </Head>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="photo/[id]" options={{ headerShown: false }} />
-            <Stack.Screen name="photos/[externalId]" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          </Stack>
-          <StatusBar style="auto" />
-          <Toast />
-        </ThemeProvider>
-        </PetProvider>
-      </DateProvider>
+      <AuthProvider>
+        <DateProvider>
+          <PetProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Head>
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+              </Head>
+              <AuthGate>
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="photo/[id]" options={{ headerShown: false }} />
+                  <Stack.Screen name="photos/[externalId]" options={{ headerShown: false }} />
+                  <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+                </Stack>
+              </AuthGate>
+              <StatusBar style="auto" />
+              <Toast />
+            </ThemeProvider>
+          </PetProvider>
+        </DateProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
