@@ -5,8 +5,10 @@ export interface PetResponse {
   name: string;
   species: string;
   breed?: string;
-  birthDate?: string;
-  gender?: 'male' | 'female';
+  birthDate?: string | null;
+  birthDateUnknown?: boolean;
+  adoptionDate?: string | null;
+  gender?: string | null;
   weightKg?: number;
   neutered?: boolean;
   medicalNotes?: string;
@@ -19,7 +21,9 @@ export interface PetRequest {
   name: string;
   species: string;
   breed?: string;
-  birthDate?: string;
+  birthDate?: string | null;
+  birthDateUnknown?: boolean;
+  adoptionDate?: string | null;
   gender?: 'male' | 'female';
   weightKg?: number;
   neutered?: boolean;

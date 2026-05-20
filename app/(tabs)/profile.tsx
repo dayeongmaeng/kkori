@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Image } from 'expo-image';
 import { colors, radius, spacing } from '../../constants/theme';
@@ -29,6 +28,9 @@ import { useCurrentPet } from '../../contexts/PetContext';
 import { SaveStatus } from '../../hooks/useAutoSave';
 import SaveIndicator from '../../components/SaveIndicator';
 
+type Gender = 'male' | 'female';
+type DateField = 'birthDate' | 'adoptionDate';
+
 let DateTimePicker: any = null;
 try {
   DateTimePicker = require('@react-native-community/datetimepicker').default;
@@ -39,6 +41,32 @@ try {
 const today = new Date();
 const minDate = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
 const maxDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+const dogBreeds = [
+  '말티즈',
+  '포메라니안',
+  '푸들',
+  '토이푸들',
+  '비숑 프리제',
+  '치와와',
+  '시츄',
+  '요크셔테리어',
+  '닥스훈트',
+  '웰시코기',
+  '프렌치 불도그',
+  '비글',
+  '시바견',
+  '진돗개',
+  '리트리버',
+  '골든 리트리버',
+  '래브라도 리트리버',
+  '보더콜리',
+  '사모예드',
+  '스피츠',
+  '슈나우저',
+  '말티푸',
+  '포메푸',
+  '믹스견',
+];
 
 function formatBirthDate(date: Date) {
   const y = date.getFullYear();
@@ -59,6 +87,14 @@ function storageToDate(s: string): Date | null {
   if (!match) return null;
   const d = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   return isNaN(d.getTime()) ? null : d;
+}
+
+function normalizeGender(value: string | null | undefined): Gender | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'male' || normalized === 'm' || normalized === '수컷') return 'male';
+  if (normalized === 'female' || normalized === 'f' || normalized === '암컷') return 'female';
+  return null;
 }
 
 function WebDatePicker({
@@ -123,24 +159,49 @@ export default function ProfileScreen() {
   const [externalId, setExternalId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [breed, setBreed] = useState('');
+  const [gender, setGender] = useState<Gender | null>(null);
   const [birthDate, setBirthDate] = useState('');
+  const [birthDateUnknown, setBirthDateUnknown] = useState(false);
+  const [adoptionDate, setAdoptionDate] = useState('');
   const [weightKg, setWeightKg] = useState('');
   const [neutered, setNeutered] = useState(false);
   const [medicalNotes, setMedicalNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [breedFocused, setBreedFocused] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
+  const [dateField, setDateField] = useState<DateField>('birthDate');
 
   const [indicatorStatus, setIndicatorStatus] = useState<SaveStatus>('idle');
   const indicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const breedSuggestions = breed.trim()
+    ? dogBreeds.filter((item) => item.includes(breed.trim()) && item !== breed.trim()).slice(0, 5)
+    : [];
+
+  function openDatePicker(field: DateField) {
+    const value = field === 'birthDate' ? birthDate : adoptionDate;
+    const parsed = storageToDate(value);
+    setDateField(field);
+    setPickerDate(parsed ?? new Date(2020, 0, 1));
+    setDatePickerVisible(true);
+  }
+
+  function formatStorageDate(value: string) {
+    const d = storageToDate(value);
+    return d ? formatBirthDate(d) : value;
+  }
 
   function fillForm(pet: PetResponse) {
+    const isBirthDateUnknown = pet.birthDateUnknown ?? !pet.birthDate;
     setExternalId(pet.externalId);
     setName(pet.name);
     setBreed(pet.breed ?? '');
-    setBirthDate(pet.birthDate ?? '');
+    setGender(normalizeGender(pet.gender));
+    setBirthDate(isBirthDateUnknown ? '' : pet.birthDate ?? '');
+    setBirthDateUnknown(isBirthDateUnknown);
+    setAdoptionDate(pet.adoptionDate ?? '');
     setWeightKg(pet.weightKg !== undefined ? String(pet.weightKg) : '');
     setNeutered(pet.neutered ?? false);
     setMedicalNotes(pet.medicalNotes ?? '');
@@ -157,8 +218,8 @@ export default function ProfileScreen() {
     async function load() {
       // 1단계: 캐시에서 즉시 로드
       const cachedId = await getCachedCurrentPetId();
+      const cached = cachedId ? await getCachedPets() : [];
       if (cachedId) {
-        const cached = await getCachedPets();
         const pet = cached.find((p) => p.externalId === cachedId);
         if (pet) {
           fillForm(pet);
@@ -170,11 +231,21 @@ export default function ProfileScreen() {
       // 2단계: 서버에서 최신 데이터 fetch (백그라운드)
       try {
         const serverPets = await petApi.getPets();
-        await setCachedPets(serverPets);
+        const mergedPets = serverPets.map((serverPet) => {
+          const cachedPet = cached.find((p) => p.externalId === serverPet.externalId);
+          return {
+            ...serverPet,
+            gender: normalizeGender(serverPet.gender) ?? normalizeGender(cachedPet?.gender),
+            birthDate: cachedPet?.birthDateUnknown ? null : (serverPet.birthDate ?? cachedPet?.birthDate),
+            birthDateUnknown: serverPet.birthDateUnknown ?? cachedPet?.birthDateUnknown,
+            adoptionDate: serverPet.adoptionDate ?? cachedPet?.adoptionDate,
+          };
+        });
+        await setCachedPets(mergedPets);
 
         const targetId = cachedId;
         if (targetId) {
-          const serverPet = serverPets.find((p) => p.externalId === targetId);
+          const serverPet = mergedPets.find((p) => p.externalId === targetId);
           if (serverPet) fillForm(serverPet);
         }
       } catch {
@@ -191,7 +262,7 @@ export default function ProfileScreen() {
   }
 
   async function handleSave() {
-    if (!name.trim() || !breed.trim() || !birthDate.trim() || !weightKg.trim()) {
+    if (!name.trim() || !breed.trim() || !gender || (!birthDateUnknown && !birthDate.trim()) || !weightKg.trim()) {
       showError();
       return;
     }
@@ -210,7 +281,10 @@ export default function ProfileScreen() {
         name: name.trim(),
         species: 'dog',
         breed: breed.trim(),
-        birthDate: birthDate.trim(),
+        gender,
+        birthDate: birthDateUnknown ? null : birthDate.trim(),
+        birthDateUnknown,
+        adoptionDate: adoptionDate.trim() || null,
         weightKg: weight,
         neutered,
         medicalNotes: medicalNotes.trim() || undefined,
@@ -221,18 +295,25 @@ export default function ProfileScreen() {
         ? await petApi.updatePet(externalId, body)
         : await petApi.createPet(body);
 
-      // 캐시 업데이트
-      await upsertCachedPet(response);
-      await setCachedCurrentPetId(response.externalId);
-      if (photoUri) await setCachedPetPhoto(response.externalId, photoUri);
+      const savedPet = {
+        ...response,
+        gender: normalizeGender(response.gender) ?? body.gender,
+        birthDate: body.birthDateUnknown ? null : response.birthDate ?? body.birthDate,
+        birthDateUnknown: response.birthDateUnknown ?? body.birthDateUnknown,
+        adoptionDate: response.adoptionDate ?? body.adoptionDate,
+      };
 
-      setExternalId(response.externalId);
-      setCurrentPet(response);
+      // 캐시 업데이트
+      await upsertCachedPet(savedPet);
+      await setCachedCurrentPetId(savedPet.externalId);
+      if (photoUri) await setCachedPetPhoto(savedPet.externalId, photoUri);
+
+      setExternalId(savedPet.externalId);
+      setCurrentPet(savedPet);
 
       setIndicatorStatus('saved');
       indicatorTimerRef.current = setTimeout(() => {
         setIndicatorStatus('idle');
-        router.replace('/(tabs)/');
       }, 1500);
     } catch (e) {
       console.error('[ProfileScreen] 서버 저장 실패:', e);
@@ -275,34 +356,100 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {/* 성별 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>성별 *</Text>
+          <View style={styles.segmentRow}>
+            {([
+              { value: 'male' as const, label: '수컷' },
+              { value: 'female' as const, label: '암컷' },
+            ]).map((option) => {
+              const selected = gender === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.segmentButton, selected && styles.segmentButtonActive]}
+                  onPress={() => setGender(option.value)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.segmentText, selected && styles.segmentTextActive]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* 견종 */}
         <View style={styles.field}>
           <Text style={styles.label}>견종 *</Text>
           <TextInput
             style={styles.input}
             value={breed}
-            onChangeText={setBreed}
+            onChangeText={(text) => {
+              setBreed(text);
+              setBreedFocused(true);
+            }}
+            onFocus={() => setBreedFocused(true)}
             placeholder="예: 말티즈, 포메라니안"
             placeholderTextColor={colors.textQuaternary}
           />
+          {breedFocused && breedSuggestions.length > 0 ? (
+            <View style={styles.suggestionBox}>
+              {breedSuggestions.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={styles.suggestionItem}
+                  onPressIn={() => {
+                    setBreed(item);
+                    setBreedFocused(false);
+                  }}
+                >
+                  <Text style={styles.suggestionText}>{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         {/* 생일 */}
         <View style={styles.field}>
           <Text style={styles.label}>생일 *</Text>
           <TouchableOpacity
-            style={[styles.input, styles.dateButton]}
-            onPress={() => {
-              const parsed = storageToDate(birthDate);
-              setPickerDate(parsed ?? new Date(2020, 0, 1));
-              setDatePickerVisible(true);
-            }}
+            style={[styles.input, styles.dateButton, birthDateUnknown && styles.inputDisabled]}
+            onPress={() => openDatePicker('birthDate')}
+            disabled={birthDateUnknown}
           >
-            <Text style={birthDate ? styles.dateText : styles.datePlaceholder}>
-              {birthDate ? (() => {
-                const d = storageToDate(birthDate);
-                return d ? formatBirthDate(d) : birthDate;
-              })() : '생일 선택'}
+            <Text style={birthDate && !birthDateUnknown ? styles.dateText : styles.datePlaceholder}>
+              {birthDateUnknown ? '생일 모름' : birthDate ? formatStorageDate(birthDate) : '생일 선택'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.checkRow}
+            onPress={() => {
+              const next = !birthDateUnknown;
+              setBirthDateUnknown(next);
+              if (next) setBirthDate('');
+            }}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.checkbox, birthDateUnknown && styles.checkboxActive]}>
+              {birthDateUnknown ? <Text style={styles.checkboxMark}>✓</Text> : null}
+            </View>
+            <Text style={styles.checkText}>생일 모름</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 함께한 날 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>함께한 날 (선택)</Text>
+          <TouchableOpacity
+            style={[styles.input, styles.dateButton]}
+            onPress={() => openDatePicker('adoptionDate')}
+          >
+            <Text style={adoptionDate ? styles.dateText : styles.datePlaceholder}>
+              {adoptionDate ? formatStorageDate(adoptionDate) : '함께한 날 선택'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -320,10 +467,18 @@ export default function ProfileScreen() {
                 <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
                   <Text style={styles.modalCancel}>취소</Text>
                 </TouchableOpacity>
-                <Text style={styles.modalTitle}>생일 선택</Text>
+                <Text style={styles.modalTitle}>
+                  {dateField === 'birthDate' ? '생일 선택' : '함께한 날 선택'}
+                </Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setBirthDate(dateToStorage(pickerDate));
+                    const value = dateToStorage(pickerDate);
+                    if (dateField === 'birthDate') {
+                      setBirthDate(value);
+                      setBirthDateUnknown(false);
+                    } else {
+                      setAdoptionDate(value);
+                    }
                     setDatePickerVisible(false);
                   }}
                 >
@@ -478,6 +633,82 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  inputDisabled: {
+    opacity: 0.65,
+  },
+  segmentRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  segmentButton: {
+    flex: 1,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  segmentButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  segmentText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  segmentTextActive: {
+    color: colors.textOnPrimary,
+  },
+  suggestionBox: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  suggestionText: {
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  checkboxActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkboxMark: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textOnPrimary,
+  },
+  checkText: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   weightRow: {
     flexDirection: 'row',
