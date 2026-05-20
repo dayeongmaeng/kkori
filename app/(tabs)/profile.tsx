@@ -100,9 +100,9 @@ function storageToDate(s: string): Date | null {
 function normalizeGender(value: string | null | undefined): Gender | null {
   if (!value) return null;
   const normalized = value.trim().toLowerCase();
-  if (normalized === "male" || normalized === "m" || normalized === "수컷")
+  if (normalized === "male" || normalized === "m" || normalized === "남자")
     return "male";
-  if (normalized === "female" || normalized === "f" || normalized === "암컷")
+  if (normalized === "female" || normalized === "f" || normalized === "여자")
     return "female";
   return null;
 }
@@ -428,8 +428,8 @@ export default function ProfileScreen() {
           <Text style={styles.label}>성별 *</Text>
           <View style={styles.segmentRow}>
             {[
-              { value: "male" as const, label: "수컷" },
-              { value: "female" as const, label: "암컷" },
+              { value: "female" as const, label: "여자" },
+              { value: "male" as const, label: "남자" },
             ].map((option) => {
               const selected = gender === option.value;
               return (
