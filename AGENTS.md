@@ -12,6 +12,8 @@
 
 모든 연령의 반려동물을 지원하지만, 노령/특수 질환 보호자에게도 깊이 있게 대응.
 
+현재 MVP 타겟은 강아지만 유지한다.
+
 ## 개발 환경
 
 - OS: Windows
@@ -157,6 +159,10 @@ API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet
   - 썸네일 클릭 시 medium 이미지를 크게 보기
   - 업로드 로딩/실패/재시도/삭제 UX 추가
   - 기록 사진 삭제 버튼 우측 상단 X 잘림 문제 해결
+- 프로필탭 고도화 진행 중
+  - 프로필 목적은 반려동물 기본 정보 관리와 향후 건강관리/AI 리포트 확장 기반 마련
+  - 입력 부담 최소화를 MVP 우선 기준으로 둠
+  - 알레르기/약/질환 등 상세 건강 정보는 추후 추가
 - 앱 재실행 후 서버/캐시 데이터 확인 완료
 
 ## S3 및 업로드 디버깅 메모
@@ -179,6 +185,7 @@ API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet
 
 ## 다음 작업 후보
 
+- 프로필탭 고도화 이어서 진행
 - 8080 외부 포트 닫기 확인
 - Vercel에 kkori.co.kr / www.kkori.co.kr 연결
 - 개인정보처리방침/계정삭제 안내 페이지 준비
@@ -252,3 +259,21 @@ API 코드 위치: `lib/api/` (client.ts, types.ts, device.ts, caregiver.ts, pet
 - 프롬프트의 검증은 “검증 포인트/기대 동작” 중심으로 작성한다.
 - 불필요한 리팩터링은 하지 않는다.
 - React Native + Expo + TypeScript strict를 유지한다.
+
+## 2026-05-20 작업 메모
+
+### 프로필탭 고도화 기준
+
+- 프로필탭 고도화를 현재 작업 기준으로 진행한다.
+- MVP에서는 강아지만 타겟으로 유지한다.
+- 추가 프로필 필드:
+  - `gender`: `MALE` / `FEMALE`
+  - `adoptionDate`: 함께한 날, nullable
+  - `birthDateUnknown`: 생일 모름 여부, boolean
+- `birthDateUnknown=true`이면 `birthDate`는 nullable을 허용한다.
+- 품종(`breed`)은 서버 enum이나 서버 관리 목록으로 만들지 않고 string으로 유지한다.
+- 서버는 `breed` 문자열 저장만 담당한다.
+- 품종 추천은 클라이언트 상수 기반 자동완성으로 제공하되 자유입력을 허용한다.
+- 입력 부담 최소화를 우선한다.
+- 알레르기, 약, 질환 등 상세 건강 정보는 현재 MVP 범위에서 제외하고 추후 추가한다.
+- 프로필의 목적은 반려동물 기본 정보 관리와 향후 건강관리/AI 리포트 확장 기반 마련이다.
