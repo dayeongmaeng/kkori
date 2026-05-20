@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import {
   Bell, Camera, ChevronRight, Database, FileText,
-  Image as ImageIcon, Info, MessageCircle, Newspaper,
+  Heart, Image as ImageIcon, Info, MessageCircle, Newspaper,
   PawPrint, Shield, Star, Trash2,
 } from 'lucide-react-native';
 import { useState } from 'react';
@@ -11,10 +11,23 @@ import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacit
 import { colors, radius, spacing } from '../../constants/theme';
 
 const FEEDBACK_URL = 'https://open.kakao.com/o/seTWQ4ui';
-const PRIVACY_URL = 'https://kkori.app/privacy';
-const TERMS_URL = 'https://kkori.app/terms';
-const NEWS_URL = 'https://kkori.app/news';
+const PRIVACY_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80909f5aef93dd5f7b72';
+const TERMS_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80d2b9b9f5efb2591b21';
+const NEWS_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80338ad5c5c5e794ed3e?pvs=73';
+const DONATION_URL = 'supertoss://send?bank=%EC%B9%B4%EC%B9%B4%EC%98%A4%EB%B1%85%ED%81%AC&accountNo=3333227317180';
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
+const CACHE_KEYS = [
+  'pet-care:api:pets',
+  'pet-care:api:current-pet-id',
+  'pet-care:api:current-caregiver-id',
+] as const;
+const CACHE_KEY_PREFIXES = [
+  'pet-care:api:photos:',
+  'pet-care:api:logs:',
+  'pet-care:api:pet-photo:',
+  'pet-care:photo-data:',
+  'pet-care:log-photos:',
+] as const;
 
 function openURL(url: string) {
   Linking.openURL(url).catch(() => Alert.alert('오류', '링크를 열 수 없어요.'));
@@ -35,6 +48,11 @@ function ComingSoonBadge() {
 
 function Card({ children }: { children: React.ReactNode }) {
   return <View style={s.card}>{children}</View>;
+}
+
+function isCacheKey(key: string) {
+  return CACHE_KEYS.some((cacheKey) => cacheKey === key)
+    || CACHE_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
 }
 
 interface RowProps {
@@ -74,8 +92,16 @@ export default function SettingsScreen() {
     Alert.alert('캐시 비우기', '저장된 임시 데이터를 모두 삭제할까요?\n다음 실행 시 서버에서 다시 불러옵니다.', [
       { text: '취소', style: 'cancel' },
       { text: '비우기', style: 'destructive', onPress: async () => {
-        await AsyncStorage.clear();
-        Alert.alert('완료', '캐시를 비웠어요.');
+        try {
+          const keys = await AsyncStorage.getAllKeys();
+          const cacheKeys = keys.filter(isCacheKey);
+          if (cacheKeys.length > 0) {
+            await AsyncStorage.multiRemove(cacheKeys);
+          }
+          Alert.alert('완료', '캐시를 비웠어요');
+        } catch {
+          Alert.alert('오류', '캐시를 비우지 못했어요');
+        }
       }},
     ]);
   }
@@ -88,6 +114,17 @@ export default function SettingsScreen() {
     }
   }
 
+  function handleDonation() {
+    Alert.alert(
+      '꼬리 응원하기',
+      '17년 함께한 반려견을 떠나보낸 경험으로 꼬리를 만들고 있어요.\n\n후원은 선택사항이며 앱 기능에 영향을 주지 않아요.',
+      [
+        { text: '닫기', style: 'cancel' },
+        { text: '토스 열기', onPress: () => openURL(DONATION_URL) },
+      ],
+    );
+  }
+
   async function handleWag() {
     const next = wagCount + 1;
     setWagCount(next);
@@ -98,15 +135,18 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content}>
-      <GroupTitle label="알림" />
-      <Card>
-        <Row icon={<Bell size={20} color={colors.textSecondary} />} label="알림 권한" desc="시스템 설정 열기" onPress={openSettings} />
-        {/* <Row icon={<Bell size={20} color={colors.textQuaternary} />} label="약 복용 알림" right={<ComingSoonBadge />} disabled /> */}
-        {/* <Row icon={<Bell size={20} color={colors.textQuaternary} />} label="데일리 포토 리마인더" right={<ComingSoonBadge />} disabled last /> */}
-      </Card>
+    {/*
+           <GroupTitle label="알림" />
+            <Card>
+              <Row icon={<Bell size={20} color={colors.textSecondary} />} label="알림 권한" desc="시스템 설정 열기" onPress={openSettings} />
+              {<Row icon={<Bell size={20} color={colors.textQuaternary} />} label="약 복용 알림" right={<ComingSoonBadge />} disabled />}
+              {<Row icon={<Bell size={20} color={colors.textQuaternary} />} label="데일리 포토 리마인더" right={<ComingSoonBadge />} disabled last /> }
+            </Card>
+      */}
 
       <GroupTitle label="권한" />
       <Card>
+        <Row icon={<Bell size={20} color={colors.textSecondary} />} label="알림 권한" desc="시스템 설정 열기" onPress={openSettings} />
         <Row icon={<Camera size={20} color={colors.textSecondary} />} label="카메라 권한" desc="시스템 설정 열기" onPress={openSettings} />
         <Row icon={<ImageIcon size={20} color={colors.textSecondary} />} label="사진 접근 권한" desc="시스템 설정 열기" onPress={openSettings} last />
       </Card>
@@ -130,6 +170,7 @@ export default function SettingsScreen() {
         <Row icon={<MessageCircle size={20} color={colors.textSecondary} />} label="문의하기" desc="카카오 오픈채팅" onPress={() => openURL(FEEDBACK_URL)} />
         <Row icon={<Newspaper size={20} color={colors.textSecondary} />} label="업데이트 소식" onPress={() => openURL(NEWS_URL)} />
         <Row icon={<Star size={20} color={colors.textSecondary} />} label="리뷰 남기기" desc="앱스토어에서 별점 남기기" onPress={handleReview} />
+        <Row icon={<Heart size={20} color={colors.accent} />} label="꼬리 응원하기" desc="개발자에게 간식 사주기" onPress={handleDonation} />
         <Row icon={<PawPrint size={20} color={colors.accent} />} label="꼬리 흔들게 하기 🐾" onPress={handleWag} last />
       </Card>
     </ScrollView>
