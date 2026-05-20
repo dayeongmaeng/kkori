@@ -1,5 +1,5 @@
-import { pickImage } from '../../lib/imagePickerHelper';
-import { useEffect, useRef, useState } from 'react';
+import { Image } from "expo-image";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Modal,
@@ -10,11 +10,13 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { Image } from 'expo-image';
-import { colors, radius, spacing } from '../../constants/theme';
-import { petApi, PetResponse } from '../../lib/api/pet';
+} from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import SaveIndicator from "../../components/SaveIndicator";
+import { colors, radius, spacing } from "../../constants/theme";
+import { useCurrentPet } from "../../contexts/PetContext";
+import { SaveStatus } from "../../hooks/useAutoSave";
+import { petApi, PetResponse } from "../../lib/api/pet";
 import {
   getCachedCurrentPetId,
   getCachedPetPhoto,
@@ -23,49 +25,55 @@ import {
   setCachedPetPhoto,
   setCachedPets,
   upsertCachedPet,
-} from '../../lib/cache/pet';
-import { useCurrentPet } from '../../contexts/PetContext';
-import { SaveStatus } from '../../hooks/useAutoSave';
-import SaveIndicator from '../../components/SaveIndicator';
+} from "../../lib/cache/pet";
+import { pickImage } from "../../lib/imagePickerHelper";
 
-type Gender = 'male' | 'female';
-type DateField = 'birthDate' | 'adoptionDate';
+type Gender = "male" | "female";
+type DateField = "birthDate" | "adoptionDate";
 
 let DateTimePicker: any = null;
 try {
-  DateTimePicker = require('@react-native-community/datetimepicker').default;
+  DateTimePicker = require("@react-native-community/datetimepicker").default;
 } catch {
   DateTimePicker = null;
 }
 
 const today = new Date();
-const minDate = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
-const maxDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+const minDate = new Date(
+  today.getFullYear() - 30,
+  today.getMonth(),
+  today.getDate(),
+);
+const maxDate = new Date(
+  today.getFullYear(),
+  today.getMonth(),
+  today.getDate() + 1,
+);
 const dogBreeds = [
-  '말티즈',
-  '포메라니안',
-  '푸들',
-  '토이푸들',
-  '비숑 프리제',
-  '치와와',
-  '시츄',
-  '요크셔테리어',
-  '닥스훈트',
-  '웰시코기',
-  '프렌치 불도그',
-  '비글',
-  '시바견',
-  '진돗개',
-  '리트리버',
-  '골든 리트리버',
-  '래브라도 리트리버',
-  '보더콜리',
-  '사모예드',
-  '스피츠',
-  '슈나우저',
-  '말티푸',
-  '포메푸',
-  '믹스견',
+  "말티즈",
+  "포메라니안",
+  "푸들",
+  "토이푸들",
+  "비숑 프리제",
+  "치와와",
+  "시츄",
+  "요크셔테리어",
+  "닥스훈트",
+  "웰시코기",
+  "프렌치 불도그",
+  "비글",
+  "시바견",
+  "진돗개",
+  "리트리버",
+  "골든 리트리버",
+  "래브라도 리트리버",
+  "보더콜리",
+  "사모예드",
+  "스피츠",
+  "슈나우저",
+  "말티푸",
+  "포메푸",
+  "믹스견",
 ];
 
 function formatBirthDate(date: Date) {
@@ -77,8 +85,8 @@ function formatBirthDate(date: Date) {
 
 function dateToStorage(date: Date) {
   const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 
@@ -92,8 +100,10 @@ function storageToDate(s: string): Date | null {
 function normalizeGender(value: string | null | undefined): Gender | null {
   if (!value) return null;
   const normalized = value.trim().toLowerCase();
-  if (normalized === 'male' || normalized === 'm' || normalized === '수컷') return 'male';
-  if (normalized === 'female' || normalized === 'f' || normalized === '암컷') return 'female';
+  if (normalized === "male" || normalized === "m" || normalized === "수컷")
+    return "male";
+  if (normalized === "female" || normalized === "f" || normalized === "암컷")
+    return "female";
   return null;
 }
 
@@ -104,9 +114,16 @@ function WebDatePicker({
   value: Date;
   onChange: (date: Date) => void;
 }) {
-  const years = Array.from({ length: 31 }, (_, i) => today.getFullYear() - 30 + i);
+  const years = Array.from(
+    { length: 31 },
+    (_, i) => today.getFullYear() - 30 + i,
+  );
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const daysInMonth = new Date(value.getFullYear(), value.getMonth() + 1, 0).getDate();
+  const daysInMonth = new Date(
+    value.getFullYear(),
+    value.getMonth() + 1,
+    0,
+  ).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   function update(y: number, m: number, d: number) {
@@ -118,31 +135,57 @@ function WebDatePicker({
     <View style={webPickerStyles.row}>
       <select
         value={value.getFullYear()}
-        onChange={e => update(Number(e.target.value), value.getMonth() + 1, value.getDate())}
+        onChange={(e) =>
+          update(Number(e.target.value), value.getMonth() + 1, value.getDate())
+        }
         style={webPickerStyles.select as any}
       >
-        {years.map(y => <option key={y} value={y}>{y}년</option>)}
+        {years.map((y) => (
+          <option key={y} value={y}>
+            {y}년
+          </option>
+        ))}
       </select>
       <select
         value={value.getMonth() + 1}
-        onChange={e => update(value.getFullYear(), Number(e.target.value), value.getDate())}
+        onChange={(e) =>
+          update(value.getFullYear(), Number(e.target.value), value.getDate())
+        }
         style={webPickerStyles.select as any}
       >
-        {months.map(m => <option key={m} value={m}>{m}월</option>)}
+        {months.map((m) => (
+          <option key={m} value={m}>
+            {m}월
+          </option>
+        ))}
       </select>
       <select
         value={value.getDate()}
-        onChange={e => update(value.getFullYear(), value.getMonth() + 1, Number(e.target.value))}
+        onChange={(e) =>
+          update(
+            value.getFullYear(),
+            value.getMonth() + 1,
+            Number(e.target.value),
+          )
+        }
         style={webPickerStyles.select as any}
       >
-        {days.map(d => <option key={d} value={d}>{d}일</option>)}
+        {days.map((d) => (
+          <option key={d} value={d}>
+            {d}일
+          </option>
+        ))}
       </select>
     </View>
   );
 }
 
 const webPickerStyles = {
-  row: { flexDirection: 'row' as const, gap: 8, justifyContent: 'center' as const },
+  row: {
+    flexDirection: "row" as const,
+    gap: 8,
+    justifyContent: "center" as const,
+  },
   select: {
     flex: 1,
     fontSize: 16,
@@ -157,31 +200,33 @@ const webPickerStyles = {
 export default function ProfileScreen() {
   const { setCurrentPet } = useCurrentPet();
   const [externalId, setExternalId] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [breed, setBreed] = useState('');
+  const [name, setName] = useState("");
+  const [breed, setBreed] = useState("");
   const [gender, setGender] = useState<Gender | null>(null);
-  const [birthDate, setBirthDate] = useState('');
+  const [birthDate, setBirthDate] = useState("");
   const [birthDateUnknown, setBirthDateUnknown] = useState(false);
-  const [adoptionDate, setAdoptionDate] = useState('');
-  const [weightKg, setWeightKg] = useState('');
+  const [adoptionDate, setAdoptionDate] = useState("");
+  const [weightKg, setWeightKg] = useState("");
   const [neutered, setNeutered] = useState(false);
-  const [medicalNotes, setMedicalNotes] = useState('');
+  const [medicalNotes, setMedicalNotes] = useState("");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [breedFocused, setBreedFocused] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
-  const [dateField, setDateField] = useState<DateField>('birthDate');
+  const [dateField, setDateField] = useState<DateField>("birthDate");
 
-  const [indicatorStatus, setIndicatorStatus] = useState<SaveStatus>('idle');
+  const [indicatorStatus, setIndicatorStatus] = useState<SaveStatus>("idle");
   const indicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const breedSuggestions = breed.trim()
-    ? dogBreeds.filter((item) => item.includes(breed.trim()) && item !== breed.trim()).slice(0, 5)
+    ? dogBreeds
+        .filter((item) => item.includes(breed.trim()) && item !== breed.trim())
+        .slice(0, 5)
     : [];
 
   function openDatePicker(field: DateField) {
-    const value = field === 'birthDate' ? birthDate : adoptionDate;
+    const value = field === "birthDate" ? birthDate : adoptionDate;
     const parsed = storageToDate(value);
     setDateField(field);
     setPickerDate(parsed ?? new Date(2020, 0, 1));
@@ -197,21 +242,24 @@ export default function ProfileScreen() {
     const isBirthDateUnknown = pet.birthDateUnknown ?? !pet.birthDate;
     setExternalId(pet.externalId);
     setName(pet.name);
-    setBreed(pet.breed ?? '');
+    setBreed(pet.breed ?? "");
     setGender(normalizeGender(pet.gender));
-    setBirthDate(isBirthDateUnknown ? '' : pet.birthDate ?? '');
+    setBirthDate(isBirthDateUnknown ? "" : (pet.birthDate ?? ""));
     setBirthDateUnknown(isBirthDateUnknown);
-    setAdoptionDate(pet.adoptionDate ?? '');
-    setWeightKg(pet.weightKg !== undefined ? String(pet.weightKg) : '');
+    setAdoptionDate(pet.adoptionDate ?? "");
+    setWeightKg(pet.weightKg !== undefined ? String(pet.weightKg) : "");
     setNeutered(pet.neutered ?? false);
-    setMedicalNotes(pet.medicalNotes ?? '');
+    setMedicalNotes(pet.medicalNotes ?? "");
     if (pet.photoBase64) setPhotoUri(pet.photoBase64);
   }
 
   function showError() {
     if (indicatorTimerRef.current) clearTimeout(indicatorTimerRef.current);
-    setIndicatorStatus('error');
-    indicatorTimerRef.current = setTimeout(() => setIndicatorStatus('idle'), 2200);
+    setIndicatorStatus("error");
+    indicatorTimerRef.current = setTimeout(
+      () => setIndicatorStatus("idle"),
+      2200,
+    );
   }
 
   useEffect(() => {
@@ -232,12 +280,19 @@ export default function ProfileScreen() {
       try {
         const serverPets = await petApi.getPets();
         const mergedPets = serverPets.map((serverPet) => {
-          const cachedPet = cached.find((p) => p.externalId === serverPet.externalId);
+          const cachedPet = cached.find(
+            (p) => p.externalId === serverPet.externalId,
+          );
           return {
             ...serverPet,
-            gender: normalizeGender(serverPet.gender) ?? normalizeGender(cachedPet?.gender),
-            birthDate: cachedPet?.birthDateUnknown ? null : (serverPet.birthDate ?? cachedPet?.birthDate),
-            birthDateUnknown: serverPet.birthDateUnknown ?? cachedPet?.birthDateUnknown,
+            gender:
+              normalizeGender(serverPet.gender) ??
+              normalizeGender(cachedPet?.gender),
+            birthDate: cachedPet?.birthDateUnknown
+              ? null
+              : (serverPet.birthDate ?? cachedPet?.birthDate),
+            birthDateUnknown:
+              serverPet.birthDateUnknown ?? cachedPet?.birthDateUnknown,
             adoptionDate: serverPet.adoptionDate ?? cachedPet?.adoptionDate,
           };
         });
@@ -262,7 +317,13 @@ export default function ProfileScreen() {
   }
 
   async function handleSave() {
-    if (!name.trim() || !breed.trim() || !gender || (!birthDateUnknown && !birthDate.trim()) || !weightKg.trim()) {
+    if (
+      !name.trim() ||
+      !breed.trim() ||
+      !gender ||
+      (!birthDateUnknown && !birthDate.trim()) ||
+      !weightKg.trim()
+    ) {
       showError();
       return;
     }
@@ -274,12 +335,12 @@ export default function ProfileScreen() {
 
     try {
       if (indicatorTimerRef.current) clearTimeout(indicatorTimerRef.current);
-      setIndicatorStatus('saving');
+      setIndicatorStatus("saving");
       setIsSaving(true);
 
       const body = {
         name: name.trim(),
-        species: 'dog',
+        species: "dog",
         breed: breed.trim(),
         gender,
         birthDate: birthDateUnknown ? null : birthDate.trim(),
@@ -298,7 +359,9 @@ export default function ProfileScreen() {
       const savedPet = {
         ...response,
         gender: normalizeGender(response.gender) ?? body.gender,
-        birthDate: body.birthDateUnknown ? null : response.birthDate ?? body.birthDate,
+        birthDate: body.birthDateUnknown
+          ? null
+          : (response.birthDate ?? body.birthDate),
         birthDateUnknown: response.birthDateUnknown ?? body.birthDateUnknown,
         adoptionDate: response.adoptionDate ?? body.adoptionDate,
       };
@@ -311,14 +374,14 @@ export default function ProfileScreen() {
       setExternalId(savedPet.externalId);
       setCurrentPet(savedPet);
 
-      setIndicatorStatus('saved');
+      setIndicatorStatus("saved");
       indicatorTimerRef.current = setTimeout(() => {
-        setIndicatorStatus('idle');
+        setIndicatorStatus("idle");
       }, 1500);
     } catch (e) {
-      console.error('[ProfileScreen] 서버 저장 실패:', e);
-      setIndicatorStatus('idle');
-      Alert.alert('저장 실패', '서버 연결을 확인해주세요.');
+      console.error("[ProfileScreen] 서버 저장 실패:", e);
+      setIndicatorStatus("idle");
+      Alert.alert("저장 실패", "서버 연결을 확인해주세요.");
     } finally {
       setIsSaving(false);
     }
@@ -335,7 +398,11 @@ export default function ProfileScreen() {
         {/* 사진 */}
         <TouchableOpacity style={styles.photoWrapper} onPress={handlePickImage}>
           {photoUri ? (
-            <Image source={{ uri: photoUri }} style={styles.photo} contentFit="cover" />
+            <Image
+              source={{ uri: photoUri }}
+              style={styles.photo}
+              contentFit="cover"
+            />
           ) : (
             <View style={styles.photoPlaceholder}>
               <Text style={styles.photoPlaceholderIcon}>📷</Text>
@@ -360,19 +427,27 @@ export default function ProfileScreen() {
         <View style={styles.field}>
           <Text style={styles.label}>성별 *</Text>
           <View style={styles.segmentRow}>
-            {([
-              { value: 'male' as const, label: '수컷' },
-              { value: 'female' as const, label: '암컷' },
-            ]).map((option) => {
+            {[
+              { value: "male" as const, label: "수컷" },
+              { value: "female" as const, label: "암컷" },
+            ].map((option) => {
               const selected = gender === option.value;
               return (
                 <TouchableOpacity
                   key={option.value}
-                  style={[styles.segmentButton, selected && styles.segmentButtonActive]}
+                  style={[
+                    styles.segmentButton,
+                    selected && styles.segmentButtonActive,
+                  ]}
                   onPress={() => setGender(option.value)}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.segmentText, selected && styles.segmentTextActive]}>
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      selected && styles.segmentTextActive,
+                    ]}
+                  >
                     {option.label}
                   </Text>
                 </TouchableOpacity>
@@ -417,12 +492,26 @@ export default function ProfileScreen() {
         <View style={styles.field}>
           <Text style={styles.label}>생일 *</Text>
           <TouchableOpacity
-            style={[styles.input, styles.dateButton, birthDateUnknown && styles.inputDisabled]}
-            onPress={() => openDatePicker('birthDate')}
+            style={[
+              styles.input,
+              styles.dateButton,
+              birthDateUnknown && styles.inputDisabled,
+            ]}
+            onPress={() => openDatePicker("birthDate")}
             disabled={birthDateUnknown}
           >
-            <Text style={birthDate && !birthDateUnknown ? styles.dateText : styles.datePlaceholder}>
-              {birthDateUnknown ? '생일 모름' : birthDate ? formatStorageDate(birthDate) : '생일 선택'}
+            <Text
+              style={
+                birthDate && !birthDateUnknown
+                  ? styles.dateText
+                  : styles.datePlaceholder
+              }
+            >
+              {birthDateUnknown
+                ? "생일 모름"
+                : birthDate
+                  ? formatStorageDate(birthDate)
+                  : "생일 선택"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -430,12 +519,19 @@ export default function ProfileScreen() {
             onPress={() => {
               const next = !birthDateUnknown;
               setBirthDateUnknown(next);
-              if (next) setBirthDate('');
+              if (next) setBirthDate("");
             }}
             activeOpacity={0.8}
           >
-            <View style={[styles.checkbox, birthDateUnknown && styles.checkboxActive]}>
-              {birthDateUnknown ? <Text style={styles.checkboxMark}>✓</Text> : null}
+            <View
+              style={[
+                styles.checkbox,
+                birthDateUnknown && styles.checkboxActive,
+              ]}
+            >
+              {birthDateUnknown ? (
+                <Text style={styles.checkboxMark}>✓</Text>
+              ) : null}
             </View>
             <Text style={styles.checkText}>생일 모름</Text>
           </TouchableOpacity>
@@ -446,10 +542,14 @@ export default function ProfileScreen() {
           <Text style={styles.label}>함께한 날 (선택)</Text>
           <TouchableOpacity
             style={[styles.input, styles.dateButton]}
-            onPress={() => openDatePicker('adoptionDate')}
+            onPress={() => openDatePicker("adoptionDate")}
           >
-            <Text style={adoptionDate ? styles.dateText : styles.datePlaceholder}>
-              {adoptionDate ? formatStorageDate(adoptionDate) : '함께한 날 선택'}
+            <Text
+              style={adoptionDate ? styles.dateText : styles.datePlaceholder}
+            >
+              {adoptionDate
+                ? formatStorageDate(adoptionDate)
+                : "함께한 날 선택"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -468,12 +568,12 @@ export default function ProfileScreen() {
                   <Text style={styles.modalCancel}>취소</Text>
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>
-                  {dateField === 'birthDate' ? '생일 선택' : '함께한 날 선택'}
+                  {dateField === "birthDate" ? "생일 선택" : "함께한 날 선택"}
                 </Text>
                 <TouchableOpacity
                   onPress={() => {
                     const value = dateToStorage(pickerDate);
-                    if (dateField === 'birthDate') {
+                    if (dateField === "birthDate") {
                       setBirthDate(value);
                       setBirthDateUnknown(false);
                     } else {
@@ -486,7 +586,7 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </View>
 
-              {Platform.OS === 'web' ? (
+              {Platform.OS === "web" ? (
                 <View style={styles.webPickerWrapper}>
                   <WebDatePicker value={pickerDate} onChange={setPickerDate} />
                 </View>
@@ -560,21 +660,23 @@ export default function ProfileScreen() {
           activeOpacity={0.8}
           disabled={isSaving}
         >
-          <Text style={styles.saveButtonText}>{isSaving ? '저장 중...' : '저장'}</Text>
+          <Text style={styles.saveButtonText}>
+            {isSaving ? "저장 중..." : "저장"}
+          </Text>
         </TouchableOpacity>
       </View>
 
       <SaveIndicator
         status={indicatorStatus}
         labels={{
-          saving: '서버에 저장 중...',
-          saved: '저장되었습니다 ✓',
-          error: '필수 항목을 입력해주세요',
+          saving: "서버에 저장 중...",
+          saved: "저장되었습니다 ✓",
+          error: "필수 항목을 입력해주세요",
         }}
         textColors={{
-          saving: 'rgba(255,255,255,0.90)',
-          saved: 'rgba(255,255,255,0.90)',
-          error: 'rgba(255,255,255,0.90)',
+          saving: "rgba(255,255,255,0.90)",
+          saved: "rgba(255,255,255,0.90)",
+          error: "rgba(255,255,255,0.90)",
         }}
       />
     </View>
@@ -591,7 +693,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   photoWrapper: {
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: spacing.xxl,
   },
   photo: {
@@ -604,8 +706,8 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: radius.full,
     backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   photoPlaceholderIcon: {
     fontSize: 32,
@@ -620,7 +722,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
@@ -638,7 +740,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   segmentRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
   },
   segmentButton: {
@@ -646,7 +748,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.lg,
     paddingVertical: 14,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -656,7 +758,7 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.textSecondary,
   },
   segmentTextActive: {
@@ -668,7 +770,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   suggestionItem: {
     paddingHorizontal: spacing.lg,
@@ -681,10 +783,10 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   checkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: spacing.sm,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   checkbox: {
     width: 22,
@@ -693,8 +795,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: spacing.sm,
   },
   checkboxActive: {
@@ -703,7 +805,7 @@ const styles = StyleSheet.create({
   },
   checkboxMark: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.textOnPrimary,
   },
   checkText: {
@@ -711,8 +813,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   weightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
   },
   weightInput: {
@@ -720,13 +822,13 @@ const styles = StyleSheet.create({
   },
   weightUnit: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.textSecondary,
   },
   switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.lg,
@@ -739,7 +841,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   dateButton: {
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   dateText: {
     fontSize: 16,
@@ -751,8 +853,8 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
   },
   modalSheet: {
     backgroundColor: colors.surface,
@@ -761,9 +863,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     borderBottomWidth: 1,
@@ -771,7 +873,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.textPrimary,
   },
   modalCancel: {
@@ -780,7 +882,7 @@ const styles = StyleSheet.create({
   },
   modalDone: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.primary,
   },
   webPickerWrapper: {
@@ -797,14 +899,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.lg,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveButtonDisabled: {
     opacity: 0.5,
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.textOnPrimary,
   },
 });
