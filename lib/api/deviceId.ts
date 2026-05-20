@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
 
 import { deviceApi } from './device';
@@ -17,7 +18,7 @@ export async function initDeviceId(): Promise<void> {
   const stored = await getStoredDeviceId();
   if (stored) return;
 
-  const id = crypto.randomUUID();
+  const id = Crypto.randomUUID();
   await deviceApi.register({ externalId: id, platform: Platform.OS });
   await AsyncStorage.setItem(STORAGE_KEY, id);
 }

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import {
   Bell, Camera, ChevronRight, Database, FileText,
   Heart, Image as ImageIcon, Info, LogOut, MessageCircle, Newspaper,
@@ -88,6 +89,7 @@ function Row({ icon, label, desc, right, onPress, disabled, last }: RowProps) {
 
 export default function SettingsScreen() {
   const [wagCount, setWagCount] = useState(0);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { logout } = useAuth();
 
   async function handleClearCache() {
@@ -127,19 +129,49 @@ export default function SettingsScreen() {
     );
   }
 
+  function showLogoutError() {
+    const message = '로그아웃하지 못했어요. 잠시 후 다시 시도해 주세요.';
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(message);
+      return;
+    }
+    Alert.alert('오류', message);
+  }
+
+  async function performLogout() {
+    if (isLoggingOut) return;
+
+    try {
+      console.info('[Settings] logout requested');
+      setIsLoggingOut(true);
+      await logout();
+      if (Platform.OS === 'web') {
+        router.replace('/');
+      }
+    } catch (error) {
+      console.error('[Settings] logout failed:', error);
+      showLogoutError();
+      setIsLoggingOut(false);
+    }
+  }
+
   function handleLogout() {
-    Alert.alert('로그아웃', '현재 계정에서 로그아웃할까요?', [
+    if (isLoggingOut) return;
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm('로그아웃할까요?\n\n다시 사용하려면 Google 로그인이 필요해요.');
+      if (confirmed) {
+        void performLogout();
+      }
+      return;
+    }
+
+    Alert.alert('로그아웃할까요?', '다시 사용하려면 Google 로그인이 필요해요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '로그아웃',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            await logout();
-          } catch {
-            Alert.alert('오류', '로그아웃하지 못했어요');
-          }
-        },
+        onPress: () => { void performLogout(); },
       },
     ]);
   }
@@ -154,11 +186,6 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content}>
-      <GroupTitle label="계정" />
-      <Card>
-        <Row icon={<LogOut size={20} color={colors.textSecondary} />} label="로그아웃" onPress={handleLogout} last />
-      </Card>
-
     {/*
            <GroupTitle label="알림" />
             <Card>
@@ -196,6 +223,18 @@ export default function SettingsScreen() {
         <Row icon={<Star size={20} color={colors.textSecondary} />} label="리뷰 남기기" desc="앱스토어에서 별점 남기기" onPress={handleReview} />
         <Row icon={<Heart size={20} color={colors.accent} />} label="꼬리 응원하기" desc="개발자에게 간식 사주기" onPress={handleDonation} />
         <Row icon={<PawPrint size={20} color={colors.accent} />} label="꼬리 흔들게 하기 🐾" onPress={handleWag} last />
+      </Card>
+
+      <GroupTitle label="계정" />
+      <Card>
+        <Row
+          icon={<LogOut size={20} color={colors.textSecondary} />}
+          label="로그아웃"
+          desc={isLoggingOut ? '로그아웃 중이에요' : '현재 Google 계정 연결 해제'}
+          onPress={handleLogout}
+          disabled={isLoggingOut}
+          last
+        />
       </Card>
     </ScrollView>
   );

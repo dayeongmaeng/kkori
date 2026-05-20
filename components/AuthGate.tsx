@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
-import GoogleLoginScreen from './GoogleLoginScreen';
+import AuthScreen from './AuthScreen';
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const { isAuthenticated, isAuthLoading } = useAuth();
@@ -18,7 +18,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <GoogleLoginScreen />;
+    return <AuthScreen />;
   }
 
   return children;
