@@ -6,13 +6,17 @@ const ACCESS_TOKEN_KEY = 'pet-care:auth:access-token';
 const REFRESH_TOKEN_KEY = 'pet-care:auth:refresh-token';
 const USER_KEY = 'pet-care:auth:user';
 
+function getStorageKey(key: string) {
+  return Platform.OS === 'web' ? key : key.replaceAll(':', '.');
+}
+
 const storage = {
   getItem: (key: string) =>
-    Platform.OS === 'web' ? AsyncStorage.getItem(key) : SecureStore.getItemAsync(key),
+    Platform.OS === 'web' ? AsyncStorage.getItem(key) : SecureStore.getItemAsync(getStorageKey(key)),
   setItem: (key: string, value: string) =>
-    Platform.OS === 'web' ? AsyncStorage.setItem(key, value) : SecureStore.setItemAsync(key, value),
+    Platform.OS === 'web' ? AsyncStorage.setItem(key, value) : SecureStore.setItemAsync(getStorageKey(key), value),
   deleteItem: (key: string) =>
-    Platform.OS === 'web' ? AsyncStorage.removeItem(key) : SecureStore.deleteItemAsync(key),
+    Platform.OS === 'web' ? AsyncStorage.removeItem(key) : SecureStore.deleteItemAsync(getStorageKey(key)),
 };
 
 export interface AuthUser {

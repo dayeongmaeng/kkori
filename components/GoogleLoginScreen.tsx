@@ -1,1 +1,2 @@
-export { default, GOOGLE_REDIRECT_URI } from './AuthScreen';
+export { default } from './AuthScreen';
+export { GOOGLE_REDIRECT_URI } from './googleAuthConfig';

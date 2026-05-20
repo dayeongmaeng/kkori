@@ -1,8 +1,7 @@
-import * as AuthSession from 'expo-auth-session';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { Image } from 'expo-image';
-import { MessageCircle } from 'lucide-react-native';1
+import { MessageCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,19 +9,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { loginWithOAuth } from '../lib/api/auth';
+import {
+  GOOGLE_ANDROID_CLIENT_ID,
+  GOOGLE_IOS_CLIENT_ID,
+  GOOGLE_REDIRECT_URI,
+  GOOGLE_WEB_CLIENT_ID,
+  maskClientId,
+} from './googleAuthConfig';
 import { s } from './AuthScreen.styles';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 const LOGIN_TIMEOUT_MS = 30000;
-
-export const GOOGLE_REDIRECT_URI = AuthSession.makeRedirectUri({
-  scheme: 'kkori',
-  path: 'oauth/google',
-});
 
 function requireGoogleClientId() {
   if (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID) return 'Google iOS 클라이언트 ID 설정이 필요해요.';
@@ -133,6 +131,11 @@ export default function AuthScreen() {
     }
 
     try {
+      console.info('[GoogleLogin] config', {
+        platform: Platform.OS,
+        redirectUri: GOOGLE_REDIRECT_URI,
+        webClientId: maskClientId(GOOGLE_WEB_CLIENT_ID),
+      });
       setErrorMessage(null);
       setIsLoggingIn(true);
       startLoginTimeout();
