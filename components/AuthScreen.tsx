@@ -1,6 +1,7 @@
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { MessageCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Platform, Text, TouchableOpacity, View } from 'react-native';
@@ -16,11 +17,14 @@ import {
   GOOGLE_WEB_CLIENT_ID,
   maskClientId,
 } from './googleAuthConfig';
+import { buildKakaoAuthorizeUrl, getKakaoRedirectUri, KAKAO_REST_API_KEY } from './kakaoAuthConfig';
 import { s } from './AuthScreen.styles';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LOGIN_TIMEOUT_MS = 30000;
+const KAKAO_REDIRECT_URI_STORAGE_KEY = 'pet-care:kakao:redirect-uri';
+type LoginProvider = 'GOOGLE' | 'KAKAO';
 
 function requireGoogleClientId() {
   if (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID) return 'Google iOS 클라이언트 ID 설정이 필요해요.';
@@ -29,14 +33,39 @@ function requireGoogleClientId() {
   return null;
 }
 
+function saveKakaoRedirectUri(redirectUri: string) {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+  try {
+    window.sessionStorage.setItem(KAKAO_REDIRECT_URI_STORAGE_KEY, redirectUri);
+  } catch {
+    // sessionStorage를 사용할 수 없는 환경에서는 동일한 생성 함수로 다시 계산해요.
+  }
+}
+
+function getSavedKakaoRedirectUri() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return getKakaoRedirectUri();
+  }
+
+  try {
+    return window.sessionStorage.getItem(KAKAO_REDIRECT_URI_STORAGE_KEY) ?? getKakaoRedirectUri();
+  } catch {
+    return getKakaoRedirectUri();
+  }
+}
+
 export default function AuthScreen() {
   const { markLoggedIn } = useAuth();
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const router = useRouter();
+  const [loginProvider, setLoginProvider] = useState<LoginProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const kakaoCallbackHandledRef = useRef(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const missingMessage = requireGoogleClientId();
+  const isLoggingIn = loginProvider !== null;
 
   const googleConfig = useMemo(() => ({
     iosClientId: GOOGLE_IOS_CLIENT_ID ?? 'missing-google-ios-client-id',
@@ -59,9 +88,35 @@ export default function AuthScreen() {
 
   const stopWithError = useCallback((message: string) => {
     clearLoginTimeout();
-    setIsLoggingIn(false);
+    setLoginProvider(null);
     setErrorMessage(message);
   }, [clearLoginTimeout]);
+
+  const startLoginTimeout = useCallback(() => {
+    clearLoginTimeout();
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
+      setLoginProvider(null);
+      setErrorMessage('로그인이 오래 걸리고 있어요. 잠시 후 다시 시도해 주세요.');
+    }, LOGIN_TIMEOUT_MS);
+  }, [clearLoginTimeout]);
+
+  const completeKakaoLogin = useCallback(async (code: string, redirectUri: string) => {
+    try {
+      console.info('[KakaoLogin] server login request', {
+        provider: 'KAKAO',
+        serverRequestRedirectUri: redirectUri,
+      });
+      await loginWithOAuth('KAKAO', { code, redirectUri });
+      markLoggedIn();
+      router.replace('/');
+    } catch {
+      setErrorMessage('카카오 로그인에 실패했어요');
+    } finally {
+      clearLoginTimeout();
+      setLoginProvider(null);
+    }
+  }, [clearLoginTimeout, markLoggedIn, router]);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -81,6 +136,34 @@ export default function AuthScreen() {
   }, [clearLoginTimeout, fadeAnim, floatAnim]);
 
   useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (kakaoCallbackHandledRef.current) return;
+    if (window.location.pathname !== '/oauth/kakao') return;
+
+    kakaoCallbackHandledRef.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const error = params.get('error');
+
+    if (error) {
+      setErrorMessage('카카오 로그인이 취소되었어요');
+      router.replace('/');
+      return;
+    }
+
+    if (!code) {
+      setErrorMessage('카카오 로그인에 실패했어요');
+      router.replace('/');
+      return;
+    }
+
+    setErrorMessage(null);
+    setLoginProvider('KAKAO');
+    startLoginTimeout();
+    void completeKakaoLogin(code, getSavedKakaoRedirectUri());
+  }, [completeKakaoLogin, router, startLoginTimeout]);
+
+  useEffect(() => {
     if (!response) return;
 
     const idToken = response.type === 'success' ? response.params.id_token : undefined;
@@ -88,7 +171,7 @@ export default function AuthScreen() {
 
     if (response.type === 'cancel' || response.type === 'dismiss') {
       clearLoginTimeout();
-      setIsLoggingIn(false);
+      setLoginProvider(null);
       return;
     }
 
@@ -110,18 +193,9 @@ export default function AuthScreen() {
       .catch(() => setErrorMessage('로그인을 완료하지 못했어요. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'))
       .finally(() => {
         clearLoginTimeout();
-        setIsLoggingIn(false);
+        setLoginProvider(null);
       });
   }, [clearLoginTimeout, markLoggedIn, response, stopWithError]);
-
-  function startLoginTimeout() {
-    clearLoginTimeout();
-    timeoutRef.current = setTimeout(() => {
-      timeoutRef.current = null;
-      setIsLoggingIn(false);
-      setErrorMessage('로그인이 오래 걸리고 있어요. 잠시 후 다시 시도해 주세요.');
-    }, LOGIN_TIMEOUT_MS);
-  }
 
   async function handleGoogleLogin() {
     if (isLoggingIn) return;
@@ -137,27 +211,81 @@ export default function AuthScreen() {
         webClientId: maskClientId(GOOGLE_WEB_CLIENT_ID),
       });
       setErrorMessage(null);
-      setIsLoggingIn(true);
+      setLoginProvider('GOOGLE');
       startLoginTimeout();
       const result = await promptAsync();
       console.info('[GoogleLogin] prompt result', { type: result.type });
       if (result.type === 'cancel' || result.type === 'dismiss') {
         clearLoginTimeout();
-        setIsLoggingIn(false);
+        setLoginProvider(null);
         return;
       }
       if (result.type === 'error') stopWithError('Google 인증 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
       if (result.type !== 'success' && result.type !== 'opened' && result.type !== 'error') {
         clearLoginTimeout();
-        setIsLoggingIn(false);
+        setLoginProvider(null);
       }
     } catch {
       stopWithError('Google 로그인을 시작하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   }
 
-  function handleKakaoLogin() {
-    if (!isLoggingIn) setErrorMessage('카카오 로그인은 곧 지원할게요.');
+  async function handleKakaoLogin() {
+    if (isLoggingIn) return;
+    if (!KAKAO_REST_API_KEY) {
+      setErrorMessage('카카오 REST API 키 설정이 필요해요.');
+      return;
+    }
+
+    try {
+      setErrorMessage(null);
+      setLoginProvider('KAKAO');
+      startLoginTimeout();
+      const redirectUri = getKakaoRedirectUri();
+      const authorizeUrl = buildKakaoAuthorizeUrl(redirectUri);
+      saveKakaoRedirectUri(redirectUri);
+      console.info('[KakaoLogin] authorize request', {
+        provider: 'KAKAO',
+        authorizeRedirectUri: redirectUri,
+      });
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.location.assign(authorizeUrl);
+        return;
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(authorizeUrl, redirectUri);
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        clearLoginTimeout();
+        setLoginProvider(null);
+        return;
+      }
+
+      if (result.type !== 'success') {
+        stopWithError('카카오 로그인에 실패했어요');
+        return;
+      }
+
+      const callbackUrl = new URL(result.url);
+      const code = callbackUrl.searchParams.get('code');
+      const error = callbackUrl.searchParams.get('error');
+
+      if (error) {
+        clearLoginTimeout();
+        setLoginProvider(null);
+        setErrorMessage('카카오 로그인이 취소되었어요');
+        return;
+      }
+
+      if (!code) {
+        stopWithError('카카오 로그인에 실패했어요');
+        return;
+      }
+
+      await completeKakaoLogin(code, redirectUri);
+    } catch {
+      stopWithError('카카오 로그인에 실패했어요');
+    }
   }
 
   const logoTransform = {
@@ -181,12 +309,14 @@ export default function AuthScreen() {
 
         <View style={s.actions}>
           <TouchableOpacity style={[s.kakaoButton, isLoggingIn && s.buttonDisabled]} onPress={handleKakaoLogin} disabled={isLoggingIn} activeOpacity={0.82}>
-            <MessageCircle size={19} color="#191919" style={s.buttonIcon} />
-            <Text style={s.kakaoText}>카카오로 시작하기</Text>
+            {loginProvider === 'KAKAO'
+              ? <ActivityIndicator color="#191919" style={s.buttonIcon} />
+              : <MessageCircle size={19} color="#191919" style={s.buttonIcon} />}
+            <Text style={s.kakaoText}>{loginProvider === 'KAKAO' ? '로그인 중이에요' : '카카오로 시작하기'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[s.googleButton, (!request || isLoggingIn) && s.buttonDisabled]} onPress={handleGoogleLogin} disabled={!request || isLoggingIn} activeOpacity={0.86}>
-            {isLoggingIn ? <ActivityIndicator color={colors.textPrimary} style={s.buttonIcon} /> : <Text style={s.googleMark}>G</Text>}
-            <Text style={s.googleText}>{isLoggingIn ? '로그인 중이에요' : 'Google로 시작하기'}</Text>
+            {loginProvider === 'GOOGLE' ? <ActivityIndicator color={colors.textPrimary} style={s.buttonIcon} /> : <Text style={s.googleMark}>G</Text>}
+            <Text style={s.googleText}>{loginProvider === 'GOOGLE' ? '로그인 중이에요' : 'Google로 시작하기'}</Text>
           </TouchableOpacity>
           {errorMessage ? <Text style={s.errorText}>{errorMessage}</Text> : null}
           <Text style={s.termsText}>계속하면 이용약관 및 개인정보처리방침에 동의한 것으로 간주돼요</Text>

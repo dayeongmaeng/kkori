@@ -1,4 +1,4 @@
-import { saveAuthTokens, StoredAuthTokens } from '../auth/tokenStorage';
+import { clearAuthSessionCache, saveAuthTokens, StoredAuthTokens } from '../auth/tokenStorage';
 import { getStoredDeviceId, initDeviceId } from './deviceId';
 import { api } from './client';
 
@@ -8,14 +8,20 @@ export interface OAuthLoginRequest {
   provider: OAuthProvider;
   idToken?: string;
   accessToken?: string;
+  code?: string;
+  redirectUri?: string;
   deviceExternalId: string;
 }
 
 export type AuthLoginResponse = StoredAuthTokens;
 
+export interface LogoutRequest {
+  deviceExternalId?: string;
+}
+
 export async function loginWithOAuth(
   provider: OAuthProvider,
-  token: { idToken?: string; accessToken?: string },
+  token: { idToken?: string; accessToken?: string; code?: string; redirectUri?: string },
 ): Promise<AuthLoginResponse> {
   let deviceExternalId = await getStoredDeviceId();
   if (!deviceExternalId) {
@@ -32,12 +38,28 @@ export async function loginWithOAuth(
       provider,
       idToken: token.idToken,
       accessToken: token.accessToken,
+      code: token.code,
+      redirectUri: token.redirectUri,
       deviceExternalId,
     } satisfies OAuthLoginRequest,
     false,
     true,
   );
 
+  await clearAuthSessionCache();
   await saveAuthTokens(result);
+  console.info('[OAuthLogin] login success', {
+    provider,
+    userId: result.user?.externalId,
+    email: result.user?.email,
+  });
   return result;
+}
+
+export async function logoutFromServer(): Promise<void> {
+  const deviceExternalId = await getStoredDeviceId();
+  await api.post<null>(
+    '/api/v1/auth/logout',
+    deviceExternalId ? ({ deviceExternalId } satisfies LogoutRequest) : {},
+  );
 }

@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-import { clearAuthTokens, getAuthTokens } from '../lib/auth/tokenStorage';
+import { clearAuthSessionCache, getAuthTokens } from '../lib/auth/tokenStorage';
+import { logoutFromServer } from '../lib/api/auth';
+import { syncServerSessionData } from '../lib/api/sessionSync';
 
 interface AuthContextValue {
   isAuthenticated: boolean;
   isAuthLoading: boolean;
+  isSessionLoading: boolean;
+  sessionDataVersion: number;
   markLoggedIn: () => void;
   logout: () => Promise<void>;
 }
@@ -12,6 +16,8 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   isAuthenticated: false,
   isAuthLoading: true,
+  isSessionLoading: false,
+  sessionDataVersion: 0,
   markLoggedIn: () => {},
   logout: async () => {},
 });
@@ -19,17 +25,70 @@ const AuthContext = createContext<AuthContextValue>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isSessionLoading, setIsSessionLoading] = useState(false);
+  const [sessionDataVersion, setSessionDataVersion] = useState(0);
 
   useEffect(() => {
     getAuthTokens()
-      .then((tokens) => setIsAuthenticated(Boolean(tokens)))
+      .then((tokens) => {
+        const hasTokens = Boolean(tokens);
+        setIsAuthenticated(hasTokens);
+        if (hasTokens) setIsSessionLoading(true);
+      })
       .catch(() => setIsAuthenticated(false))
       .finally(() => setIsAuthLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsSessionLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsSessionLoading(true);
+
+    syncServerSessionData()
+      .catch((error) => console.warn('[Auth] session data sync failed:', error))
+      .finally(() => {
+        if (cancelled) return;
+        setSessionDataVersion((version) => version + 1);
+        setIsSessionLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  function markLoggedIn() {
+    setIsSessionLoading(true);
+    setIsAuthenticated(true);
+  }
+
   async function logout() {
-    await clearAuthTokens();
-    setIsAuthenticated(false);
+    const tokens = await getAuthTokens();
+    console.log({
+      provider: tokens?.user?.provider,
+      userId: tokens?.user?.externalId,
+    });
+
+    try {
+      await logoutFromServer();
+      console.log('logout api success');
+    } catch (error) {
+      console.warn('[Auth] logout api failed:', error);
+    } finally {
+      try {
+        await clearAuthSessionCache();
+        console.log('local auth cleared');
+      } catch (error) {
+        console.warn('[Auth] local auth clear failed:', error);
+      }
+      setIsAuthenticated(false);
+      setSessionDataVersion((version) => version + 1);
+      console.log('logout complete');
+    }
   }
 
   return (
@@ -37,7 +96,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         isAuthenticated,
         isAuthLoading,
-        markLoggedIn: () => setIsAuthenticated(true),
+        isSessionLoading,
+        sessionDataVersion,
+        markLoggedIn,
         logout,
       }}
     >

@@ -8,7 +8,7 @@ import {
   PawPrint, Shield, Star, Trash2,
 } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -129,28 +129,15 @@ export default function SettingsScreen() {
     );
   }
 
-  function showLogoutError() {
-    const message = '로그아웃하지 못했어요. 잠시 후 다시 시도해 주세요.';
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.alert(message);
-      return;
-    }
-    Alert.alert('오류', message);
-  }
-
   async function performLogout() {
     if (isLoggingOut) return;
 
     try {
-      console.info('[Settings] logout requested');
       setIsLoggingOut(true);
       await logout();
-      if (Platform.OS === 'web') {
-        router.replace('/');
-      }
+      router.replace('/');
     } catch (error) {
-      console.error('[Settings] logout failed:', error);
-      showLogoutError();
+      console.warn('[Settings] logout cleanup failed:', error);
       setIsLoggingOut(false);
     }
   }
@@ -159,18 +146,17 @@ export default function SettingsScreen() {
     if (isLoggingOut) return;
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const confirmed = window.confirm('로그아웃할까요?\n\n다시 사용하려면 Google 로그인이 필요해요.');
+      const confirmed = window.confirm('로그아웃할까요?\n\n다시 사용하려면 로그인이 필요해요');
       if (confirmed) {
         void performLogout();
       }
       return;
     }
 
-    Alert.alert('로그아웃할까요?', '다시 사용하려면 Google 로그인이 필요해요.', [
+    Alert.alert('로그아웃할까요?', '다시 사용하려면 로그인이 필요해요', [
       { text: '취소', style: 'cancel' },
       {
         text: '로그아웃',
-        style: 'destructive',
         onPress: () => { void performLogout(); },
       },
     ]);
@@ -228,9 +214,10 @@ export default function SettingsScreen() {
       <GroupTitle label="계정" />
       <Card>
         <Row
-          icon={<LogOut size={20} color={colors.textSecondary} />}
+          icon={<LogOut size={20} color={colors.accent} />}
           label="로그아웃"
-          desc={isLoggingOut ? '로그아웃 중이에요' : '현재 Google 계정 연결 해제'}
+          desc={isLoggingOut ? '로그아웃 중이에요' : undefined}
+          right={isLoggingOut ? <ActivityIndicator color={colors.accent} /> : undefined}
           onPress={handleLogout}
           disabled={isLoggingOut}
           last

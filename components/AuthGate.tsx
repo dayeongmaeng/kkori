@@ -6,9 +6,9 @@ import { useAuth } from '../contexts/AuthContext';
 import AuthScreen from './AuthScreen';
 
 export default function AuthGate({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isAuthLoading } = useAuth();
+  const { isAuthenticated, isAuthLoading, isSessionLoading } = useAuth();
 
-  if (isAuthLoading) {
+  if (isAuthLoading || (isAuthenticated && isSessionLoading)) {
     return (
       <View style={s.loading}>
         <ActivityIndicator color={colors.accent} />
