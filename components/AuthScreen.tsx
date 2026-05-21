@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { MessageCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Linking, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '../constants/theme';
@@ -17,7 +17,12 @@ import {
   GOOGLE_WEB_CLIENT_ID,
   maskClientId,
 } from './googleAuthConfig';
-import { buildKakaoAuthorizeUrl, getKakaoRedirectUri, KAKAO_REST_API_KEY } from './kakaoAuthConfig';
+import {
+  buildKakaoAuthorizeUrl,
+  getKakaoNativeReturnUri,
+  getKakaoRedirectUri,
+  KAKAO_REST_API_KEY,
+} from './kakaoAuthConfig';
 import { s } from './AuthScreen.styles';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -62,6 +67,8 @@ export default function AuthScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const kakaoCallbackHandledRef = useRef(false);
+  const kakaoLatestCallbackUrlRef = useRef<string | null>(null);
+  const kakaoBrowserOpenRef = useRef(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const missingMessage = requireGoogleClientId();
@@ -115,8 +122,60 @@ export default function AuthScreen() {
     } finally {
       clearLoginTimeout();
       setLoginProvider(null);
+      kakaoLatestCallbackUrlRef.current = null;
     }
   }, [clearLoginTimeout, markLoggedIn, router]);
+
+  const dismissKakaoBrowserSafely = useCallback(async () => {
+    if (!kakaoBrowserOpenRef.current) return;
+    kakaoBrowserOpenRef.current = false;
+
+    try {
+      await WebBrowser.dismissBrowser();
+    } catch (error) {
+      console.warn('[KakaoLogin] dismissBrowser skipped', error);
+    }
+  }, []);
+
+  const handleKakaoCallbackUrl = useCallback(async (url: string, redirectUri: string) => {
+    if (!url.startsWith('kkori://oauth/kakao') && !url.startsWith('kkori:///oauth/kakao')) {
+      return false;
+    }
+    if (kakaoLatestCallbackUrlRef.current === url) return true;
+    if (kakaoCallbackHandledRef.current) return true;
+    kakaoLatestCallbackUrlRef.current = url;
+    kakaoCallbackHandledRef.current = true;
+
+    let code: string | null = null;
+    let error: string | null = null;
+    try {
+      const callbackUrl = new URL(url);
+      code = callbackUrl.searchParams.get('code');
+      error = callbackUrl.searchParams.get('error');
+    } catch (parseError) {
+      console.warn('[KakaoLogin] callback URL parse failed', parseError);
+      stopWithError('카카오 로그인에 실패했어요');
+      return true;
+    }
+
+    if (error) {
+      clearLoginTimeout();
+      setLoginProvider(null);
+      setErrorMessage('카카오 로그인이 취소되었어요');
+      await dismissKakaoBrowserSafely();
+      return true;
+    }
+
+    if (!code) {
+      stopWithError('카카오 로그인에 실패했어요');
+      await dismissKakaoBrowserSafely();
+      return true;
+    }
+
+    await dismissKakaoBrowserSafely();
+    await completeKakaoLogin(code, redirectUri);
+    return true;
+  }, [clearLoginTimeout, completeKakaoLogin, dismissKakaoBrowserSafely, stopWithError]);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -197,6 +256,16 @@ export default function AuthScreen() {
       });
   }, [clearLoginTimeout, markLoggedIn, response, stopWithError]);
 
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void handleKakaoCallbackUrl(url, getKakaoRedirectUri());
+    });
+
+    return () => subscription.remove();
+  }, [handleKakaoCallbackUrl]);
+
   async function handleGoogleLogin() {
     if (isLoggingIn) return;
     if (missingMessage) {
@@ -240,21 +309,34 @@ export default function AuthScreen() {
     try {
       setErrorMessage(null);
       setLoginProvider('KAKAO');
+      kakaoCallbackHandledRef.current = false;
+      kakaoLatestCallbackUrlRef.current = null;
       startLoginTimeout();
-      const redirectUri = getKakaoRedirectUri();
-      const authorizeUrl = buildKakaoAuthorizeUrl(redirectUri);
-      saveKakaoRedirectUri(redirectUri);
-      console.info('[KakaoLogin] authorize request', {
-        provider: 'KAKAO',
-        authorizeRedirectUri: redirectUri,
-      });
+      const authorizeRedirectUri = getKakaoRedirectUri();
+      const browserReturnUri = getKakaoNativeReturnUri();
+      const authorizeUrl = buildKakaoAuthorizeUrl(authorizeRedirectUri);
+      saveKakaoRedirectUri(authorizeRedirectUri);
+      if (__DEV__) {
+        console.info('[KakaoLogin] authorize request', {
+          provider: 'KAKAO',
+          authorizeRedirectUri,
+          browserReturnUri,
+          authorizeUrl,
+        });
+      }
 
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         window.location.assign(authorizeUrl);
         return;
       }
 
-      const result = await WebBrowser.openAuthSessionAsync(authorizeUrl, redirectUri);
+      kakaoBrowserOpenRef.current = true;
+      let result: WebBrowser.WebBrowserAuthSessionResult;
+      try {
+        result = await WebBrowser.openAuthSessionAsync(authorizeUrl, browserReturnUri);
+      } finally {
+        kakaoBrowserOpenRef.current = false;
+      }
       if (result.type === 'cancel' || result.type === 'dismiss') {
         clearLoginTimeout();
         setLoginProvider(null);
@@ -266,23 +348,9 @@ export default function AuthScreen() {
         return;
       }
 
-      const callbackUrl = new URL(result.url);
-      const code = callbackUrl.searchParams.get('code');
-      const error = callbackUrl.searchParams.get('error');
-
-      if (error) {
-        clearLoginTimeout();
-        setLoginProvider(null);
-        setErrorMessage('카카오 로그인이 취소되었어요');
-        return;
-      }
-
-      if (!code) {
+      if (!(await handleKakaoCallbackUrl(result.url, authorizeRedirectUri))) {
         stopWithError('카카오 로그인에 실패했어요');
-        return;
       }
-
-      await completeKakaoLogin(code, redirectUri);
     } catch {
       stopWithError('카카오 로그인에 실패했어요');
     }

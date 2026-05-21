@@ -1,19 +1,24 @@
 import * as AuthSession from 'expo-auth-session';
-import { Platform } from 'react-native';
 
 export const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
 const KAKAO_WEB_REDIRECT_BASE_URL = 'https://test-kkori.vercel.app';
+const KAKAO_DEV_REDIRECT_URI = 'http://localhost:8081/oauth/kakao';
 
 export function getKakaoRedirectUri() {
-  if (Platform.OS === 'web') {
-    if (__DEV__) {
-      return 'http://localhost:8081/oauth/kakao';
-    }
-
-    const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL ?? KAKAO_WEB_REDIRECT_BASE_URL;
-    return `${webBaseUrl.replace(/\/$/, '')}/oauth/kakao`;
+  const configuredRedirectUri = process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI?.trim();
+  if (configuredRedirectUri) {
+    return configuredRedirectUri;
   }
 
+  if (__DEV__) {
+    return KAKAO_DEV_REDIRECT_URI;
+  }
+
+  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL ?? KAKAO_WEB_REDIRECT_BASE_URL;
+  return `${webBaseUrl.replace(/\/$/, '')}/oauth/kakao`;
+}
+
+export function getKakaoNativeReturnUri() {
   return AuthSession.makeRedirectUri({
     scheme: 'kkori',
     path: 'oauth/kakao',

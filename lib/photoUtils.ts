@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Platform } from 'react-native';
+import { Image as RNImage, Platform } from 'react-native';
 
 export interface ThumbnailFile {
   uri: string;
@@ -23,16 +23,17 @@ function base64ToBlob(base64: string): Blob {
 
 export async function generateThumbnails(uri: string): Promise<ThumbnailResult> {
   const isWeb = Platform.OS === 'web';
+  const size = await getImageSize(uri);
 
   const [mediumRes, thumbRes] = await Promise.all([
     ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: 1080 } }],
+      size.width > 1080 ? [{ resize: { width: 1080 } }] : [],
       { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: isWeb },
     ),
     ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: 300 } }],
+      size.width > 300 ? [{ resize: { width: 300 } }] : [],
       { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: isWeb },
     ),
   ]);
@@ -48,6 +49,16 @@ export async function generateThumbnails(uri: string): Promise<ThumbnailResult> 
     medium: { uri: mediumRes.uri, name: 'medium.jpg', type: 'image/jpeg' },
     thumbnail: { uri: thumbRes.uri, name: 'thumbnail.jpg', type: 'image/jpeg' },
   };
+}
+
+function getImageSize(uri: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    RNImage.getSize(
+      uri,
+      (width, height) => resolve({ width, height }),
+      () => resolve({ width: Number.MAX_SAFE_INTEGER, height: Number.MAX_SAFE_INTEGER }),
+    );
+  });
 }
 
 const MAX_SIZE = 800;

@@ -1,6 +1,7 @@
 import { Image } from "expo-image";
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -26,7 +27,12 @@ import {
   setCachedPets,
   upsertCachedPet,
 } from "../../lib/cache/pet";
-import { pickImage } from "../../lib/imagePickerHelper";
+import { pickImageUri } from "../../lib/imagePickerHelper";
+import {
+  ImageUploadState,
+  prepareImageForUpload,
+  toBase64DataUri,
+} from "../../lib/imageUpload";
 
 type Gender = "male" | "female";
 type DateField = "birthDate" | "adoptionDate";
@@ -210,6 +216,10 @@ export default function ProfileScreen() {
   const [neutered, setNeutered] = useState(false);
   const [medicalNotes, setMedicalNotes] = useState("");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [photoSourceUri, setPhotoSourceUri] = useState<string | undefined>();
+  const [photoUploadState, setPhotoUploadState] = useState<ImageUploadState>({
+    status: "idle",
+  });
   const [breedFocused, setBreedFocused] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -310,10 +320,35 @@ export default function ProfileScreen() {
     load();
   }, []);
 
+  async function prepareProfilePhoto(sourceUri: string) {
+    setPhotoUploadState({ status: "compressing", progress: 40 });
+    try {
+      const prepared = await prepareImageForUpload(sourceUri, {
+        maxWidth: 512,
+        compress: 0.7,
+        base64: true,
+      });
+      setPhotoUri(toBase64DataUri(prepared));
+      setPhotoUploadState({ status: "idle" });
+    } catch {
+      setPhotoUploadState({
+        status: "failed",
+        errorMessage: "업로드에 실패했어요",
+      });
+    }
+  }
+
   async function handlePickImage() {
-    const dataUri = await pickImage({ allowsEditing: true, aspect: [1, 1] });
-    if (!dataUri) return;
-    setPhotoUri(dataUri);
+    const uri = await pickImageUri({ allowsEditing: true, aspect: [1, 1] });
+    if (!uri) return;
+    setPhotoSourceUri(uri);
+    setPhotoUri(uri);
+    await prepareProfilePhoto(uri);
+  }
+
+  async function handleRetryPhoto() {
+    if (!photoSourceUri) return;
+    await prepareProfilePhoto(photoSourceUri);
   }
 
   async function handleSave() {
@@ -337,6 +372,9 @@ export default function ProfileScreen() {
       if (indicatorTimerRef.current) clearTimeout(indicatorTimerRef.current);
       setIndicatorStatus("saving");
       setIsSaving(true);
+      if (photoUri) {
+        setPhotoUploadState({ status: "saving", progress: 90 });
+      }
 
       const body = {
         name: name.trim(),
@@ -374,13 +412,23 @@ export default function ProfileScreen() {
       setExternalId(savedPet.externalId);
       setCurrentPet(savedPet);
 
+      if (photoUri) {
+        setPhotoUploadState({ status: "success", progress: 100 });
+      }
       setIndicatorStatus("saved");
       indicatorTimerRef.current = setTimeout(() => {
         setIndicatorStatus("idle");
+        setPhotoUploadState({ status: "idle" });
       }, 1500);
     } catch (e) {
       console.error("[ProfileScreen] 서버 저장 실패:", e);
       setIndicatorStatus("idle");
+      if (photoUri) {
+        setPhotoUploadState({
+          status: "failed",
+          errorMessage: "업로드에 실패했어요",
+        });
+      }
       Alert.alert("저장 실패", "서버 연결을 확인해주세요.");
     } finally {
       setIsSaving(false);
@@ -409,6 +457,33 @@ export default function ProfileScreen() {
               <Text style={styles.photoPlaceholderText}>사진 추가</Text>
             </View>
           )}
+          {photoUploadState.status !== "idle" ? (
+            <View
+              style={[
+                styles.photoStatusOverlay,
+                photoUploadState.status === "failed" &&
+                  styles.photoStatusErrorOverlay,
+              ]}
+            >
+              {photoUploadState.status !== "failed" &&
+              photoUploadState.status !== "success" ? (
+                <ActivityIndicator color={colors.textOnPrimary} />
+              ) : null}
+              {photoUploadState.status === "failed" ? (
+                <>
+                  <Text style={styles.photoStatusText}>
+                    사진을 올리지 못했어요. 다시 시도해주세요.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.photoRetryButton}
+                    onPress={handleRetryPhoto}
+                  >
+                    <Text style={styles.photoRetryText}>재시도</Text>
+                  </TouchableOpacity>
+                </>
+              ) : null}
+            </View>
+          ) : null}
         </TouchableOpacity>
 
         {/* 이름 */}
@@ -695,6 +770,8 @@ const styles = StyleSheet.create({
   photoWrapper: {
     alignSelf: "center",
     marginBottom: spacing.xxl,
+    width: 120,
+    height: 120,
   },
   photo: {
     width: 120,
@@ -716,6 +793,35 @@ const styles = StyleSheet.create({
   photoPlaceholderText: {
     fontSize: 12,
     color: colors.textTertiary,
+  },
+  photoStatusOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.full,
+    backgroundColor: "rgba(25,31,40,0.58)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  photoStatusErrorOverlay: {
+    backgroundColor: "rgba(233,75,90,0.72)",
+  },
+  photoStatusText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.textOnPrimary,
+    textAlign: "center",
+  },
+  photoRetryButton: {
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  photoRetryText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.danger,
   },
   field: {
     marginBottom: spacing.lg + 4,

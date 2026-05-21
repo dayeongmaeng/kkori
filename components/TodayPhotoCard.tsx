@@ -5,12 +5,11 @@ import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
-import { resizeImage } from '../lib/imagePickerHelper';
 import { LocalPhoto } from '../lib/cache/photo';
 
 interface Props {
   todayPhoto?: LocalPhoto;
-  onPhotoTaken: (base64Uri: string) => void;
+  onPhotoTaken: (photoUri: string) => void;
   onTapGallery: () => void;
   onTapPhoto: () => void;
   aspectRatio?: number;
@@ -53,7 +52,7 @@ function LiveCameraCard({
 }: {
   aspectRatio: number;
   onTapGallery: () => void;
-  onPhotoTaken: (base64Uri: string) => void;
+  onPhotoTaken: (photoUri: string) => void;
 }) {
   const [facing, setFacing] = useState<'front' | 'back'>('back');
   const [capturing, setCapturing] = useState(false);
@@ -66,8 +65,7 @@ function LiveCameraCard({
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 1, skipProcessing: false });
       if (!photo?.uri) throw new Error('촬영 데이터가 없어요.');
-      const resized = await resizeImage(photo.uri);
-      onPhotoTaken(resized);
+      onPhotoTaken(photo.uri);
     } catch (e: any) {
       Alert.alert('오류', `촬영 실패: ${e?.message ?? '알 수 없는 오류'}`);
     } finally {
@@ -121,7 +119,7 @@ function CameraPermissionGate({
 }: {
   aspectRatio: number;
   onTapGallery: () => void;
-  onPhotoTaken: (base64Uri: string) => void;
+  onPhotoTaken: (photoUri: string) => void;
 }) {
   const [permission, requestPermission] = useCameraPermissions();
 

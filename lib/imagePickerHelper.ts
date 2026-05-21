@@ -21,7 +21,7 @@ export async function resizeImage(uri: string): Promise<string> {
   return `data:image/jpeg;base64,${result.base64}`;
 }
 
-function pickImageWeb(): Promise<string | null> {
+function pickImageWebRaw(): Promise<string | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -33,13 +33,7 @@ function pickImageWeb(): Promise<string | null> {
         return;
       }
       const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          resolve(await resizeImage(reader.result as string));
-        } catch {
-          resolve(null);
-        }
-      };
+      reader.onload = () => resolve(reader.result as string);
       reader.onerror = () => resolve(null);
       reader.readAsDataURL(file);
     };
@@ -47,7 +41,7 @@ function pickImageWeb(): Promise<string | null> {
   });
 }
 
-async function pickImageNative(options: PickImageOptions): Promise<string | null> {
+async function pickImageNativeRaw(options: PickImageOptions): Promise<string | null> {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (status !== 'granted') {
     Alert.alert('권한 필요', '사진 접근 권한이 필요합니다.');
@@ -55,21 +49,31 @@ async function pickImageNative(options: PickImageOptions): Promise<string | null
   }
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: 'images',
+    allowsMultipleSelection: false,
     allowsEditing: options.allowsEditing ?? true,
     ...(options.aspect ? { aspect: options.aspect } : {}),
+    ...(Platform.OS === 'ios'
+      ? { presentationStyle: ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN }
+      : {}),
     quality: 1,
   });
   if (result.canceled || !result.assets?.[0]) return null;
-  try {
-    return await resizeImage(result.assets[0].uri);
-  } catch {
-    return null;
+  return result.assets[0].uri;
+}
+
+export async function pickImageUri(options: PickImageOptions = {}): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return pickImageWebRaw();
   }
+  return pickImageNativeRaw(options);
 }
 
 export async function pickImage(options: PickImageOptions = {}): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return pickImageWeb();
+  const uri = await pickImageUri(options);
+  if (!uri) return null;
+  try {
+    return await resizeImage(uri);
+  } catch {
+    return null;
   }
-  return pickImageNative(options);
 }

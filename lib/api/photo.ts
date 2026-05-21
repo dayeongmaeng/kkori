@@ -81,6 +81,15 @@ export const photoApi = {
 
   uploadPhoto: async (externalId: string, medium: ThumbnailFile, thumbnail: ThumbnailFile): Promise<PhotoUploadResponse> => {
     const formData = new FormData();
+    if (__DEV__) {
+      console.log('[PhotoTabUpload]', 'FormData create start', {
+        externalId,
+        mediumUri: medium.uri,
+        mediumSize: medium.blob?.size,
+        thumbnailUri: thumbnail.uri,
+        thumbnailSize: thumbnail.blob?.size,
+      });
+    }
 
     function appendFile(key: string, file: ThumbnailFile) {
       if (file.blob) {
@@ -93,6 +102,21 @@ export const photoApi = {
     appendFile('medium', medium);
     appendFile('thumbnail', thumbnail);
 
-    return api.postFormData<PhotoUploadResponse>(`/api/v1/photos/${externalId}/upload`, formData);
+    if (__DEV__) {
+      console.log('[PhotoTabUpload]', 'API upload start', { externalId });
+    }
+
+    try {
+      const response = await api.postFormData<PhotoUploadResponse>(`/api/v1/photos/${externalId}/upload`, formData);
+      if (__DEV__) {
+        console.log('[PhotoTabUpload]', 'API upload success', { externalId });
+      }
+      return response;
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('[PhotoTabUpload]', 'API upload fail', { externalId, error });
+      }
+      throw error;
+    }
   },
 };

@@ -1,8 +1,9 @@
-import { pickImage } from '../../lib/imagePickerHelper';
+import { pickImageUri } from '../../lib/imagePickerHelper';
 import { generateThumbnails } from '../../lib/photoUtils';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   AppState,
   Dimensions,
@@ -29,6 +30,10 @@ import { getCachedCurrentPetId } from '../../lib/cache/pet';
 import { getCachedCurrentCaregiverId } from '../../lib/cache/caregiver';
 import { initCaregiver } from '../../lib/api/initCaregiver';
 import { savePhotoLocal } from '../../lib/photoLocalCache';
+import {
+  ImageUploadState,
+  prepareImageForUpload,
+} from '../../lib/imageUpload';
 import { colors, radius, shadow, spacing } from '../../constants/theme';
 import { useDate } from '../../contexts/DateContext';
 
@@ -61,12 +66,38 @@ export default function PhotoScreen() {
   const [hasPet, setHasPet] = useState<boolean | null>(null);
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [pendingBase64, setPendingBase64] = useState<string | null>(null);
+  const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [uploadState, setUploadState] = useState<ImageUploadState>({ status: 'idle' });
+  const [failedUpload, setFailedUpload] = useState<{
+    sourceUri: string;
+    preparedUri?: string;
+    caption: string;
+    externalId?: string;
+    response?: LocalPhoto;
+  } | null>(null);
+  const uploadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const today = useDate();
   const todayPhoto = photos.find((p) => p.date === today);
   const pastPhotos = photos.filter((p) => p.date !== today);
+
+  function debugPhotoUpload(message: string, payload?: unknown) {
+    if (__DEV__) {
+      console.log('[PhotoTabUpload]', message, payload ?? '');
+    }
+  }
+
+  async function getDebugUriSize(uri: string): Promise<number | undefined> {
+    if (!__DEV__) return undefined;
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      return blob.size;
+    } catch {
+      return undefined;
+    }
+  }
 
   const load = useCallback(async () => {
     const petId = await getCachedCurrentPetId();
@@ -121,20 +152,46 @@ export default function PhotoScreen() {
     setRefreshing(false);
   }, [load]);
 
-  function handlePhotoTaken(base64Uri: string) {
-    setPendingBase64(base64Uri);
+  function setTemporaryTodayPhoto(uri: string, externalId = 'today-photo-uploading') {
+    const now = new Date().toISOString();
+    setPhotos((current) => [
+      {
+        externalId,
+        petExternalId: '',
+        date: today,
+        photoUri: uri,
+        createdAt: now,
+        updatedAt: now,
+      },
+      ...current.filter((photo) => photo.date !== today && photo.externalId !== externalId),
+    ]);
+  }
+
+  function replaceTemporaryPhoto(photo: LocalPhoto) {
+    setPhotos((current) => [
+      photo,
+      ...current.filter((item) => item.externalId !== 'today-photo-uploading' && item.externalId !== photo.externalId),
+    ]);
+  }
+
+  function handlePhotoTaken(photoUri: string) {
+    setUploadState({ status: 'idle' });
+    setFailedUpload(null);
+    setPendingPhotoUri(photoUri);
     setModalVisible(true);
   }
 
   async function handleOpenGallery() {
+    debugPhotoUpload('picker start');
     const petId = await getCachedCurrentPetId();
     if (!petId) {
       Alert.alert('알림', '프로필 탭에서 반려동물을 먼저 등록해주세요.');
       return;
     }
-    const dataUri = await pickImage({ allowsEditing: true, aspect: [1, 1] });
-    if (!dataUri) return;
-    handlePhotoTaken(dataUri);
+    const uri = await pickImageUri({ allowsEditing: true, aspect: [1, 1] });
+    debugPhotoUpload('picker result', { selectedPet: petId, selectedDate: today, uri });
+    if (!uri) return;
+    handlePhotoTaken(uri);
   }
 
   function handleTapTodayPhoto() {
@@ -144,58 +201,186 @@ export default function PhotoScreen() {
   async function handleSavePhoto(caption: string) {
     setModalVisible(false);
     const petId = await getCachedCurrentPetId();
-    if (!petId || !pendingBase64) return;
+    if (!petId || !pendingPhotoUri) return;
 
-    const localBase64 = pendingBase64;
-    setPendingBase64(null);
+    const sourceUri = pendingPhotoUri;
+    setPendingPhotoUri(null);
+    setUploadState({ status: 'preparing', progress: 10 });
+    setTemporaryTodayPhoto(sourceUri);
+    await saveOrUploadTodayPhoto({ sourceUri, caption });
+  }
 
+  async function saveOrUploadTodayPhoto({
+    sourceUri,
+    caption,
+    preparedUri,
+    externalId,
+    response,
+  }: {
+    sourceUri: string;
+    caption: string;
+    preparedUri?: string;
+    externalId?: string;
+    response?: LocalPhoto;
+  }) {
+    const petId = await getCachedCurrentPetId();
+    if (!petId) return;
+    let lastPreparedUri = preparedUri;
+    let lastExternalId = externalId;
+    let lastResponse = response;
     try {
+      setFailedUpload(null);
+      debugPhotoUpload('selectedPet', petId);
+      debugPhotoUpload('selectedDate', today);
+      debugPhotoUpload('original uri/size', {
+        uri: sourceUri,
+        size: await getDebugUriSize(sourceUri),
+      });
+      setUploadState({ status: 'compressing', progress: 25 });
+      const uploadUri = lastPreparedUri ?? (await prepareImageForUpload(sourceUri, { maxWidth: 1080, compress: 0.75 })).uri;
+      lastPreparedUri = uploadUri;
+      debugPhotoUpload('compressed uri/size', {
+        uri: uploadUri,
+        size: await getDebugUriSize(uploadUri),
+      });
+      setTemporaryTodayPhoto(uploadUri, externalId ?? 'today-photo-uploading');
+
       // takenAt의 날짜 부분을 today(KST)로 고정하여 그리드 분류 일치
       const timeStr = new Date().toISOString().split('T')[1];
       const takenAt = `${today}T${timeStr}`;
 
-      let caregiverId = await getCachedCurrentCaregiverId();
-      console.log('[PhotoSave] caregiverId (캐시):', caregiverId);
+      let savedResponse = lastResponse;
+      let savedExternalId = lastExternalId;
 
-      if (!caregiverId) {
-        console.warn('[PhotoSave] caregiverId 없음 — initCaregiver 재시도');
-        await initCaregiver();
-        caregiverId = await getCachedCurrentCaregiverId();
-        console.log('[PhotoSave] caregiverId (재시도 후):', caregiverId);
+      if (!savedExternalId || !savedResponse) {
+        setUploadState({ status: 'saving', progress: 45 });
+        const existingTodayPhoto = photos.find((photo) => (
+          photo.date === today && photo.externalId !== 'today-photo-uploading'
+        ));
+
+        if (existingTodayPhoto?.externalId) {
+          debugPhotoUpload('reuse existing dailyPhoto externalId', existingTodayPhoto.externalId);
+          savedExternalId = existingTodayPhoto.externalId;
+          savedResponse = {
+            ...existingTodayPhoto,
+            photoUri: uploadUri,
+            caption: caption || existingTodayPhoto.caption,
+            updatedAt: new Date().toISOString(),
+          };
+          lastExternalId = savedExternalId;
+          lastResponse = savedResponse;
+          if (caption) {
+            await photoApi.updatePhoto(savedExternalId, { caption });
+          }
+          await savePhotoLocal(savedExternalId, uploadUri);
+          replaceTemporaryPhoto(savedResponse);
+        } else {
+          const serverPhotos = await photoApi.getPhotos(petId);
+          const serverTodayPhoto = serverPhotos.find((photo) => (
+            (photo.date ?? photo.takenAt?.slice(0, 10) ?? photo.createdAt?.slice(0, 10)) === today
+          ));
+
+          if (serverTodayPhoto?.externalId) {
+            debugPhotoUpload('reuse server dailyPhoto externalId', serverTodayPhoto.externalId);
+            savedExternalId = serverTodayPhoto.externalId;
+            savedResponse = {
+              ...serverTodayPhoto,
+              petExternalId: serverTodayPhoto.petExternalId ?? petId,
+              date: serverTodayPhoto.date ?? today,
+              photoUri: uploadUri,
+              caption: caption || serverTodayPhoto.caption,
+            };
+            lastExternalId = savedExternalId;
+            lastResponse = savedResponse;
+            if (caption) {
+              await photoApi.updatePhoto(savedExternalId, { caption });
+            }
+            await setCachedPhotos(petId, serverPhotos);
+            await savePhotoLocal(savedExternalId, uploadUri);
+            replaceTemporaryPhoto(savedResponse);
+          } else {
+            let caregiverId = await getCachedCurrentCaregiverId();
+            debugPhotoUpload('caregiverId cache', caregiverId);
+
+            if (!caregiverId) {
+              debugPhotoUpload('caregiverId missing, init retry');
+              await initCaregiver();
+              caregiverId = await getCachedCurrentCaregiverId();
+              debugPhotoUpload('caregiverId after retry', caregiverId);
+            }
+
+            const created = await photoApi.createPhoto({
+              petExternalId: petId,
+              caregiverExternalId: caregiverId ?? undefined,
+              date: today,
+              takenAt,
+              caption: caption || undefined,
+            });
+            debugPhotoUpload('dailyPhoto externalId', created.externalId);
+
+            savedExternalId = created.externalId;
+            savedResponse = {
+              ...created,
+              petExternalId: created.petExternalId ?? petId,
+              date: created.date ?? today,
+              photoUri: uploadUri,
+              caption: created.caption ?? caption,
+            };
+            lastExternalId = savedExternalId;
+            lastResponse = savedResponse;
+
+            await savePhotoLocal(created.externalId, uploadUri);
+            await upsertCachedPhoto(petId, created);
+            replaceTemporaryPhoto(savedResponse);
+          }
+        }
       }
 
-      const response = await photoApi.createPhoto({
-        petExternalId: petId,
-        caregiverExternalId: caregiverId ?? undefined,
-        date: today,
-        takenAt,
-        caption: caption || undefined,
+      if (!savedExternalId || !savedResponse) {
+        throw new Error('사진 저장 정보를 찾지 못했어요.');
+      }
+
+      setUploadState({ status: 'uploading', progress: 70 });
+      const { medium, thumbnail } = await generateThumbnails(uploadUri);
+      debugPhotoUpload('upload start', {
+        dailyPhotoExternalId: savedExternalId,
+        mediumUri: medium.uri,
+        thumbnailUri: thumbnail.uri,
       });
-      console.log('[PhotoSave] 메타 생성:', response.externalId);
+      const uploadResponse = await photoApi.uploadPhoto(savedExternalId, medium, thumbnail);
+      debugPhotoUpload('upload success', uploadResponse);
 
-      // 원본 base64 로컬 저장 (월력용) + 즉시 표시
-      await savePhotoLocal(response.externalId, localBase64);
-      await upsertCachedPhoto(petId, response);
-      await load();
-
-      // S3 업로드 (실패해도 메타데이터는 유지)
-      try {
-        const { medium, thumbnail } = await generateThumbnails(localBase64);
-        const uploadResponse = await photoApi.uploadPhoto(response.externalId, medium, thumbnail);
-        console.log('[PhotoSave] S3 업로드 완료:', uploadResponse.mediumUrl);
-        await upsertCachedPhoto(petId, { ...response, ...uploadResponse });
-        await load();
-      } catch (uploadErr) {
-        console.warn('[PhotoSave] S3 업로드 실패 (메타 유지):', uploadErr);
-      }
-    } catch {
-      Alert.alert('오류', '서버에 저장하지 못했어요. 다시 시도해주세요.');
+      await upsertCachedPhoto(petId, { ...savedResponse, ...uploadResponse });
+      replaceTemporaryPhoto({ ...savedResponse, ...uploadResponse, photoUri: uploadUri });
+      setUploadState({ status: 'success', progress: 100 });
+      if (uploadTimerRef.current) clearTimeout(uploadTimerRef.current);
+      uploadTimerRef.current = setTimeout(() => setUploadState({ status: 'idle' }), 1500);
+    } catch (e) {
+      debugPhotoUpload('upload fail', e);
+      console.warn('[PhotoTabUpload] 저장/업로드 실패:', e);
+      setFailedUpload({
+        sourceUri,
+        preparedUri: lastPreparedUri,
+        caption,
+        externalId: lastExternalId,
+        response: lastResponse,
+      });
+      setUploadState({
+        status: 'failed',
+        errorMessage: '사진을 올리지 못했어요. 다시 시도해주세요.',
+      });
     }
+  }
+
+  async function handleRetryUpload() {
+    if (!failedUpload || uploadState.status !== 'failed') return;
+    setUploadState({ status: 'preparing', progress: 10 });
+    await saveOrUploadTodayPhoto(failedUpload);
   }
 
   function handleCancelModal() {
     setModalVisible(false);
-    setPendingBase64(null);
+    setPendingPhotoUri(null);
   }
 
   const listHeader = (
@@ -222,12 +407,31 @@ export default function PhotoScreen() {
         </View>
       </View>
       <View style={styles.headerSection}>
-        <TodayPhotoCard
-          todayPhoto={todayPhoto}
-          onPhotoTaken={handlePhotoTaken}
-          onTapGallery={handleOpenGallery}
-          onTapPhoto={handleTapTodayPhoto}
-        />
+        <View>
+          <TodayPhotoCard
+            todayPhoto={todayPhoto}
+            onPhotoTaken={handlePhotoTaken}
+            onTapGallery={handleOpenGallery}
+            onTapPhoto={handleTapTodayPhoto}
+          />
+          {uploadState.status !== 'idle' && (
+            <View style={[styles.uploadOverlay, uploadState.status === 'failed' && styles.uploadErrorOverlay]}>
+              {uploadState.status !== 'failed' && uploadState.status !== 'success' ? (
+                <ActivityIndicator color={colors.textOnPrimary} />
+              ) : null}
+              {uploadState.status === 'failed' ? (
+                <>
+                  <Text style={styles.uploadOverlayText}>
+                    {uploadState.errorMessage ?? '사진을 올리지 못했어요. 다시 시도해주세요.'}
+                  </Text>
+                  <TouchableOpacity style={styles.uploadRetryButton} onPress={handleRetryUpload}>
+                    <Text style={styles.uploadRetryText}>재시도</Text>
+                  </TouchableOpacity>
+                </>
+              ) : null}
+            </View>
+          )}
+        </View>
         {pastPhotos.length > 0 && (
           <Text style={styles.sectionLabel}>지난 사진</Text>
         )}
@@ -267,10 +471,10 @@ export default function PhotoScreen() {
         }
       />
 
-      {pendingBase64 && (
+      {pendingPhotoUri && (
         <CaptionModal
           visible={modalVisible}
-          photoBase64={pendingBase64}
+          photoBase64={pendingPhotoUri}
           onSave={handleSavePhoto}
           onCancel={handleCancelModal}
         />
@@ -369,5 +573,33 @@ const styles = StyleSheet.create({
   },
   cellNoLocalIcon: {
     fontSize: 24,
+  },
+  uploadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(25,31,40,0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  uploadErrorOverlay: {
+    backgroundColor: 'rgba(233,75,90,0.72)',
+  },
+  uploadOverlayText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textOnPrimary,
+  },
+  uploadRetryButton: {
+    marginTop: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  uploadRetryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.danger,
   },
 });

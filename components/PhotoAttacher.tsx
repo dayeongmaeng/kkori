@@ -14,14 +14,17 @@ import {
 import { colors, radius, spacing } from '../constants/theme';
 import { logApi } from '../lib/api/log';
 import type { LogPhotoResponse } from '../lib/api/log';
-import { pickImage } from '../lib/imagePickerHelper';
+import { pickImageUri } from '../lib/imagePickerHelper';
+import { ImageUploadStatus, prepareImageForUpload } from '../lib/imageUpload';
 import { generateThumbnails } from '../lib/photoUtils';
 
 const MAX_PHOTOS = 3;
 
 export type LogPhotoAttachment = LogPhotoResponse & {
   localUri?: string;
-  status?: 'ready' | 'uploading' | 'error';
+  sourceUri?: string;
+  status?: ImageUploadStatus | 'ready' | 'error';
+  progress?: number;
   errorMessage?: string;
   tempId?: string;
 };
@@ -57,27 +60,53 @@ export default function PhotoAttacher({
 
   async function commitPhotos(nextPhotos: LogPhotoAttachment[]) {
     onChangePhotos(nextPhotos);
-    await onUploaded?.(nextPhotos.filter((p) => p.status !== 'uploading' && p.status !== 'error'));
+    await onUploaded?.(nextPhotos.filter((p) => !isBusy(p.status) && !isFailed(p.status)));
   }
 
-  async function uploadLocalPhoto(tempId: string, localUri: string, basePhotos: LogPhotoAttachment[]) {
+  function isBusy(status: LogPhotoAttachment['status']) {
+    return status === 'compressing' || status === 'uploading' || status === 'saving';
+  }
+
+  function isFailed(status: LogPhotoAttachment['status']) {
+    return status === 'failed' || status === 'error';
+  }
+
+  async function uploadLocalPhoto(tempId: string, sourceUri: string, basePhotos: LogPhotoAttachment[]) {
     try {
+      onChangePhotos(basePhotos.map((photo) => (
+        photo.tempId === tempId
+          ? { ...photo, status: 'compressing', progress: 20, errorMessage: undefined }
+          : photo
+      )));
+      const prepared = await prepareImageForUpload(sourceUri, { maxWidth: 1080, compress: 0.75 });
+      const photosWithPrepared = basePhotos.map((photo) => (
+        photo.tempId === tempId
+          ? { ...photo, localUri: prepared.uri, status: 'saving' as const, progress: 45 }
+          : photo
+      ));
+      onChangePhotos(photosWithPrepared);
+
       const logExternalId = await onEnsureLogExternalId();
       if (!logExternalId) throw new Error('기록을 먼저 저장하지 못했어요.');
 
-      const { medium, thumbnail } = await generateThumbnails(localUri);
+      onChangePhotos(photosWithPrepared.map((photo) => (
+        photo.tempId === tempId
+          ? { ...photo, status: 'uploading' as const, progress: 70 }
+          : photo
+      )));
+      const { medium, thumbnail } = await generateThumbnails(prepared.uri);
       const uploaded = await logApi.uploadLogPhoto(logExternalId, medium, thumbnail);
 
-      const nextPhotos = basePhotos.map((photo) => (
+      const nextPhotos = photosWithPrepared.map((photo) => (
         photo.tempId === tempId
-          ? { ...uploaded, localUri, status: 'ready' as const }
+          ? { ...uploaded, localUri: prepared.uri, sourceUri, status: 'ready' as const, progress: 100 }
           : photo
       ));
       await commitPhotos(nextPhotos);
     } catch {
       onChangePhotos(basePhotos.map((photo) => (
         photo.tempId === tempId
-          ? { ...photo, status: 'error', errorMessage: '업로드 실패' }
+          ? { ...photo, status: 'failed', progress: undefined, errorMessage: '업로드에 실패했어요' }
           : photo
       )));
     }
@@ -86,16 +115,18 @@ export default function PhotoAttacher({
   async function handleAdd() {
     if (disabled || photos.length >= MAX_PHOTOS) return;
 
-    const dataUri = await pickImage({ allowsEditing: false });
-    if (!dataUri) return;
+    const sourceUri = await pickImageUri({ allowsEditing: false });
+    if (!sourceUri) return;
 
     const tempId = `log-photo-${Date.now()}`;
     const tempPhoto: LogPhotoAttachment = {
       externalId: tempId,
       mediumUrl: '',
       thumbnailUrl: '',
-      localUri: dataUri,
-      status: 'uploading',
+      localUri: sourceUri,
+      sourceUri,
+      status: 'idle',
+      progress: 0,
       tempId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -103,18 +134,19 @@ export default function PhotoAttacher({
 
     const nextPhotos = [...photos, tempPhoto];
     onChangePhotos(nextPhotos);
-    await uploadLocalPhoto(tempId, dataUri, nextPhotos);
+    await uploadLocalPhoto(tempId, sourceUri, nextPhotos);
   }
 
   async function handleRetry(photo: LogPhotoAttachment) {
-    if (!photo.tempId || !photo.localUri || disabled) return;
+    const retryUri = photo.sourceUri ?? photo.localUri;
+    if (!photo.tempId || !retryUri || disabled) return;
     const nextPhotos = photos.map((p) => (
       p.tempId === photo.tempId
-        ? { ...p, status: 'uploading' as const, errorMessage: undefined }
+        ? { ...p, status: 'compressing' as const, progress: 15, errorMessage: undefined }
         : p
     ));
     onChangePhotos(nextPhotos);
-    await uploadLocalPhoto(photo.tempId, photo.localUri, nextPhotos);
+    await uploadLocalPhoto(photo.tempId, retryUri, nextPhotos);
   }
 
   async function handleRemove(photo: LogPhotoAttachment) {
@@ -123,8 +155,8 @@ export default function PhotoAttacher({
     const nextPhotos = photos.filter((p) => getPhotoKey(p) !== getPhotoKey(photo));
     onChangePhotos(nextPhotos);
 
-    if (photo.tempId || photo.status === 'error') {
-      await onUploaded?.(nextPhotos.filter((p) => p.status !== 'uploading' && p.status !== 'error'));
+    if (photo.tempId || isFailed(photo.status)) {
+      await onUploaded?.(nextPhotos.filter((p) => !isBusy(p.status) && !isFailed(p.status)));
       return;
     }
 
@@ -140,7 +172,7 @@ export default function PhotoAttacher({
   }
 
   function handlePressPhoto(photo: LogPhotoAttachment) {
-    if (photo.status === 'uploading' || photo.status === 'error') return;
+    if (isBusy(photo.status) || isFailed(photo.status)) return;
     setPreviewPhoto(photo);
   }
 
@@ -156,7 +188,7 @@ export default function PhotoAttacher({
                 style={styles.photoButton}
                 onPress={() => handlePressPhoto(photo)}
                 activeOpacity={0.82}
-                disabled={photo.status === 'uploading' || photo.status === 'error'}
+                disabled={isBusy(photo.status) || isFailed(photo.status)}
               >
                 {getThumbUri(photo) ? (
                   <Image source={{ uri: getThumbUri(photo) }} style={styles.photo} contentFit="cover" />
@@ -166,16 +198,15 @@ export default function PhotoAttacher({
                   </View>
                 )}
 
-                {photo.status === 'uploading' && (
+                {isBusy(photo.status) && (
                   <View style={styles.overlay}>
                     <ActivityIndicator color={colors.textOnPrimary} />
-                    <Text style={styles.overlayText}>업로드 중</Text>
                   </View>
                 )}
 
-                {photo.status === 'error' && (
+                {isFailed(photo.status) && (
                   <View style={[styles.overlay, styles.errorOverlay]}>
-                    <Text style={styles.overlayText}>실패</Text>
+                    <Text style={styles.overlayText}>사진을 올리지 못했어요. 다시 시도해주세요.</Text>
                     <TouchableOpacity style={styles.retryBtn} onPress={() => handleRetry(photo)}>
                       <Text style={styles.retryBtnText}>재시도</Text>
                     </TouchableOpacity>
