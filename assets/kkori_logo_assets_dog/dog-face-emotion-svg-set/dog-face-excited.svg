@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="dog face excited">
+  <title>dog face excited</title>
+  <g fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <!-- left ear: same silhouette in every icon -->
+    <path d="M423 321 C394 286 375 271 349 276 C327 280 297 298 270 317 C245 335 243 358 259 385 C274 411 303 429 325 421 C351 411 363 365 369 323"/>
+    <path d="M369 323 C363 359 353 392 337 410"/>
+    <!-- right ear: same silhouette in every icon -->
+    <path d="M569 321 C598 286 617 271 643 276 C665 280 695 298 722 317 C747 335 749 358 733 385 C718 411 689 429 667 421 C641 411 629 365 623 323"/>
+    <path d="M623 323 C629 359 639 392 655 410"/>
+  </g>
+  <g fill="none" stroke="#111111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M390 415 C405 397 425 397 440 415"/>
+    <path d="M553 415 C568 397 588 397 603 415"/>
+    <ellipse cx="496" cy="443" rx="14" ry="10" fill="#111111" stroke="none"/>
+    <path d="M470 459 C477 492 515 492 522 459"/>
+    <path d="M484 478 C492 486 502 486 510 478"/>
+    <path d="M690 362 C681 348 658 352 658 373 C658 392 690 410 690 410 C690 410 722 392 722 373 C722 352 699 348 690 362 Z" fill="#111111" stroke="none"/>
+  </g>
+</svg>
