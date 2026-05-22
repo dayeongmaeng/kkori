@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Modal,
   Platform,
   StyleSheet,
@@ -229,11 +230,47 @@ export default function ProfileScreen() {
 
   const [indicatorStatus, setIndicatorStatus] = useState<SaveStatus>("idle");
   const indicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const footerAnim = useRef(new Animated.Value(0)).current;
+  const footerHeightRef = useRef(0);
+  const lastScrollYRef = useRef(0);
+  const footerVisibleRef = useRef(true);
   const breedSuggestions = breed.trim()
     ? dogBreeds
         .filter((item) => item.includes(breed.trim()) && item !== breed.trim())
         .slice(0, 5)
     : [];
+
+  function showFooter() {
+    footerVisibleRef.current = true;
+    Animated.timing(footerAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start();
+  }
+  function hideFooter() {
+    footerVisibleRef.current = false;
+    Animated.timing(footerAnim, { toValue: footerHeightRef.current, duration: 220, useNativeDriver: true }).start();
+  }
+  const BOTTOM_THRESHOLD = 40;
+  function isAtEdge(y: number, contentHeight: number, layoutHeight: number) {
+    return y <= 0 || y + layoutHeight >= contentHeight - BOTTOM_THRESHOLD;
+  }
+  function handleScroll(e: any) {
+    const y: number = e.nativeEvent.contentOffset.y;
+    const contentHeight: number = e.nativeEvent.contentSize.height;
+    const layoutHeight: number = e.nativeEvent.layoutMeasurement.height;
+    const dy = y - lastScrollYRef.current;
+    lastScrollYRef.current = y;
+    if (isAtEdge(y, contentHeight, layoutHeight)) {
+      if (!footerVisibleRef.current) showFooter();
+      return;
+    }
+    if (dy > 3 && footerVisibleRef.current) hideFooter();
+    else if (dy < -3 && !footerVisibleRef.current) showFooter();
+  }
+  function handleScrollEnd(e: any) {
+    const y: number = e.nativeEvent.contentOffset.y;
+    const contentHeight: number = e.nativeEvent.contentSize.height;
+    const layoutHeight: number = e.nativeEvent.layoutMeasurement.height;
+    if (isAtEdge(y, contentHeight, layoutHeight) && !footerVisibleRef.current) showFooter();
+  }
 
   function openDatePicker(field: DateField) {
     const value = field === "birthDate" ? birthDate : adoptionDate;
@@ -442,6 +479,10 @@ export default function ProfileScreen() {
         enableOnAndroid
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onScrollEndDrag={handleScrollEnd}
+        onMomentumScrollEnd={handleScrollEnd}
       >
         {/* 사진 */}
         <TouchableOpacity style={styles.photoWrapper} onPress={handlePickImage}>
@@ -728,7 +769,10 @@ export default function ProfileScreen() {
       </KeyboardAwareScrollView>
 
       {/* 저장 버튼 */}
-      <View style={styles.footer}>
+      <Animated.View
+        style={[styles.footer, { transform: [{ translateY: footerAnim }] }]}
+        onLayout={(e) => { footerHeightRef.current = e.nativeEvent.layout.height; }}
+      >
         <TouchableOpacity
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
           onPress={handleSave}
@@ -739,7 +783,7 @@ export default function ProfileScreen() {
             {isSaving ? "저장 중..." : "저장"}
           </Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       <SaveIndicator
         status={indicatorStatus}
@@ -995,6 +1039,11 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     backgroundColor: colors.background,

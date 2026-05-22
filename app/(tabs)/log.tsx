@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   AppState,
   Platform,
   StyleSheet,
@@ -181,6 +182,10 @@ export default function LogScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const footerAnim = useRef(new Animated.Value(0)).current;
+  const footerHeightRef = useRef(0);
+  const lastScrollYRef = useRef(0);
+  const footerVisibleRef = useRef(true);
 
   function handleDateChange(newDate: string) {
     if (isSaving || isDeleting || !isLoaded) return;
@@ -358,6 +363,38 @@ export default function LogScreen() {
     return savedExtId;
   }, []);
 
+  function showFooter() {
+    footerVisibleRef.current = true;
+    Animated.timing(footerAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start();
+  }
+  function hideFooter() {
+    footerVisibleRef.current = false;
+    Animated.timing(footerAnim, { toValue: footerHeightRef.current, duration: 220, useNativeDriver: true }).start();
+  }
+  const BOTTOM_THRESHOLD = 40;
+  function isAtEdge(y: number, contentHeight: number, layoutHeight: number) {
+    return y <= 0 || y + layoutHeight >= contentHeight - BOTTOM_THRESHOLD;
+  }
+  function handleScroll(e: any) {
+    const y: number = e.nativeEvent.contentOffset.y;
+    const contentHeight: number = e.nativeEvent.contentSize.height;
+    const layoutHeight: number = e.nativeEvent.layoutMeasurement.height;
+    const dy = y - lastScrollYRef.current;
+    lastScrollYRef.current = y;
+    if (isAtEdge(y, contentHeight, layoutHeight)) {
+      if (!footerVisibleRef.current) showFooter();
+      return;
+    }
+    if (dy > 3 && footerVisibleRef.current) hideFooter();
+    else if (dy < -3 && !footerVisibleRef.current) showFooter();
+  }
+  function handleScrollEnd(e: any) {
+    const y: number = e.nativeEvent.contentOffset.y;
+    const contentHeight: number = e.nativeEvent.contentSize.height;
+    const layoutHeight: number = e.nativeEvent.layoutMeasurement.height;
+    if (isAtEdge(y, contentHeight, layoutHeight) && !footerVisibleRef.current) showFooter();
+  }
+
   async function handleSave() {
     if (!isLoaded || hasPet !== true || isSaving || isDeleting) return;
 
@@ -528,6 +565,10 @@ export default function LogScreen() {
         enableOnAndroid
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onScrollEndDrag={handleScrollEnd}
+        onMomentumScrollEnd={handleScrollEnd}
       >
         <Card title="오늘 컨디션은?">
           <ConditionPicker value={condition} onChange={setCondition} />
@@ -590,7 +631,10 @@ export default function LogScreen() {
 
       </KeyboardAwareScrollView>
 
-      <View style={styles.footer}>
+      <Animated.View
+        style={[styles.footer, { transform: [{ translateY: footerAnim }] }]}
+        onLayout={(e) => { footerHeightRef.current = e.nativeEvent.layout.height; }}
+      >
         <TouchableOpacity
           style={[styles.saveBtn, isBusy && styles.saveBtnDisabled]}
           onPress={handleSave}
@@ -609,7 +653,7 @@ export default function LogScreen() {
             <Text style={styles.deleteBtnText}>{isDeleting ? '삭제 중...' : '기록 삭제'}</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -663,7 +707,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     gap: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingBottom: 160,
   },
   card: {
     backgroundColor: colors.surface,
@@ -677,6 +721,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     backgroundColor: colors.background,
