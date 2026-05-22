@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors } from "../constants/theme";
+import { colors, radius, spacing } from "../constants/theme";
 import { useCurrentPet } from "../contexts/PetContext";
 
 const FEEDBACK_URL = "https://open.kakao.com/o/sqYtAKvi";
@@ -38,7 +38,11 @@ export default function AppHeader() {
   const petName = currentPet?.name ?? null;
 
   function handlePetPress() {
-    Alert.alert("알림", "반려동물 추가 기능은 출시 예정이에요 🐾");
+    if (Platform.OS === "web") {
+      window.alert("반려동물 추가 기능은 출시 예정이에요 🐾");
+    } else {
+      Alert.alert("알림", "반려동물 추가 기능은 출시 예정이에요 🐾");
+    }
   }
 
   function handleBetaPress() {
@@ -74,6 +78,9 @@ export default function AppHeader() {
           {petName ?? "반려동물 등록"}
         </Text>
         <Text style={styles.arrow}>▼</Text>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>출시 예정</Text>
+        </View>
       </TouchableOpacity>
 
       <View style={styles.center} />
@@ -127,6 +134,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+  badge: {
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.accent,
   },
   betaBadge: {
     backgroundColor: "#FFE4D1",
