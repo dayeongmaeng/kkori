@@ -182,6 +182,7 @@ export default function PhotoScreen() {
   }
 
   async function handleOpenGallery() {
+    if (uploadState.status !== 'idle' && uploadState.status !== 'failed') return;
     debugPhotoUpload('picker start');
     const petId = await getCachedCurrentPetId();
     if (!petId) {

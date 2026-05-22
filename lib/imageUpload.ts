@@ -1,5 +1,5 @@
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Image as RNImage } from 'react-native';
+import { Image as RNImage, Platform } from 'react-native';
 
 export type ImageUploadStatus =
   | 'idle'
@@ -71,11 +71,20 @@ export async function prepareImageForUpload(
 }
 
 function getImageSize(uri: string): Promise<{ width: number; height: number }> {
+  const fallback = { width: Number.MAX_SAFE_INTEGER, height: Number.MAX_SAFE_INTEGER };
   return new Promise((resolve) => {
+    if (Platform.OS === 'web') {
+      const img = new window.Image();
+      const timer = setTimeout(() => resolve(fallback), 5000);
+      img.onload = () => { clearTimeout(timer); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+      img.onerror = () => { clearTimeout(timer); resolve(fallback); };
+      img.src = uri;
+      return;
+    }
     RNImage.getSize(
       uri,
       (width, height) => resolve({ width, height }),
-      () => resolve({ width: Number.MAX_SAFE_INTEGER, height: Number.MAX_SAFE_INTEGER }),
+      () => resolve(fallback),
     );
   });
 }

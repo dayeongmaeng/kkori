@@ -15,7 +15,8 @@ export interface ThumbnailResult {
 }
 
 function base64ToBlob(base64: string): Blob {
-  const binary = atob(base64);
+  const raw = base64.includes(',') ? base64.split(',')[1] : base64;
+  const binary = atob(raw);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: 'image/jpeg' });
@@ -52,11 +53,20 @@ export async function generateThumbnails(uri: string): Promise<ThumbnailResult> 
 }
 
 function getImageSize(uri: string): Promise<{ width: number; height: number }> {
+  const fallback = { width: Number.MAX_SAFE_INTEGER, height: Number.MAX_SAFE_INTEGER };
   return new Promise((resolve) => {
+    if (Platform.OS === 'web') {
+      const img = new window.Image();
+      const timer = setTimeout(() => resolve(fallback), 5000);
+      img.onload = () => { clearTimeout(timer); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
+      img.onerror = () => { clearTimeout(timer); resolve(fallback); };
+      img.src = uri;
+      return;
+    }
     RNImage.getSize(
       uri,
       (width, height) => resolve({ width, height }),
-      () => resolve({ width: Number.MAX_SAFE_INTEGER, height: Number.MAX_SAFE_INTEGER }),
+      () => resolve(fallback),
     );
   });
 }
