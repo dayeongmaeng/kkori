@@ -145,6 +145,7 @@
 - 생일/함께한 날은 네이티브 DateTimePicker와 웹용 select picker를 분기 처리.
 - 프로필 사진은 512px 기준 압축 후 base64로 저장/전송.
 - 저장 후 pet 캐시와 current pet 상태 갱신.
+- 반려동물 삭제 버튼 추가 방향 확정. API 연동 예정 (`DELETE /api/v1/pets/{externalId}` 호출 후 로컬 캐시 정리).
 
 ### 설정
 
@@ -211,11 +212,12 @@
 
 ## 다음 작업 후보
 
-1. 8080 외부 포트 닫기 확인
-2. Vercel에 `kkori.co.kr` / `www.kkori.co.kr` 연결
-3. 개인정보처리방침/계정삭제 안내 페이지 준비
-4. `.env.example`과 실제 사용 환경변수 정합성 정리
-5. Phase D 회원가입/계정 모델 고도화 설계
+1. 반려동물 삭제 버튼 API 연동 (프로필 탭 → `DELETE /api/v1/pets/{externalId}` + 로컬 캐시 정리)
+2. 8080 외부 포트 닫기 확인
+3. Vercel에 `kkori.co.kr` / `www.kkori.co.kr` 연결
+4. 개인정보처리방침/계정삭제 안내 페이지 준비
+5. `.env.example`과 실제 사용 환경변수 정합성 정리
+6. Phase D 회원가입/계정 모델 고도화 설계
 
 ## 작업 스타일
 

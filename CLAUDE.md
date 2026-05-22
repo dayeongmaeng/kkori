@@ -105,7 +105,8 @@
 - `POST /api/v1/devices/register`
 - `GET /api/v1/devices/me`
 - `GET/POST/PUT/DELETE /api/v1/caregivers`
-- `GET/POST/PUT/DELETE /api/v1/pets`
+- `GET/POST/PUT /api/v1/pets`
+- `DELETE /api/v1/pets/{externalId}` — 204. cascade soft delete + S3 비동기 삭제는 API 내부 처리.
 - `GET/POST/PUT/DELETE /api/v1/photos`
 - `PATCH /api/v1/photos/{externalId}`
 - `POST /api/v1/photos/{externalId}/upload`
@@ -182,6 +183,7 @@ API 코드 위치: `lib/api/`
 - 생일/함께한 날은 네이티브 DateTimePicker와 웹용 select picker를 분기 처리한다.
 - 프로필 사진은 512px 기준으로 압축하고 base64로 저장/전송한다.
 - 저장 후 pet 캐시와 current pet 상태를 갱신한다.
+- 반려동물 삭제 버튼 추가 방향 확정. `DELETE /api/v1/pets/{externalId}` 호출 후 로컬 캐시 정리. API 연동 예정.
 
 ### 설정 탭
 
@@ -246,6 +248,7 @@ API 코드 위치: `lib/api/`
 
 ## 다음 작업 후보
 
+- 반려동물 삭제 버튼 API 연동 (프로필 탭 → `DELETE /api/v1/pets/{externalId}` + 로컬 캐시 정리)
 - 8080 외부 포트 닫기 확인
 - Vercel에 `kkori.co.kr` / `www.kkori.co.kr` 연결
 - 개인정보처리방침/계정삭제 안내 페이지 준비
