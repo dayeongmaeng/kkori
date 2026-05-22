@@ -66,4 +66,6 @@ npm run lint
 - `.env.example`에는 `EXPO_PUBLIC_SHARE_API_URL`이 없지만 코드에서 사용 중입니다.
 - `WEB_BASE_URL` 기본값은 아직 `https://test-kkori.vercel.app` 기준입니다.
 - 프로필 `gender`는 현재 `male` / `female` 소문자로 전송합니다.
+- `EXPO_PUBLIC_DEV_API_URL` 환경변수는 실제로 사용되지 않습니다. 개발 모드 API는 `http://localhost:8080`으로 하드코딩되어 있습니다.
+- 서버 8080 포트 외부 공개 여부가 아직 확인되지 않았습니다. 운영 전 Lightsail 방화벽 설정을 확인하세요.
 - AI 리포트, 반려동물 추가/전환, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 출시 예정입니다.

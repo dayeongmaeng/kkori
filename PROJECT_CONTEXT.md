@@ -59,7 +59,7 @@
 
 ## API 연동
 
-- 운영 API fallback: `https://api.kkori.co.kr`
+- 운영 API: `https://api.kkori.co.kr`
 - 개발 모드 API 기본값: `http://localhost:8080`
 - 권장 운영 환경변수: `EXPO_PUBLIC_API_URL=https://api.kkori.co.kr`
 - 웹 URL 기본값: `https://test-kkori.vercel.app`

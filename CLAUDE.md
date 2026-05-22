@@ -39,6 +39,7 @@
 - 번들 ID/패키지: `com.anonymous.kkori`
 - 주요 탭: 홈, 기록, 포토, 프로필, 설정
 - 루트 Provider: `AuthProvider`, `DateProvider`, `PetProvider`
+- `DateProvider`는 KST 기준 날짜를 관리하며 자정과 앱 활성화 시 갱신한다.
 - 로그인 전에는 `AuthGate`가 로그인 화면을 표시한다.
 - 이 저장소는 Expo 앱과 Vercel 공유 페이지/API 프록시 코드를 포함한다. Spring Boot 백엔드 코드는 별도 저장소에 있다.
 
@@ -69,6 +70,16 @@
 - 기존 테마 기준 색상은 `constants/theme.ts`를 따른다.
 - 모서리는 둥글게, 여백은 넉넉하게 유지한다.
 
+## 작업 스타일
+
+- 사용자는 Spring Boot 경험이 풍부하고 React Native, TypeScript는 학습 중이다.
+- 모르는 개념은 짧게 설명하면 좋다.
+- 한 번에 한 화면씩 진행한다.
+- 화면 확인은 사용자가 직접 진행한다.
+- 검증 포인트/기대 동작 중심으로 안내한다.
+- 불필요한 리팩터링은 하지 않는다.
+- React Native + Expo + TypeScript strict를 유지한다.
+
 ## 인증/세션
 
 - Google OAuth, Kakao OAuth 로그인 화면이 구현되어 있다.
@@ -81,7 +92,6 @@
 ## 서버 API
 
 - 운영 Base URL: `https://api.kkori.co.kr`
-- 운영 API fallback: `https://api.kkori.co.kr`
 - 개발 모드 API 기본값은 코드상 `http://localhost:8080`
 - 권장 운영 환경변수: `EXPO_PUBLIC_API_URL=https://api.kkori.co.kr`
 - 모든 일반 API 요청은 AsyncStorage에 저장된 `pet-care:device-id`를 읽어 `X-Device-Id` 헤더를 붙인다.
@@ -232,6 +242,7 @@ API 코드 위치: `lib/api/`
 - `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://test-kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다.
 - 프로필 `gender` 요청 타입은 코드상 `male` / `female` 소문자로 전송한다. 서버 문서가 `MALE` / `FEMALE` 기준이면 정합성 확인이 필요하다.
 - AI 리포트, 반려동물 추가/전환, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
+- 번들 ID/패키지가 `com.anonymous.kkori`로 되어 있다. App Store 제출 전 실제 번들 ID로 교체해야 한다.
 
 ## 다음 작업 후보
 
