@@ -31,6 +31,7 @@ import {
   LogResponse,
   logApi,
 } from '../../lib/api/log';
+import { initCaregiver } from '../../lib/api/initCaregiver';
 import { getCachedCurrentCaregiverId } from '../../lib/cache/caregiver';
 import { getCachedCurrentPetId } from '../../lib/cache/pet';
 import {
@@ -313,7 +314,11 @@ export default function LogScreen() {
     const currentPetId = petIdRef.current;
     if (!currentPetId) return null;
 
-    const caregiverId = await getCachedCurrentCaregiverId();
+    let caregiverId = await getCachedCurrentCaregiverId();
+    if (!caregiverId) {
+      await initCaregiver();
+      caregiverId = await getCachedCurrentCaregiverId();
+    }
     if (!caregiverId) throw new Error('보호자 정보가 초기화되지 않았습니다.');
 
     const body: LogRequest = {
@@ -408,7 +413,8 @@ export default function LogScreen() {
       setSuccessBgColor(undefined);
       setSaveStatus('saved');
       saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch {
+    } catch (err) {
+      console.error('[LogSave] 저장 실패:', err);
       setSaveStatus('error');
     } finally {
       setIsSaving(false);
@@ -458,7 +464,8 @@ export default function LogScreen() {
       setSaveStatus('saved');
       saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
       return savedId;
-    } catch {
+    } catch (err) {
+      console.error('[LogSave] 기록 사진 사전 저장 실패:', err);
       setSaveStatus('error');
       return null;
     } finally {
