@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -224,6 +225,7 @@ export default function ProfileScreen() {
   const [breedFocused, setBreedFocused] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
   const [dateField, setDateField] = useState<DateField>("birthDate");
@@ -470,6 +472,66 @@ export default function ProfileScreen() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function doDelete() {
+    if (!externalId || isDeleting || isSaving) return;
+    setIsDeleting(true);
+    try {
+      await petApi.deletePet(externalId);
+      const pets = await getCachedPets();
+      const remaining = pets.filter((p) => p.externalId !== externalId);
+      await setCachedPets(remaining);
+      // 폼 초기화
+      setExternalId(null);
+      setName("");
+      setBreed("");
+      setGender(null);
+      setBirthDate("");
+      setBirthDateUnknown(false);
+      setAdoptionDate("");
+      setWeightKg("");
+      setNeutered(false);
+      setMedicalNotes("");
+      setPhotoUri(undefined);
+      setPhotoSourceUri(undefined);
+      setPhotoUploadState({ status: "idle" });
+      if (remaining.length > 0) {
+        const nextPet = remaining[0];
+        await setCachedCurrentPetId(nextPet.externalId);
+        setCurrentPet(nextPet);
+        fillForm(nextPet);
+        const photo = await getCachedPetPhoto(nextPet.externalId);
+        if (photo) setPhotoUri(photo);
+      } else {
+        await AsyncStorage.removeItem("pet-care:api:current-pet-id");
+        setCurrentPet(null);
+      }
+    } catch (e) {
+      console.error("[ProfileScreen] 삭제 실패:", e);
+      Alert.alert("삭제 실패", "반려동물을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  function confirmDelete() {
+    if (!externalId || isDeleting || isSaving) return;
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        `${name} 프로필을 삭제할까요?\n모든 기록이 함께 삭제됩니다.`,
+      );
+      if (confirmed) void doDelete();
+      return;
+    }
+    Alert.alert(
+      "반려동물 삭제",
+      `${name} 프로필을 삭제할까요?\n모든 기록이 함께 삭제됩니다.`,
+      [
+        { text: "취소", style: "cancel" },
+        { text: "삭제", style: "destructive", onPress: doDelete },
+      ],
+    );
   }
 
   return (
@@ -768,21 +830,33 @@ export default function ProfileScreen() {
         </View>
       </KeyboardAwareScrollView>
 
-      {/* 저장 버튼 */}
+      {/* 저장/삭제 버튼 */}
       <Animated.View
         style={[styles.footer, { transform: [{ translateY: footerAnim }] }]}
         onLayout={(e) => { footerHeightRef.current = e.nativeEvent.layout.height; }}
       >
         <TouchableOpacity
-          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (isSaving || isDeleting) && styles.saveButtonDisabled]}
           onPress={handleSave}
           activeOpacity={0.8}
-          disabled={isSaving}
+          disabled={isSaving || isDeleting}
         >
           <Text style={styles.saveButtonText}>
             {isSaving ? "저장 중..." : "저장"}
           </Text>
         </TouchableOpacity>
+        {externalId ? (
+          <TouchableOpacity
+            style={[styles.deleteButton, (isSaving || isDeleting) && styles.deleteButtonDisabled]}
+            onPress={confirmDelete}
+            activeOpacity={0.8}
+            disabled={isSaving || isDeleting}
+          >
+            <Text style={styles.deleteButtonText}>
+              {isDeleting ? "삭제 중..." : "반려동물 삭제"}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </Animated.View>
 
       <SaveIndicator
@@ -1049,6 +1123,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    gap: spacing.sm,
   },
   saveButton: {
     backgroundColor: colors.primary,
@@ -1063,5 +1138,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: colors.textOnPrimary,
+  },
+  deleteButton: {
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  deleteButtonDisabled: {
+    opacity: 0.5,
+  },
+  deleteButtonText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.danger,
   },
 });
