@@ -25,11 +25,11 @@ export default function WalkInput({ minutes, note, onChangeMinutes, onChangeNote
     <View>
       <View style={styles.inputRow}>
         <TextInput
-          style={styles.minutesInput}
+          style={[styles.minutesInput, minutes == null && styles.minutesInputPlaceholder]}
           value={minutes == null ? '' : String(minutes)}
           onChangeText={handleTextChange}
           keyboardType="number-pad"
-          placeholder="-"
+          placeholder="산책 안 함"
           placeholderTextColor={colors.textQuaternary}
           maxLength={3}
         />
@@ -80,6 +80,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: colors.primary,
     paddingBottom: 2,
+  },
+  minutesInputPlaceholder: {
+    fontSize: 18,
   },
   unit: {
     fontSize: 18,
