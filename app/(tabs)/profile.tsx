@@ -378,6 +378,7 @@ export default function ProfileScreen() {
   }
 
   async function handlePickImage() {
+    if (photoUploadState.status !== 'idle' && photoUploadState.status !== 'failed') return;
     const uri = await pickImageUri({ allowsEditing: true, aspect: [1, 1] });
     if (!uri) return;
     setPhotoSourceUri(uri);

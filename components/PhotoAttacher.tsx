@@ -114,6 +114,7 @@ export default function PhotoAttacher({
 
   async function handleAdd() {
     if (disabled || photos.length >= MAX_PHOTOS) return;
+    if (photos.some((p) => isBusy(p.status))) return;
 
     const sourceUri = await pickImageUri({ allowsEditing: false });
     if (!sourceUri) return;
@@ -176,7 +177,7 @@ export default function PhotoAttacher({
     setPreviewPhoto(photo);
   }
 
-  const canAdd = photos.length < MAX_PHOTOS && !disabled;
+  const canAdd = photos.length < MAX_PHOTOS && !disabled && !photos.some((p) => isBusy(p.status));
 
   return (
     <>
