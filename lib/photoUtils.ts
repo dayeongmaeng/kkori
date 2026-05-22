@@ -22,6 +22,15 @@ function base64ToBlob(base64: string): Blob {
   return new Blob([bytes], { type: 'image/jpeg' });
 }
 
+async function uriToBlob(uri: string, base64?: string | null): Promise<Blob> {
+  if (base64) {
+    return base64ToBlob(base64);
+  }
+  // base64가 없을 때 URI에서 직접 fetch
+  const res = await fetch(uri);
+  return res.blob();
+}
+
 export async function generateThumbnails(uri: string): Promise<ThumbnailResult> {
   const isWeb = Platform.OS === 'web';
   const size = await getImageSize(uri);
@@ -40,9 +49,13 @@ export async function generateThumbnails(uri: string): Promise<ThumbnailResult> 
   ]);
 
   if (isWeb) {
+    const [medBlob, thumbBlob] = await Promise.all([
+      uriToBlob(mediumRes.uri, mediumRes.base64),
+      uriToBlob(thumbRes.uri, thumbRes.base64),
+    ]);
     return {
-      medium: { uri: mediumRes.uri, name: 'medium.jpg', type: 'image/jpeg', blob: base64ToBlob(mediumRes.base64!) },
-      thumbnail: { uri: thumbRes.uri, name: 'thumbnail.jpg', type: 'image/jpeg', blob: base64ToBlob(thumbRes.base64!) },
+      medium: { uri: mediumRes.uri, name: 'medium.jpg', type: 'image/jpeg', blob: medBlob },
+      thumbnail: { uri: thumbRes.uri, name: 'thumbnail.jpg', type: 'image/jpeg', blob: thumbBlob },
     };
   }
 

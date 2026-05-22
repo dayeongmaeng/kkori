@@ -26,7 +26,12 @@ function pickImageWebRaw(): Promise<string | null> {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+    // DOM에 없는 element는 일부 브라우저에서 click()이 무시됨
+    input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;';
+    document.body.appendChild(input);
+
     input.onchange = () => {
+      if (document.body.contains(input)) document.body.removeChild(input);
       const file = input.files?.[0];
       if (!file) {
         resolve(null);

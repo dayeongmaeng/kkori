@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -57,6 +57,9 @@ export default function PhotoAttacher({
   onUploaded,
 }: Props) {
   const [previewPhoto, setPreviewPhoto] = useState<LogPhotoAttachment | null>(null);
+  // 항상 최신 photos를 참조해 비동기 중간 stale closure 방지
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
 
   async function commitPhotos(nextPhotos: LogPhotoAttachment[]) {
     onChangePhotos(nextPhotos);
@@ -71,25 +74,24 @@ export default function PhotoAttacher({
     return status === 'failed' || status === 'error';
   }
 
-  async function uploadLocalPhoto(tempId: string, sourceUri: string, basePhotos: LogPhotoAttachment[]) {
+  async function uploadLocalPhoto(tempId: string, sourceUri: string) {
     try {
-      onChangePhotos(basePhotos.map((photo) => (
+      onChangePhotos(photosRef.current.map((photo) => (
         photo.tempId === tempId
           ? { ...photo, status: 'compressing', progress: 20, errorMessage: undefined }
           : photo
       )));
       const prepared = await prepareImageForUpload(sourceUri, { maxWidth: 1080, compress: 0.75 });
-      const photosWithPrepared = basePhotos.map((photo) => (
+      onChangePhotos(photosRef.current.map((photo) => (
         photo.tempId === tempId
           ? { ...photo, localUri: prepared.uri, status: 'saving' as const, progress: 45 }
           : photo
-      ));
-      onChangePhotos(photosWithPrepared);
+      )));
 
       const logExternalId = await onEnsureLogExternalId();
       if (!logExternalId) throw new Error('기록을 먼저 저장하지 못했어요.');
 
-      onChangePhotos(photosWithPrepared.map((photo) => (
+      onChangePhotos(photosRef.current.map((photo) => (
         photo.tempId === tempId
           ? { ...photo, status: 'uploading' as const, progress: 70 }
           : photo
@@ -97,14 +99,14 @@ export default function PhotoAttacher({
       const { medium, thumbnail } = await generateThumbnails(prepared.uri);
       const uploaded = await logApi.uploadLogPhoto(logExternalId, medium, thumbnail);
 
-      const nextPhotos = photosWithPrepared.map((photo) => (
+      const nextPhotos = photosRef.current.map((photo) => (
         photo.tempId === tempId
           ? { ...uploaded, localUri: prepared.uri, sourceUri, status: 'ready' as const, progress: 100 }
           : photo
       ));
       await commitPhotos(nextPhotos);
     } catch {
-      onChangePhotos(basePhotos.map((photo) => (
+      onChangePhotos(photosRef.current.map((photo) => (
         photo.tempId === tempId
           ? { ...photo, status: 'failed', progress: undefined, errorMessage: '업로드에 실패했어요' }
           : photo
@@ -133,21 +135,19 @@ export default function PhotoAttacher({
       updatedAt: new Date().toISOString(),
     };
 
-    const nextPhotos = [...photos, tempPhoto];
-    onChangePhotos(nextPhotos);
-    await uploadLocalPhoto(tempId, sourceUri, nextPhotos);
+    onChangePhotos([...photosRef.current, tempPhoto]);
+    await uploadLocalPhoto(tempId, sourceUri);
   }
 
   async function handleRetry(photo: LogPhotoAttachment) {
     const retryUri = photo.sourceUri ?? photo.localUri;
     if (!photo.tempId || !retryUri || disabled) return;
-    const nextPhotos = photos.map((p) => (
+    onChangePhotos(photosRef.current.map((p) => (
       p.tempId === photo.tempId
         ? { ...p, status: 'compressing' as const, progress: 15, errorMessage: undefined }
         : p
-    ));
-    onChangePhotos(nextPhotos);
-    await uploadLocalPhoto(photo.tempId, retryUri, nextPhotos);
+    )));
+    await uploadLocalPhoto(photo.tempId, retryUri);
   }
 
   async function handleRemove(photo: LogPhotoAttachment) {

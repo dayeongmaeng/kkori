@@ -79,6 +79,8 @@ export default function PhotoScreen() {
   const uploadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const today = useDate();
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
   const todayPhoto = photos.find((p) => p.date === today);
   const pastPhotos = photos.filter((p) => p.date !== today);
 
@@ -255,7 +257,7 @@ export default function PhotoScreen() {
 
       if (!savedExternalId || !savedResponse) {
         setUploadState({ status: 'saving', progress: 45 });
-        const existingTodayPhoto = photos.find((photo) => (
+        const existingTodayPhoto = photosRef.current.find((photo) => (
           photo.date === today && photo.externalId !== 'today-photo-uploading'
         ));
 
