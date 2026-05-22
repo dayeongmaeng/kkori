@@ -93,6 +93,22 @@ export default function SettingsScreen() {
   const { logout } = useAuth();
 
   async function handleClearCache() {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm('저장된 임시 데이터를 모두 삭제할까요?\n다음 실행 시 서버에서 다시 불러옵니다.');
+      if (!confirmed) return;
+      try {
+        const keys = await AsyncStorage.getAllKeys();
+        const cacheKeys = keys.filter(isCacheKey);
+        if (cacheKeys.length > 0) {
+          await AsyncStorage.multiRemove(cacheKeys);
+        }
+        window.alert('캐시를 비웠어요');
+      } catch {
+        window.alert('캐시를 비우지 못했어요');
+      }
+      return;
+    }
+
     Alert.alert('캐시 비우기', '저장된 임시 데이터를 모두 삭제할까요?\n다음 실행 시 서버에서 다시 불러옵니다.', [
       { text: '취소', style: 'cancel' },
       { text: '비우기', style: 'destructive', onPress: async () => {
@@ -119,6 +135,14 @@ export default function SettingsScreen() {
   }
 
   function handleDonation() {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        '17년 함께한 반려견을 떠나보낸 경험으로 꼬리를 만들고 있어요.\n\n후원은 선택사항이며 앱 기능에 영향을 주지 않아요.\n\n확인을 누르면 토스로 이동해요.',
+      );
+      if (confirmed) openURL(DONATION_URL);
+      return;
+    }
+
     Alert.alert(
       '꼬리 응원하기',
       '17년 함께한 반려견을 떠나보낸 경험으로 꼬리를 만들고 있어요.\n\n후원은 선택사항이며 앱 기능에 영향을 주지 않아요.',
@@ -167,7 +191,12 @@ export default function SettingsScreen() {
     setWagCount(next);
     if (Platform.OS !== 'web') await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     const msgs = ['🐾 꼬리가 흔들려요!', '🐾🐾 더 빠르게!', '🐾🐾🐾 멈출 수가 없어요!!'];
-    Alert.alert('', msgs[Math.min(next - 1, msgs.length - 1)]);
+    const msg = msgs[Math.min(next - 1, msgs.length - 1)];
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(msg);
+      return;
+    }
+    Alert.alert('', msg);
   }
 
   return (
