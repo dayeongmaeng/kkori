@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import {
   Bell, Camera, ChevronRight, Database, FileText,
   Heart, Image as ImageIcon, Info, LogOut, MessageCircle, Newspaper,
-  PawPrint, Shield, Star, Trash2,
+  PawPrint, Shield, Star, Trash2, UserX,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -86,8 +86,9 @@ interface RowProps {
   onPress?: () => void;
   disabled?: boolean;
   last?: boolean;
+  destructive?: boolean;
 }
-function Row({ icon, label, desc, right, onPress, disabled, last }: RowProps) {
+function Row({ icon, label, desc, right, onPress, disabled, last, destructive }: RowProps) {
   return (
     <>
       <TouchableOpacity
@@ -98,7 +99,7 @@ function Row({ icon, label, desc, right, onPress, disabled, last }: RowProps) {
       >
         <View style={s.rowIcon}>{icon}</View>
         <View style={s.rowBody}>
-          <Text style={s.rowLabel}>{label}</Text>
+          <Text style={[s.rowLabel, destructive && s.rowLabelDestructive]}>{label}</Text>
           {desc ? <Text style={s.rowDesc}>{desc}</Text> : null}
         </View>
         {right !== undefined ? right : (onPress ? <ChevronRight size={16} color={colors.textQuaternary} /> : null)}
@@ -111,9 +112,10 @@ function Row({ icon, label, desc, right, onPress, disabled, last }: RowProps) {
 export default function SettingsScreen() {
   const [wagCount, setWagCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [webNotifPerm, setWebNotifPerm] = useState<WebNotifPerm>('unsupported');
   const [webCameraPerm, setWebCameraPerm] = useState<WebCameraPerm>('unsupported');
-  const { logout } = useAuth();
+  const { logout, deleteAccount } = useAuth();
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -200,6 +202,58 @@ export default function SettingsScreen() {
       console.warn('[Settings] logout cleanup failed:', error);
       setIsLoggingOut(false);
     }
+  }
+
+  async function performDeleteAccount() {
+    if (isDeletingAccount) return;
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccount();
+      router.replace('/');
+    } catch (error) {
+      setIsDeletingAccount(false);
+      const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
+      const message = isNetworkError
+        ? '네트워크 오류가 발생했어요.\n연결을 확인한 뒤 다시 시도해 주세요.'
+        : error instanceof Error
+          ? error.message
+          : '탈퇴 처리 중 오류가 발생했어요. 다시 시도해 주세요.';
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(`탈퇴 실패\n\n${message}`);
+      } else {
+        Alert.alert('탈퇴 실패', message);
+      }
+    }
+  }
+
+  const DELETE_ACCOUNT_MESSAGE =
+    '탈퇴하면 다음 항목이 처리됩니다.\n\n' +
+    '• 모든 개인정보가 삭제 또는 익명화됩니다.\n' +
+    '• 반려동물 정보, 기록, 사진은 삭제 처리됩니다.\n' +
+    '• 삭제된 데이터는 복구할 수 없습니다.\n' +
+    '• 가족공유 기능 도입 시 공유 데이터에 영향이 있을 수 있습니다.\n' +
+    '• Google/Kakao 계정 자체는 삭제되지 않습니다.\n' +
+    '• 같은 계정으로 재가입은 가능합니다.';
+
+  function handleDeleteAccount() {
+    if (isDeletingAccount) return;
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm(`회원 탈퇴\n\n${DELETE_ACCOUNT_MESSAGE}`);
+      if (confirmed) {
+        void performDeleteAccount();
+      }
+      return;
+    }
+
+    Alert.alert('회원 탈퇴', DELETE_ACCOUNT_MESSAGE, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '탈퇴하기',
+        style: 'destructive',
+        onPress: () => { void performDeleteAccount(); },
+      },
+    ]);
   }
 
   function handleLogout() {
@@ -332,7 +386,16 @@ export default function SettingsScreen() {
           desc={isLoggingOut ? '로그아웃 중이에요' : undefined}
           right={isLoggingOut ? <ActivityIndicator color={colors.accent} /> : undefined}
           onPress={handleLogout}
-          disabled={isLoggingOut}
+          disabled={isLoggingOut || isDeletingAccount}
+        />
+        <Row
+          icon={<UserX size={20} color={colors.danger} />}
+          label="회원 탈퇴"
+          desc={isDeletingAccount ? '탈퇴 처리 중이에요' : '계정 및 모든 데이터 삭제'}
+          right={isDeletingAccount ? <ActivityIndicator color={colors.danger} /> : undefined}
+          onPress={handleDeleteAccount}
+          disabled={isDeletingAccount || isLoggingOut}
+          destructive
           last
         />
       </Card>
@@ -372,6 +435,7 @@ const s = StyleSheet.create({
   rowIcon: { width: 24, alignItems: 'center' },
   rowBody: { flex: 1, justifyContent: 'center' },
   rowLabel: { fontSize: 15, color: colors.textPrimary },
+  rowLabelDestructive: { color: colors.danger },
   rowDesc: { fontSize: 12, color: colors.textTertiary, marginTop: 1 },
 
   divider: {

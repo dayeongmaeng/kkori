@@ -21,4 +21,10 @@ export function maskClientId(clientId?: string) {
   return `${clientId.slice(0, 12)}...${clientId.slice(-12)}`;
 }
 
+export function getGoogleClientId(): string {
+  if (Platform.OS === 'ios') return GOOGLE_IOS_CLIENT_ID ?? '';
+  if (Platform.OS === 'android') return GOOGLE_ANDROID_CLIENT_ID ?? '';
+  return GOOGLE_WEB_CLIENT_ID ?? '';
+}
+
 export const GOOGLE_REDIRECT_URI = getGoogleRedirectUri();

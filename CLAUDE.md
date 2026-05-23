@@ -59,7 +59,11 @@
 - 개발 중 웹 브라우저로 주로 테스트한다.
 - `expo-image-picker` 같은 네이티브 기능은 웹 fallback이 필요하다.
 - 카메라 기능은 웹에서 file input 기반 갤러리 선택으로 대체한다.
-- 웹 삭제 확인은 `Alert.alert` 대신 `window.confirm`을 사용한 구현이 있다.
+- 웹 삭제/탈퇴 확인은 `Alert.alert` 대신 `window.confirm`을 사용한 구현이 있다.
+- 권한 안내(알림/카메라/사진 접근)는 웹에서 별도 대응이 적용되어 있다.
+- 설정탭 외부 링크는 웹 환경에서 `Linking.openURL`로 처리한다.
+- 출시 예정 UI는 웹/native 모두 대응되어 있다.
+- 사진 업로드: Web 이미지 크기 계산 수정, base64 처리 보완, 업로드 중 중복 실행 방지 적용.
 
 ## UI 가이드
 
@@ -84,6 +88,7 @@
 
 - Google OAuth, Kakao OAuth 로그인 화면이 구현되어 있다.
 - 로그인 성공 시 `/api/v1/auth/oauth/login`으로 서버 로그인 요청을 보내고 access/refresh token을 저장한다.
+- Google 로그인 시 OAuth access token을 서버로 함께 전달한다. 서버는 이를 `UserOAuthToken`에 암호화 저장해 탈퇴 시 revoke에 사용한다.
 - 네이티브는 `expo-secure-store`, 웹은 AsyncStorage 기반으로 토큰을 저장한다.
 - API 요청에서 401이 발생하면 `/api/v1/auth/refresh`로 access token 갱신 후 원 요청을 재시도한다.
 - 로그아웃은 `/api/v1/auth/logout` 호출 후 인증 토큰과 세션 캐시를 정리한다.
@@ -117,6 +122,7 @@
 - `POST /api/v1/auth/oauth/login`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
+- `DELETE /api/v1/users/me` — 회원 탈퇴 (JWT 필수, 204 반환)
 
 API 코드 위치: `lib/api/`
 
@@ -191,7 +197,7 @@ API 코드 위치: `lib/api/`
 - 데이터 섹션: 데이터 백업/내보내기, 데이터 가져오기는 출시 예정. 캐시 비우기는 구현 완료.
 - 정보 섹션: 개인정보처리방침, 이용약관, 버전 정보.
 - 지원 섹션: 문의하기, 업데이트 소식, 리뷰 남기기, 후원하기, 꼬리 흔들게 하기.
-- 계정 섹션: 로그아웃 구현 완료.
+- 계정 섹션: 로그아웃 구현 완료. **회원 탈퇴 UI 구현 완료** (탈퇴 전 안내, Web/native 확인 모달, 성공 시 세션 정리 + 로그인 화면 이동).
 - 리뷰 남기기는 앱 출시 후 실제 App Store ID로 교체해야 하는 TODO가 남아 있다.
 
 ## 도메인 및 인프라

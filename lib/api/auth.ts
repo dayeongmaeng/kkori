@@ -11,6 +11,8 @@ export interface OAuthLoginRequest {
   code?: string;
   redirectUri?: string;
   deviceExternalId: string;
+  googleOAuthAccessToken?: string;
+  googleRefreshToken?: string;
 }
 
 export type AuthLoginResponse = StoredAuthTokens;
@@ -21,7 +23,14 @@ export interface LogoutRequest {
 
 export async function loginWithOAuth(
   provider: OAuthProvider,
-  token: { idToken?: string; accessToken?: string; code?: string; redirectUri?: string },
+  token: {
+    idToken?: string;
+    accessToken?: string;
+    code?: string;
+    redirectUri?: string;
+    googleOAuthAccessToken?: string;
+    googleRefreshToken?: string;
+  },
 ): Promise<AuthLoginResponse> {
   let deviceExternalId = await getStoredDeviceId();
   if (!deviceExternalId) {
@@ -30,6 +39,13 @@ export async function loginWithOAuth(
   }
   if (!deviceExternalId) {
     throw new Error('기기 정보를 찾을 수 없어요. 앱을 다시 실행한 뒤 시도해 주세요.');
+  }
+
+  if (__DEV__ && provider === 'GOOGLE') {
+    console.info('[OAuthLogin] google payload keys', {
+      hasGoogleOAuthAccessToken: Boolean(token.googleOAuthAccessToken),
+      hasGoogleRefreshToken: Boolean(token.googleRefreshToken),
+    });
   }
 
   const result = await api.post<AuthLoginResponse>(
@@ -41,6 +57,8 @@ export async function loginWithOAuth(
       code: token.code,
       redirectUri: token.redirectUri,
       deviceExternalId,
+      googleOAuthAccessToken: token.googleOAuthAccessToken,
+      googleRefreshToken: token.googleRefreshToken,
     } satisfies OAuthLoginRequest,
     false,
     true,
@@ -62,4 +80,8 @@ export async function logoutFromServer(): Promise<void> {
     '/api/v1/auth/logout',
     deviceExternalId ? ({ deviceExternalId } satisfies LogoutRequest) : {},
   );
+}
+
+export async function deleteAccount(): Promise<void> {
+  await api.delete<null>('/api/v1/users/me');
 }

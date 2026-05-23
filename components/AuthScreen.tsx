@@ -1,4 +1,5 @@
-import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
+import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -11,10 +12,8 @@ import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { loginWithOAuth } from '../lib/api/auth';
 import {
-  GOOGLE_ANDROID_CLIENT_ID,
-  GOOGLE_IOS_CLIENT_ID,
+  getGoogleClientId,
   GOOGLE_REDIRECT_URI,
-  GOOGLE_WEB_CLIENT_ID,
   maskClientId,
 } from './googleAuthConfig';
 import {
@@ -27,15 +26,27 @@ import { s } from './AuthScreen.styles';
 
 WebBrowser.maybeCompleteAuthSession();
 
+// id_token + access_token을 동시에 받기 위해 implicit hybrid flow를 사용한다.
+// useIdTokenAuthRequest는 response_type=id_token만 고정이라 access_token을 받을 수 없다.
+const GOOGLE_DISCOVERY = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+};
+
+// response_type에 id_token이 포함되면 Google이 nonce를 요구한다.
+function generateGoogleNonce(): string {
+  const bytes = Crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
 const LOGIN_TIMEOUT_MS = 30000;
 const KAKAO_REDIRECT_URI_STORAGE_KEY = 'pet-care:kakao:redirect-uri';
 type LoginProvider = 'GOOGLE' | 'KAKAO';
 
 function requireGoogleClientId() {
-  if (Platform.OS === 'ios' && !GOOGLE_IOS_CLIENT_ID) return 'Google iOS 클라이언트 ID 설정이 필요해요.';
-  if (Platform.OS === 'android' && !GOOGLE_ANDROID_CLIENT_ID) return 'Google Android 클라이언트 ID 설정이 필요해요.';
-  if (Platform.OS === 'web' && !GOOGLE_WEB_CLIENT_ID) return 'Google Web 클라이언트 ID 설정이 필요해요.';
-  return null;
+  if (getGoogleClientId()) return null;
+  if (Platform.OS === 'ios') return 'Google iOS 클라이언트 ID 설정이 필요해요.';
+  if (Platform.OS === 'android') return 'Google Android 클라이언트 ID 설정이 필요해요.';
+  return 'Google Web 클라이언트 ID 설정이 필요해요.';
 }
 
 function saveKakaoRedirectUri(redirectUri: string) {
@@ -74,18 +85,21 @@ export default function AuthScreen() {
   const missingMessage = requireGoogleClientId();
   const isLoggingIn = loginProvider !== null;
 
-  const googleConfig = useMemo(() => ({
-    iosClientId: GOOGLE_IOS_CLIENT_ID ?? 'missing-google-ios-client-id',
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID ?? 'missing-google-android-client-id',
-    webClientId: GOOGLE_WEB_CLIENT_ID ?? 'missing-google-web-client-id',
-    redirectUri: GOOGLE_REDIRECT_URI,
-    scopes: ['openid', 'profile', 'email'],
-  }), []);
+  const googleConfig = useMemo(() => {
+    const nonce = generateGoogleNonce();
+    return {
+      clientId: getGoogleClientId(),
+      responseType: 'id_token token',
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri: GOOGLE_REDIRECT_URI,
+      usePKCE: false,
+      nonce,
+      // nonce를 extraParams에도 넣어야 authorization URL 쿼리 파라미터에 실제로 포함된다.
+      extraParams: { nonce },
+    };
+  }, []);
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(googleConfig, {
-    scheme: 'kkori',
-    path: 'oauth/google',
-  });
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(googleConfig, GOOGLE_DISCOVERY);
 
   const clearLoginTimeout = useCallback(() => {
     if (!timeoutRef.current) return;
@@ -246,8 +260,15 @@ export default function AuthScreen() {
       return;
     }
 
+    const googleOAuthAccessToken = response.params.access_token || undefined;
+    const googleRefreshToken = response.params.refresh_token || undefined;
+    console.info('[GoogleLogin] oauth token from response', {
+      hasGoogleOAuthAccessToken: Boolean(googleOAuthAccessToken),
+      hasGoogleRefreshToken: Boolean(googleRefreshToken),
+    });
+
     console.info('[GoogleLogin] server login request', { provider: 'GOOGLE' });
-    loginWithOAuth('GOOGLE', { idToken })
+    loginWithOAuth('GOOGLE', { idToken, googleOAuthAccessToken, googleRefreshToken })
       .then(markLoggedIn)
       .catch(() => setErrorMessage('로그인을 완료하지 못했어요. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'))
       .finally(() => {
@@ -277,8 +298,26 @@ export default function AuthScreen() {
       console.info('[GoogleLogin] config', {
         platform: Platform.OS,
         redirectUri: GOOGLE_REDIRECT_URI,
-        webClientId: maskClientId(GOOGLE_WEB_CLIENT_ID),
+        clientId: maskClientId(getGoogleClientId()),
       });
+
+      if (__DEV__ && request) {
+        try {
+          const authorizeUrl = await request.makeAuthUrlAsync(GOOGLE_DISCOVERY);
+          let parsed: URL | null = null;
+          try { parsed = new URL(authorizeUrl); } catch {}
+          console.info('[GoogleLogin] authorize URL params', {
+            response_type: parsed?.searchParams.get('response_type'),
+            scope: parsed?.searchParams.get('scope'),
+            hasClientId: Boolean(parsed?.searchParams.get('client_id')),
+            hasRedirectUri: Boolean(parsed?.searchParams.get('redirect_uri')),
+            hasNonce: Boolean(parsed?.searchParams.get('nonce')),
+          });
+        } catch (logErr) {
+          console.warn('[GoogleLogin] authorize URL inspection failed', logErr);
+        }
+      }
+
       setErrorMessage(null);
       setLoginProvider('GOOGLE');
       startLoginTimeout();

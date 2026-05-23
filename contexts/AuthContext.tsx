@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 import { clearAuthSessionCache, getAuthTokens } from '../lib/auth/tokenStorage';
-import { logoutFromServer } from '../lib/api/auth';
+import { deleteAccount as deleteAccountFromServer, logoutFromServer } from '../lib/api/auth';
 import { syncServerSessionData } from '../lib/api/sessionSync';
 
 interface AuthContextValue {
@@ -11,6 +11,7 @@ interface AuthContextValue {
   sessionDataVersion: number;
   markLoggedIn: () => void;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextValue>({
   sessionDataVersion: 0,
   markLoggedIn: () => {},
   logout: async () => {},
+  deleteAccount: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -91,6 +93,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function deleteAccount() {
+    // API 실패 시 로컬 토큰을 건드리지 않아야 하므로 await가 throws하면 그대로 전파한다.
+    await deleteAccountFromServer();
+    try {
+      await clearAuthSessionCache();
+    } catch (error) {
+      console.warn('[Auth] deleteAccount local clear failed:', error);
+    }
+    setIsAuthenticated(false);
+    setSessionDataVersion((version) => version + 1);
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -100,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionDataVersion,
         markLoggedIn,
         logout,
+        deleteAccount,
       }}
     >
       {children}
