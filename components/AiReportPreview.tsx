@@ -1,9 +1,20 @@
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
 import IconImage from './IconImage';
 
 const imgDoctorReport = require('../assets/home/doctor-report.png');
 const imgWeekendReport = require('../assets/home/weekend-report.png');
+
+const cardShadow: ViewStyle = Platform.select<ViewStyle>({
+  ios: {
+    shadowColor: shadow.sm.shadowColor,
+    shadowOffset: shadow.sm.shadowOffset,
+    shadowOpacity: shadow.sm.shadowOpacity,
+    shadowRadius: shadow.sm.shadowRadius,
+  },
+  android: { elevation: shadow.sm.elevation },
+  default: {},
+}) ?? {};
 
 interface CardProps {
   imgSource: number;
@@ -16,7 +27,13 @@ function ReportCard({ imgSource, iconFallback, title, description }: CardProps) 
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => Alert.alert('곧 출시될 기능이에요 🐾', '조금만 기다려주세요')}
+      onPress={() => {
+        if (Platform.OS === 'web') {
+          window.alert('곧 출시될 기능이에요 🐾\n조금만 기다려주세요');
+        } else {
+          Alert.alert('곧 출시될 기능이에요 🐾', '조금만 기다려주세요');
+        }
+      }}
       activeOpacity={0.75}
     >
       <View style={styles.badge}>
@@ -81,11 +98,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     opacity: 0.85,
-    ...Platform.select({
-      ios: shadow.sm,
-      android: { elevation: shadow.sm.elevation },
-      default: {},
-    }),
+    ...cardShadow,
   },
   badge: {
     position: 'absolute',
