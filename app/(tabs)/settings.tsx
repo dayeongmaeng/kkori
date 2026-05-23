@@ -7,7 +7,7 @@ import {
   Heart, Image as ImageIcon, Info, LogOut, MessageCircle, Newspaper,
   PawPrint, Shield, Star, Trash2,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,6 +30,27 @@ const CACHE_KEY_PREFIXES = [
   'pet-care:photo-data:',
   'pet-care:log-photos:',
 ] as const;
+
+type WebNotifPerm = 'granted' | 'denied' | 'default' | 'unsupported';
+type WebCameraPerm = 'granted' | 'denied' | 'prompt' | 'unsupported';
+
+function getWebNotifDesc(perm: WebNotifPerm): string {
+  switch (perm) {
+    case 'granted': return '허용됨';
+    case 'denied': return '차단됨 · 탭해서 안내 보기';
+    case 'default': return '탭해서 알림 권한 요청하기';
+    case 'unsupported': return '이 브라우저에서 지원하지 않아요';
+  }
+}
+
+function getWebCameraDesc(perm: WebCameraPerm): string {
+  switch (perm) {
+    case 'granted': return '허용됨';
+    case 'denied': return '차단됨 · 탭해서 안내 보기';
+    case 'prompt': return '촬영 시 브라우저가 권한을 요청해요';
+    case 'unsupported': return '촬영 시 브라우저가 권한을 요청해요';
+  }
+}
 
 function openURL(url: string) {
   Linking.openURL(url).catch(() => Alert.alert('오류', '링크를 열 수 없어요.'));
@@ -90,7 +111,22 @@ function Row({ icon, label, desc, right, onPress, disabled, last }: RowProps) {
 export default function SettingsScreen() {
   const [wagCount, setWagCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [webNotifPerm, setWebNotifPerm] = useState<WebNotifPerm>('unsupported');
+  const [webCameraPerm, setWebCameraPerm] = useState<WebCameraPerm>('unsupported');
   const { logout } = useAuth();
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setWebNotifPerm(Notification.permission as WebNotifPerm);
+    }
+    if (typeof navigator !== 'undefined' && navigator.permissions) {
+      navigator.permissions
+        .query({ name: 'camera' as PermissionName })
+        .then((result) => setWebCameraPerm(result.state as WebCameraPerm))
+        .catch(() => setWebCameraPerm('unsupported'));
+    }
+  }, []);
 
   async function handleClearCache() {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -186,6 +222,25 @@ export default function SettingsScreen() {
     ]);
   }
 
+  async function handleWebNotifPermission() {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission === 'denied') {
+      window.alert('알림이 차단되어 있어요.\n브라우저 주소창의 자물쇠 아이콘을 탭한 뒤 알림을 허용해 주세요.');
+      return;
+    }
+    if (Notification.permission === 'granted') return;
+    try {
+      const result = await Notification.requestPermission();
+      setWebNotifPerm(result as WebNotifPerm);
+    } catch {
+      // 일부 브라우저에서 Promise 방식 미지원
+    }
+  }
+
+  function handleWebCameraInfo() {
+    window.alert('카메라가 차단되어 있어요.\n브라우저 주소창의 자물쇠 아이콘을 탭한 뒤 카메라를 허용해 주세요.');
+  }
+
   async function handleWag() {
     const next = wagCount + 1;
     setWagCount(next);
@@ -212,9 +267,38 @@ export default function SettingsScreen() {
 
       <GroupTitle label="권한" />
       <Card>
-        <Row icon={<Bell size={20} color={colors.textSecondary} />} label="알림 권한" desc="시스템 설정 열기" onPress={openSettings} />
-        <Row icon={<Camera size={20} color={colors.textSecondary} />} label="카메라 권한" desc="시스템 설정 열기" onPress={openSettings} />
-        <Row icon={<ImageIcon size={20} color={colors.textSecondary} />} label="사진 접근 권한" desc="시스템 설정 열기" onPress={openSettings} last />
+        {Platform.OS === 'web' ? (
+          <>
+            <Row
+              icon={<Bell size={20} color={colors.textSecondary} />}
+              label="알림 권한"
+              desc={getWebNotifDesc(webNotifPerm)}
+              onPress={
+                webNotifPerm === 'default' || webNotifPerm === 'denied'
+                  ? () => { void handleWebNotifPermission(); }
+                  : undefined
+              }
+            />
+            <Row
+              icon={<Camera size={20} color={colors.textSecondary} />}
+              label="카메라 권한"
+              desc={getWebCameraDesc(webCameraPerm)}
+              onPress={webCameraPerm === 'denied' ? handleWebCameraInfo : undefined}
+            />
+            <Row
+              icon={<ImageIcon size={20} color={colors.textSecondary} />}
+              label="사진 접근 권한"
+              desc="파일 선택창에서 선택한 사진만 접근해요"
+              last
+            />
+          </>
+        ) : (
+          <>
+            <Row icon={<Bell size={20} color={colors.textSecondary} />} label="알림 권한" desc="시스템 설정 열기" onPress={openSettings} />
+            <Row icon={<Camera size={20} color={colors.textSecondary} />} label="카메라 권한" desc="시스템 설정 열기" onPress={openSettings} />
+            <Row icon={<ImageIcon size={20} color={colors.textSecondary} />} label="사진 접근 권한" desc="시스템 설정 열기" onPress={openSettings} last />
+          </>
+        )}
       </Card>
 
       <GroupTitle label="데이터" />
