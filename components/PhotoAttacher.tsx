@@ -74,15 +74,23 @@ export default function PhotoAttacher({
     return status === 'failed' || status === 'error';
   }
 
-  async function uploadLocalPhoto(tempId: string, sourceUri: string) {
+  async function uploadLocalPhoto(tempId: string, sourceUri: string, initialTempPhoto?: LogPhotoAttachment) {
+    // React가 re-render하기 전에 photosRef.current에 tempPhoto가 없을 수 있으므로
+    // tempId가 없으면 initialTempPhoto를 포함해 동기 상태 갱신을 보장한다
+    function currentPhotos(): LogPhotoAttachment[] {
+      const curr = photosRef.current;
+      if (curr.some((p) => p.tempId === tempId)) return curr;
+      return initialTempPhoto ? [...curr, initialTempPhoto] : curr;
+    }
+
     try {
-      onChangePhotos(photosRef.current.map((photo) => (
+      onChangePhotos(currentPhotos().map((photo) => (
         photo.tempId === tempId
           ? { ...photo, status: 'compressing', progress: 20, errorMessage: undefined }
           : photo
       )));
       const prepared = await prepareImageForUpload(sourceUri, { maxWidth: 1080, compress: 0.75 });
-      onChangePhotos(photosRef.current.map((photo) => (
+      onChangePhotos(currentPhotos().map((photo) => (
         photo.tempId === tempId
           ? { ...photo, localUri: prepared.uri, status: 'saving' as const, progress: 45 }
           : photo
@@ -91,7 +99,7 @@ export default function PhotoAttacher({
       const logExternalId = await onEnsureLogExternalId();
       if (!logExternalId) throw new Error('기록을 먼저 저장하지 못했어요.');
 
-      onChangePhotos(photosRef.current.map((photo) => (
+      onChangePhotos(currentPhotos().map((photo) => (
         photo.tempId === tempId
           ? { ...photo, status: 'uploading' as const, progress: 70 }
           : photo
@@ -99,14 +107,15 @@ export default function PhotoAttacher({
       const { medium, thumbnail } = await generateThumbnails(prepared.uri);
       const uploaded = await logApi.uploadLogPhoto(logExternalId, medium, thumbnail);
 
-      const nextPhotos = photosRef.current.map((photo) => (
+      // 업로드 성공 후 localUri를 원본 sourceUri로 유지해 웹에서 즉시 표시되도록 한다
+      const nextPhotos = currentPhotos().map((photo) => (
         photo.tempId === tempId
-          ? { ...uploaded, localUri: prepared.uri, sourceUri, status: 'ready' as const, progress: 100 }
+          ? { ...uploaded, localUri: sourceUri, sourceUri, status: 'ready' as const, progress: 100 }
           : photo
       ));
       await commitPhotos(nextPhotos);
     } catch {
-      onChangePhotos(photosRef.current.map((photo) => (
+      onChangePhotos(currentPhotos().map((photo) => (
         photo.tempId === tempId
           ? { ...photo, status: 'failed', progress: undefined, errorMessage: '업로드에 실패했어요' }
           : photo
@@ -136,7 +145,7 @@ export default function PhotoAttacher({
     };
 
     onChangePhotos([...photosRef.current, tempPhoto]);
-    await uploadLocalPhoto(tempId, sourceUri);
+    await uploadLocalPhoto(tempId, sourceUri, tempPhoto);
   }
 
   async function handleRetry(photo: LogPhotoAttachment) {
