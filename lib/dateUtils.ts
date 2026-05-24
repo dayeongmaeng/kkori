@@ -55,5 +55,8 @@ export function formatTogetherness(adoptionDate: string): string {
   months = Math.max(1, months);
 
   if (months < 12) return `함께한 지 ${months}개월`;
-  return `함께한 지 ${Math.floor(months / 12)}년`;
+  const years = Math.floor(months / 12);
+  const remainingMonths = months % 12;
+  if (remainingMonths === 0) return `함께한 지 ${years}년`;
+  return `함께한 지 ${years}년 ${remainingMonths}개월`;
 }

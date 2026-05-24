@@ -24,7 +24,7 @@ export default function HomeProfileCard({ pet }: Props) {
   const dateLabel = (() => {
     if (pet.birthDate && !pet.birthDateUnknown) return formatAge(pet.birthDate);
     if (pet.adoptionDate) return formatTogetherness(pet.adoptionDate);
-    return '생일이나 함께한 날을 입력해보세요';
+    return null;
   })();
   const breedAge = [pet.breed, dateLabel].filter(Boolean).join(' · ');
 
