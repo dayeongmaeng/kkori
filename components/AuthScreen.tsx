@@ -426,7 +426,7 @@ export default function AuthScreen() {
       <Animated.View style={[s.screen, { opacity: fadeAnim }]}>
         <View style={s.titleArea}>
           <Text style={s.headline}>꼬리에{'\n'}오신 것을 환영해요</Text>
-          <Text style={s.subhead}>특별한 날보다, 평범한 오늘을 남겨요{'\n'}우리 아이와의 시간을 오래 기억하도록</Text>
+          <Text style={s.subhead}>특별한 날보다, 평범한 오늘을 남겨요</Text>
         </View>
 
         <View style={s.logoArea}>
