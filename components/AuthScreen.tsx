@@ -426,14 +426,14 @@ export default function AuthScreen() {
       <Animated.View style={[s.screen, { opacity: fadeAnim }]}>
         <View style={s.titleArea}>
           <Text style={s.headline}>꼬리에{'\n'}오신 것을 환영해요</Text>
-          <Text style={s.subhead}>기록부터 건강 관리까지,{'\n'}소중한 시간을 함께 저장해요</Text>
+          <Text style={s.subhead}>특별한 날보다,{'\n'}평범한 오늘을 남겨요{'\n'}우리 아이와의 시간을 오래 기억하도록</Text>
         </View>
 
         <View style={s.logoArea}>
           <Animated.View style={[s.logo, logoTransform]}>
             <Image source={require('../assets/logo.png')} style={s.logoImage} contentFit="contain" />
           </Animated.View>
-          <Text style={s.logoCaption}>17년의 추억에서 시작된 기록 앱</Text>
+          <Text style={s.logoCaption}>더 많이 남겨둘걸 후회했던 마음에서{'\n'}꼬리는 시작됐어요</Text>
         </View>
 
         <View style={s.actions}>
