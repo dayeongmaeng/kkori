@@ -14,6 +14,7 @@ import { loginWithOAuth } from '../lib/api/auth';
 import {
   getGoogleClientId,
   GOOGLE_REDIRECT_URI,
+  logGoogleAuthDiagnostics,
   maskClientId,
 } from './googleAuthConfig';
 import {
@@ -190,6 +191,27 @@ export default function AuthScreen() {
     await completeKakaoLogin(code, redirectUri);
     return true;
   }, [clearLoginTimeout, completeKakaoLogin, dismissKakaoBrowserSafely, stopWithError]);
+
+  // 마운트 시 1회 Google auth 환경변수 진단 로그
+  useEffect(() => {
+    logGoogleAuthDiagnostics();
+  }, []);
+
+  // client ID가 없는 경우 원인 파악용 안전 로그
+  useEffect(() => {
+    if (!missingMessage) return;
+    const hostname =
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.hostname
+        : 'native';
+    console.warn('[GoogleAuth] client ID missing — check Vercel build-time env vars', {
+      platform: Platform.OS,
+      hostname,
+      isDev: __DEV__,
+      message: missingMessage,
+      hint: 'EXPO_PUBLIC_* 변수는 expo export 실행 시점에 Vercel 환경변수로 주입되어야 합니다. 런타임에는 변경되지 않아요.',
+    });
+  }, [missingMessage]);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
