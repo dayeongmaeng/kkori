@@ -436,7 +436,7 @@ export default function SettingsScreen() {
       <Card>
         <Row icon={<Database size={20} color={colors.textQuaternary} />} label="데이터 백업 / 내보내기" right={<ComingSoonBadge />} disabled />
         <Row icon={<Database size={20} color={colors.textQuaternary} />} label="데이터 가져오기" right={<ComingSoonBadge />} disabled />
-        <Row icon={<Trash2 size={20} color={colors.danger} />} label="캐시 비우기" onPress={handleClearCache} last />
+        <Row icon={<Trash2 size={20} color={colors.textSecondary} />} label="캐시 비우기" onPress={handleClearCache} last />
       </Card>
 
       <GroupTitle label="정보" />
@@ -451,28 +451,27 @@ export default function SettingsScreen() {
         <Row icon={<MessageCircle size={20} color={colors.textSecondary} />} label="문의하기" desc="카카오 오픈채팅" onPress={() => openURL(FEEDBACK_URL)} />
         <Row icon={<Newspaper size={20} color={colors.textSecondary} />} label="업데이트 소식" onPress={() => openURL(NEWS_URL)} />
         <Row icon={<Star size={20} color={colors.textSecondary} />} label="리뷰 남기기" desc="앱스토어에서 별점 남기기" onPress={handleReview} />
-        <Row icon={<Heart size={20} color={colors.accent} />} label="꼬리 응원하기" desc="개발자에게 간식 사주기" onPress={handleDonation} />
-        <Row icon={<PawPrint size={20} color={colors.accent} />} label="꼬리 흔들게 하기 🐾" onPress={handleWag} last />
+        <Row icon={<Heart size={20} color={colors.textSecondary} />} label="꼬리 응원하기" desc="개발자에게 간식 사주기" onPress={handleDonation} />
+        <Row icon={<PawPrint size={20} color={colors.textSecondary} />} label="꼬리 흔들게 하기 🐾" onPress={handleWag} last />
       </Card>
 
       <GroupTitle label="계정" />
       <Card>
         <Row
-          icon={<LogOut size={20} color={colors.accent} />}
+          icon={<LogOut size={20} color={colors.textSecondary} />}
           label="로그아웃"
           desc={isLoggingOut ? '로그아웃 중이에요' : undefined}
-          right={isLoggingOut ? <ActivityIndicator color={colors.accent} /> : undefined}
+          right={isLoggingOut ? <ActivityIndicator color={colors.textSecondary} /> : undefined}
           onPress={handleLogout}
           disabled={isLoggingOut || isDeletingAccount}
         />
         <Row
-          icon={<UserX size={20} color={colors.danger} />}
+          icon={<UserX size={20} color={colors.textSecondary} />}
           label="회원 탈퇴"
           desc={isDeletingAccount ? '탈퇴 처리 중이에요' : '계정 및 모든 데이터 삭제'}
-          right={isDeletingAccount ? <ActivityIndicator color={colors.danger} /> : undefined}
+          right={isDeletingAccount ? <ActivityIndicator color={colors.textSecondary} /> : undefined}
           onPress={handleDeleteAccount}
           disabled={isDeletingAccount || isLoggingOut}
-          destructive
           last
         />
       </Card>

@@ -1,6 +1,18 @@
+function parseLocalDate(dateStr: string): Date | null {
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function todayLocal(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 export function calculateAge(birthDate: string): { years: number; months: number } {
-  const today = new Date();
-  const birth = new Date(birthDate);
+  const birth = parseLocalDate(birthDate);
+  if (!birth) return { years: 0, months: 0 };
+  const today = todayLocal();
 
   let years = today.getFullYear() - birth.getFullYear();
   let months = today.getMonth() - birth.getMonth();
@@ -21,7 +33,27 @@ export function formatAge(birthDate: string): string {
 }
 
 export function daysSince(dateStr: string): number {
-  const today = new Date();
-  const past = new Date(dateStr);
-  return Math.floor((today.getTime() - past.getTime()) / (1000 * 60 * 60 * 24));
+  const past = parseLocalDate(dateStr);
+  if (!past) return 0;
+  return Math.floor((todayLocal().getTime() - past.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export function formatTogetherness(adoptionDate: string): string {
+  const start = parseLocalDate(adoptionDate);
+  if (!start) return '';
+
+  const today = todayLocal();
+  const diffDays = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  const days = Math.max(0, diffDays) + 1; // 첫날 포함
+
+  if (days < 30) return `함께한 지 ${days}일`;
+
+  let months =
+    (today.getFullYear() - start.getFullYear()) * 12 +
+    (today.getMonth() - start.getMonth());
+  if (today.getDate() < start.getDate()) months -= 1;
+  months = Math.max(1, months);
+
+  if (months < 12) return `함께한 지 ${months}개월`;
+  return `함께한 지 ${Math.floor(months / 12)}년`;
 }

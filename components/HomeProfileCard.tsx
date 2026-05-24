@@ -13,7 +13,7 @@ const cardShadow: ViewStyle = Platform.select<ViewStyle>({
   android: { elevation: shadow.md.elevation },
   default: {},
 }) ?? {};
-import { formatAge } from '../lib/dateUtils';
+import { formatAge, formatTogetherness } from '../lib/dateUtils';
 import { PetResponse } from '../lib/api/pet';
 
 interface Props {
@@ -21,9 +21,12 @@ interface Props {
 }
 
 export default function HomeProfileCard({ pet }: Props) {
-  const breedAge = [pet.breed, pet.birthDate ? formatAge(pet.birthDate) : null]
-    .filter(Boolean)
-    .join(' · ');
+  const dateLabel = (() => {
+    if (pet.birthDate && !pet.birthDateUnknown) return formatAge(pet.birthDate);
+    if (pet.adoptionDate) return formatTogetherness(pet.adoptionDate);
+    return '생일이나 함께한 날을 입력해보세요';
+  })();
+  const breedAge = [pet.breed, dateLabel].filter(Boolean).join(' · ');
 
   return (
     <TouchableOpacity
