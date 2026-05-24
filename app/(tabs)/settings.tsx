@@ -8,11 +8,15 @@ import {
   PawPrint, Shield, Star, Trash2, UserX,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 
 const FEEDBACK_URL = 'https://open.kakao.com/o/seTWQ4ui';
+// TODO: 앱 출시 후 실제 스토어 URL로 교체
+const IOS_REVIEW_URL = 'itms-apps://itunes.apple.com/app/id'; // TODO: App Store ID 교체
+const ANDROID_REVIEW_URL = 'https://play.google.com/store/apps/details?id=com.anonymous.kkori'; // TODO: 실제 패키지명으로 교체
+const FEEDBACK_EMAIL = 'dayeongmaeng@gmail.com';
 const PRIVACY_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80909f5aef93dd5f7b72';
 const TERMS_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80d2b9b9f5efb2591b21';
 const NEWS_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80338ad5c5c5e794ed3e?pvs=73';
@@ -59,6 +63,64 @@ function openURL(url: string) {
 function openSettings() {
   if (Platform.OS === 'web') { Alert.alert('알림', '기기 설정에서 권한을 변경해 주세요.'); return; }
   Linking.openSettings();
+}
+
+function detectBrowserName(ua: string): string {
+  if (ua.includes('CriOS')) return 'Chrome (iOS)';
+  if (ua.includes('FxiOS')) return 'Firefox (iOS)';
+  if (ua.includes('EdgiOS')) return 'Edge (iOS)';
+  if (ua.includes('SamsungBrowser')) return 'Samsung Internet';
+  if (ua.includes('Chrome')) return 'Chrome';
+  if (ua.includes('Firefox')) return 'Firefox';
+  if (ua.includes('Edg/')) return 'Edge';
+  if (ua.includes('Safari') && ua.includes('Version/')) return 'Safari';
+  return '알 수 없음';
+}
+
+function detectOSName(ua: string): string {
+  const iosMatch = ua.match(/iPhone OS ([\d_]+)/);
+  if (iosMatch) return `iOS ${iosMatch[1].replace(/_/g, '.')}`;
+  if (ua.includes('iPad')) return 'iPadOS';
+  const androidMatch = ua.match(/Android ([\d.]+)/);
+  if (androidMatch) return `Android ${androidMatch[1]}`;
+  if (ua.includes('Windows NT')) return 'Windows';
+  if (ua.includes('Mac OS X')) return 'macOS';
+  if (ua.includes('Linux')) return 'Linux';
+  return '알 수 없음';
+}
+
+function detectDeviceName(ua: string): string {
+  if (ua.includes('iPhone')) return 'iPhone';
+  if (ua.includes('iPad')) return 'iPad';
+  if (ua.includes('Android') && ua.includes('Mobile')) return 'Android 스마트폰';
+  if (ua.includes('Android')) return 'Android 태블릿';
+  return '데스크톱';
+}
+
+function buildFeedbackMailtoHref(): string {
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const body = [
+    '사용 환경:',
+    '- iOS / Android / Web',
+    '',
+    '유형:',
+    '- 버그 제보',
+    '- 기능 제안',
+    '- 불편 사항',
+    '- 기타 의견',
+    '',
+    '내용:',
+    '(자유 입력)',
+    '',
+    '----------------------',
+    `앱 버전: ${APP_VERSION}`,
+    '환경: Web',
+    `브라우저: ${detectBrowserName(ua)}`,
+    `OS: ${detectOSName(ua)}`,
+    `기기: ${detectDeviceName(ua)}`,
+    '----------------------',
+  ].join('\n');
+  return `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('[꼬리 의견]')}&body=${encodeURIComponent(body)}`;
 }
 
 function GroupTitle({ label }: { label: string }) {
@@ -113,6 +175,7 @@ export default function SettingsScreen() {
   const [wagCount, setWagCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showWebReviewModal, setShowWebReviewModal] = useState(false);
   const [webNotifPerm, setWebNotifPerm] = useState<WebNotifPerm>('unsupported');
   const [webCameraPerm, setWebCameraPerm] = useState<WebCameraPerm>('unsupported');
   const { logout, deleteAccount } = useAuth();
@@ -166,10 +229,24 @@ export default function SettingsScreen() {
 
   function handleReview() {
     if (Platform.OS === 'ios') {
-      openURL('itms-apps://itunes.apple.com/app/id'); // TODO: 앱 출시 후 실제 ID로 교체
-    } else {
+      openURL(IOS_REVIEW_URL);
+    } else if (Platform.OS === 'android') {
       Alert.alert('리뷰 남기기', 'iOS 앱 출시 후 이용할 수 있어요 🐾');
+    } else {
+      setShowWebReviewModal(true);
     }
+  }
+
+  function handleFeedbackMail() {
+    setShowWebReviewModal(false);
+    const href = buildFeedbackMailtoHref();
+    Linking.openURL(href).catch(() => {
+      if (typeof window !== 'undefined') {
+        window.alert(`메일 앱을 열 수 없어요.\n\n${FEEDBACK_EMAIL} 으로 직접 보내주세요.`);
+      } else {
+        Alert.alert('오류', `메일 앱을 열 수 없어요.\n${FEEDBACK_EMAIL} 으로 직접 보내주세요.`);
+      }
+    });
   }
 
   function handleDonation() {
@@ -399,6 +476,53 @@ export default function SettingsScreen() {
           last
         />
       </Card>
+      <Modal
+        visible={showWebReviewModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowWebReviewModal(false)}
+      >
+        <TouchableOpacity
+          style={s.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowWebReviewModal(false)}
+        >
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>꼬리가 마음에 드셨나요?</Text>
+            <Text style={s.modalSubtitle}>한 줄의 리뷰나 의견이 큰 도움이 돼요.</Text>
+            <View style={s.modalActions}>
+              <TouchableOpacity
+                style={s.modalRow}
+                activeOpacity={0.7}
+                onPress={() => { setShowWebReviewModal(false); openURL(IOS_REVIEW_URL); }}
+              >
+                <Star size={18} color={colors.textSecondary} />
+                <Text style={s.modalRowLabel}>App Store 리뷰</Text>
+                <ChevronRight size={16} color={colors.textQuaternary} />
+              </TouchableOpacity>
+              <View style={s.divider} />
+              <TouchableOpacity
+                style={s.modalRow}
+                activeOpacity={0.7}
+                onPress={() => { setShowWebReviewModal(false); openURL(ANDROID_REVIEW_URL); }}
+              >
+                <Star size={18} color={colors.textSecondary} />
+                <Text style={s.modalRowLabel}>Google Play 리뷰</Text>
+                <ChevronRight size={16} color={colors.textQuaternary} />
+              </TouchableOpacity>
+              <View style={s.divider} />
+              <TouchableOpacity style={s.modalRow} activeOpacity={0.7} onPress={handleFeedbackMail}>
+                <MessageCircle size={18} color={colors.textSecondary} />
+                <Text style={s.modalRowLabel}>의견 보내기</Text>
+                <ChevronRight size={16} color={colors.textQuaternary} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={s.modalCloseBtn} activeOpacity={0.7} onPress={() => setShowWebReviewModal(false)}>
+              <Text style={s.modalCloseBtnText}>닫기</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -453,4 +577,62 @@ const s = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '600', color: colors.accent },
 
   versionText: { fontSize: 13, color: colors.textTertiary },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    width: '100%',
+    maxWidth: 340,
+    overflow: 'hidden',
+    paddingTop: spacing.xl,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  modalActions: {
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  modalRowLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  modalCloseBtn: {
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  modalCloseBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
 });
