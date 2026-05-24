@@ -427,6 +427,7 @@ export default function AuthScreen() {
         <View style={s.titleArea}>
           <Text style={s.headline}>꼬리에{'\n'}오신 것을 환영해요</Text>
           <Text style={s.subhead}>특별한 날보다, 평범한 오늘을 남겨요</Text>
+          <Text style={s.subhead}>더 많이 남겨둘걸 후회했던 마음에서 꼬리는 시작됐어요</Text>
         </View>
 
         <View style={s.logoArea}>
