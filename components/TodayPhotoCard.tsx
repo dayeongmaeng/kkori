@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
 import { LocalPhoto } from '../lib/cache/photo';
@@ -169,31 +169,53 @@ export default function TodayPhotoCard({
   onTapPhoto,
   aspectRatio = 1,
 }: Props) {
+  const [showFallback, setShowFallback] = useState(false);
+  useEffect(() => { setShowFallback(false); }, [todayPhoto?.externalId]);
+
   // 사진 있을 때 — 다른 기기에서 찍어 로컬 데이터 없는 경우 회색 박스
   if (todayPhoto) {
-    const displayUri = todayPhoto.photoUri ?? todayPhoto.mediumUrl ?? todayPhoto.thumbnailUrl;
-    if (!displayUri) {
+    // S3 URL을 우선 사용. 업로드 직후처럼 S3 URL이 아직 없을 때만 로컬 URI 사용.
+    // photoUri(blob URL)는 iOS Safari에서 세션 전환 시 만료되므로 마지막 fallback으로.
+    const displayUri = todayPhoto.mediumUrl ?? todayPhoto.thumbnailUrl ?? todayPhoto.photoUri;
+
+    if (!displayUri || showFallback) {
       return (
         <TouchableOpacity
           style={[styles.photoCard, styles.noLocalCard, { aspectRatio }]}
           onPress={onTapPhoto}
           activeOpacity={0.92}
         >
-          <Text style={styles.noLocalEmoji}>📲</Text>
-          <Text style={styles.noLocalText}>다른 기기에서 찍은 사진이에요</Text>
+          <Text style={styles.noLocalEmoji}>{!displayUri ? '📲' : '🖼️'}</Text>
+          <Text style={styles.noLocalText}>
+            {!displayUri ? '다른 기기에서 찍은 사진이에요' : '사진을 불러오지 못했어요'}
+          </Text>
         </TouchableOpacity>
       );
     }
+
     return (
       <TouchableOpacity
-        style={[styles.photoCard, { aspectRatio }]}
+        style={styles.photoCard}
         onPress={onTapPhoto}
         activeOpacity={0.92}
       >
+        {/* absoluteFill 대신 Image에 직접 aspectRatio를 지정 — iOS Safari에서 height 0 문제 방지 */}
         <Image
           source={{ uri: displayUri }}
-          style={StyleSheet.absoluteFill}
+          style={[styles.photoCardImage, { aspectRatio }]}
           contentFit="cover"
+          onError={() => {
+            if (__DEV__) {
+              let logUri = displayUri;
+              if (!displayUri.startsWith('blob:') && !displayUri.startsWith('data:')) {
+                try { const u = new URL(displayUri); logUri = u.origin + u.pathname; } catch {}
+              } else {
+                logUri = displayUri.slice(0, 50);
+              }
+              console.warn('[TodayPhotoCard] 이미지 로드 실패:', logUri);
+            }
+            setShowFallback(true);
+          }}
         />
       </TouchableOpacity>
     );
@@ -238,6 +260,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
     backgroundColor: colors.surfaceAlt,
+  },
+  photoCardImage: {
+    width: '100%',
   },
   noLocalCard: {
     alignItems: 'center',

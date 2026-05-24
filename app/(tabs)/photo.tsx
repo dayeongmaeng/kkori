@@ -40,8 +40,10 @@ import { useDate } from '../../contexts/DateContext';
 const CELL_SIZE = Math.floor(Dimensions.get('window').width / 3);
 
 function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void }) {
+  const [imgError, setImgError] = useState(false);
   const uri = photo.thumbnailUrl ?? photo.photoUri;
-  if (!uri) {
+
+  if (!uri || imgError) {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
         <View style={[styles.cell, styles.cellNoLocal]}>
@@ -52,7 +54,23 @@ function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void 
   }
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <Image source={{ uri }} style={styles.cell} contentFit="cover" />
+      <Image
+        source={{ uri }}
+        style={styles.cell}
+        contentFit="cover"
+        onError={() => {
+          if (__DEV__) {
+            let logUri = uri;
+            if (!uri.startsWith('blob:') && !uri.startsWith('data:')) {
+              try { const u = new URL(uri); logUri = u.origin + u.pathname; } catch {}
+            } else {
+              logUri = uri.slice(0, 50);
+            }
+            console.warn('[PhotoCell] 이미지 로드 실패:', logUri);
+          }
+          setImgError(true);
+        }}
+      />
     </TouchableOpacity>
   );
 }
