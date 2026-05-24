@@ -93,7 +93,7 @@ export default function HomeScreen() {
         onTapAdd={() => router.navigate('/log')}
         onTapView={() => router.navigate('/log')}
       />
-      <HomeConditionChart logs={recentLogs} />
+      <HomeConditionChart logs={recentLogs} today={today} />
       <AiReportPreview petName={pet.name} />
     </ScrollView>
   );

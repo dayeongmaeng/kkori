@@ -13,20 +13,23 @@ const CONDITION_COLOR: Record<number, string> = {
   5: colors.condition5,
 };
 
-function getLast7Dates(): string[] {
+// today는 KST 기준 'YYYY-MM-DD' 문자열 (useDate()에서 전달)
+// UTC 산술로 계산해 로컬 타임존 영향을 받지 않도록 함
+function getLast7Dates(today: string): string[] {
+  const [y, m, d] = today.split('-').map(Number);
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    return d.toISOString().slice(0, 10);
+    const date = new Date(Date.UTC(y, m - 1, d - (6 - i)));
+    return date.toISOString().slice(0, 10);
   });
 }
 
 interface Props {
   logs: LogResponse[];
+  today: string;
 }
 
-export default function HomeConditionChart({ logs }: Props) {
-  const dates = getLast7Dates();
+export default function HomeConditionChart({ logs, today }: Props) {
+  const dates = getLast7Dates(today);
   const logMap = new Map(logs.map((l) => [l.date, l]));
 
   const entries = dates.map((date) => ({
