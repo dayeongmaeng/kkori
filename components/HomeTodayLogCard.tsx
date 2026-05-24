@@ -1,5 +1,16 @@
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
+
+const cardShadow: ViewStyle = Platform.select<ViewStyle>({
+  ios: {
+    shadowColor: shadow.sm.shadowColor,
+    shadowOffset: shadow.sm.shadowOffset,
+    shadowOpacity: shadow.sm.shadowOpacity,
+    shadowRadius: shadow.sm.shadowRadius,
+  },
+  android: { elevation: shadow.sm.elevation },
+  default: {},
+}) ?? {};
 import IconImage from './IconImage';
 import { summarizeLog } from '../lib/logUtils';
 import { LogResponse } from '../lib/api/log';
@@ -56,11 +67,7 @@ const styles = StyleSheet.create({
   },
   filledCard: {
     backgroundColor: colors.surface,
-    ...Platform.select({
-      ios: shadow.sm,
-      android: { elevation: shadow.sm.elevation },
-      default: {},
-    }),
+    ...cardShadow,
   },
   row: {
     flexDirection: 'row',
