@@ -1,7 +1,7 @@
 import * as AuthSession from 'expo-auth-session';
 
 export const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
-const KAKAO_WEB_REDIRECT_BASE_URL = 'https://test-kkori.vercel.app';
+const KAKAO_WEB_REDIRECT_BASE_URL = 'https://kkori.vercel.app';
 const KAKAO_DEV_REDIRECT_URI = 'http://localhost:8081/oauth/kakao';
 
 export function getKakaoRedirectUri() {

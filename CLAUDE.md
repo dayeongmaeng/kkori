@@ -247,7 +247,7 @@ API 코드 위치: `lib/api/`
 
 - `.env.example`에는 `EXPO_PUBLIC_SHARE_API_URL`이 없지만 `photoApi.getSharedPhoto()`에서 사용 중이다.
 - 문서에는 `EXPO_PUBLIC_DEV_API_URL` 언급이 있으나 현재 `lib/api/client.ts`는 개발 모드에서 항상 `http://localhost:8080`을 사용한다.
-- `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://test-kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다.
+- `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다.
 - 프로필 `gender` 요청 타입은 코드상 `male` / `female` 소문자로 전송한다. 서버 문서가 `MALE` / `FEMALE` 기준이면 정합성 확인이 필요하다.
 - AI 리포트, 반려동물 추가/전환, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
 - 번들 ID/패키지가 `com.anonymous.kkori`로 되어 있다. App Store 제출 전 실제 번들 ID로 교체해야 한다.

@@ -68,7 +68,7 @@
 - 운영 API: `https://api.kkori.co.kr`
 - 개발 모드 API 기본값: `http://localhost:8080`
 - 권장 운영 환경변수: `EXPO_PUBLIC_API_URL=https://api.kkori.co.kr`
-- 웹 URL 기본값: `https://test-kkori.vercel.app`
+- 웹 URL 기본값: `https://kkori.vercel.app`
 - 모든 일반 API 요청은 AsyncStorage의 `pet-care:device-id`를 읽어 `X-Device-Id` 헤더를 붙인다.
 - 최초 실행 시 `expo-crypto`로 UUID를 생성하고 `/api/v1/devices/register`에 등록한다.
 - 응답 구조는 `{ success, data, error, timestamp }` 형태로 처리한다.
@@ -212,7 +212,7 @@
 
 - `.env.example`에는 `EXPO_PUBLIC_SHARE_API_URL`이 없지만 `photoApi.getSharedPhoto()`에서 사용 중이다.
 - 문서에는 `EXPO_PUBLIC_DEV_API_URL` 언급이 있으나 현재 `lib/api/client.ts`는 개발 모드에서 항상 `http://localhost:8080`을 사용한다.
-- `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://test-kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다.
+- `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다.
 - 프로필 `gender` 요청 타입은 코드상 `male` / `female` 소문자로 전송한다. 서버 문서가 `MALE` / `FEMALE` 기준이면 정합성 확인이 필요하다.
 - AI 리포트, 반려동물 추가/전환, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
 
