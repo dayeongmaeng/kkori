@@ -7,6 +7,11 @@ const kakaoNativeAppKey = process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY;
 // kakao{NATIVE_APP_KEY} 형식의 URL scheme — Kakao 앱이 인증 후 이 scheme으로 리다이렉트한다.
 const kakaoUrlScheme = kakaoNativeAppKey ? `kakao${kakaoNativeAppKey}` : undefined;
 
+// IMPORTANT: 이 파일 변경 후에는 반드시 아래 명령을 실행해야 Info.plist에 반영된다.
+//   npx expo prebuild --platform ios
+// CFBundleURLTypes(kakao{NATIVE_APP_KEY}), LSApplicationQueriesSchemes(kakaokompassauth, kakaolink)가
+// 자동 생성되므로, Xcode에서 ios/ 디렉터리를 새로 열거나 EAS Build를 새로 실행해야 한다.
+
 /** @param {{ config: import('@expo/config').ExpoConfig }} ctx */
 module.exports = ({ config }) => {
   const cfBundleUrlTypes = [...(config.ios?.infoPlist?.CFBundleURLTypes ?? [])];

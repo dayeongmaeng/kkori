@@ -7,6 +7,7 @@ export const KAKAO_NATIVE_APP_KEY = process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY
 const KAKAO_WEB_REDIRECT_BASE_URL = 'https://kkori.vercel.app';
 const KAKAO_DEV_REDIRECT_URI = 'http://localhost:8081/oauth/kakao';
 
+// web 전용: localhost(__DEV__) 또는 Vercel URL. 실기기에서는 사용하지 않는다.
 export function getKakaoRedirectUri() {
   const configuredRedirectUri = process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI?.trim();
   if (configuredRedirectUri) {
@@ -21,6 +22,20 @@ export function getKakaoRedirectUri() {
   return `${webBaseUrl.replace(/\/$/, '')}/oauth/kakao`;
 }
 
+// iOS 전용: 실기기에서 접근 가능한 서비스 URL을 redirect_uri로 사용.
+// localhost는 실기기에서 접근 불가하므로 __DEV__ 여부와 무관하게 Vercel URL 반환.
+// Kakao Developers > REST API 키 > 리다이렉트 URI에 이 URL이 등록되어 있어야 한다.
+// Vercel /oauth/kakao 페이지가 kkori://oauth/kakao 딥링크로 리다이렉트하므로
+// openAuthSessionAsync(authorizeUrl, getKakaoNativeReturnUri())가 code를 캡처한다.
+export function getKakaoIosRedirectUri(): string {
+  const configuredRedirectUri = process.env.EXPO_PUBLIC_KAKAO_REDIRECT_URI?.trim();
+  if (configuredRedirectUri) {
+    return configuredRedirectUri;
+  }
+  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_URL ?? KAKAO_WEB_REDIRECT_BASE_URL;
+  return `${webBaseUrl.replace(/\/$/, '')}/oauth/kakao`;
+}
+
 export function getKakaoNativeReturnUri() {
   return AuthSession.makeRedirectUri({
     scheme: 'kkori',
@@ -28,10 +43,21 @@ export function getKakaoNativeReturnUri() {
   });
 }
 
-// iOS 카카오 앱 로그인 redirect URI: kakao{NATIVE_APP_KEY}://oauth
-// Kakao Developers에 등록한 iOS Bundle ID와 앱의 bundleIdentifier가 일치해야 한다.
+// iOS Kakao 로그인 redirect URI: kakao{NATIVE_APP_KEY}://oauth
+// 앱 로그인 + Safari web fallback 모두 이 URI를 사용한다.
+// Kakao Developers > 앱 설정 > 플랫폼 > iOS > Redirect URI에 등록 필요.
+// KAKAO_NATIVE_APP_KEY가 없으면 호출하지 말 것 (handleKakaoLogin에서 사전 차단).
 export function getKakaoIosAppRedirectUri(): string {
+  if (!KAKAO_NATIVE_APP_KEY) {
+    console.warn('[KakaoLogin] getKakaoIosAppRedirectUri: KAKAO_NATIVE_APP_KEY not set');
+    return '';
+  }
   return `kakao${KAKAO_NATIVE_APP_KEY}://oauth`;
+}
+
+// redirectUri 로그 마스킹: kakao{KEY}://oauth → 'kakao****' (key 원문 보호)
+export function maskKakaoScheme(redirectUri: string): string {
+  return redirectUri.startsWith('kakao') ? 'kakao****' : '****';
 }
 
 // kakaokompassauth://authorize 로 Kakao 앱 실행 (iOS 네이티브 앱 로그인)
@@ -75,7 +101,10 @@ export function logKakaoDiagnostics(): void {
   });
 
   if (__DEV__ && Platform.OS === 'ios' && KAKAO_NATIVE_APP_KEY) {
-    // Kakao Developers > 내 애플리케이션 > 앱 설정 > 플랫폼 > iOS > Bundle ID + Redirect URI에 이 값을 등록해야 한다.
-    console.info('[KakaoLogin] iOS redirectUri to register in Kakao Developers:', getKakaoIosAppRedirectUri());
+    // Kakao Developers > 앱 설정 > 플랫폼 > iOS > Redirect URI에 등록 필요 (key 원문 출력 금지)
+    // 실제 등록값 형식: kakao{NATIVE_APP_KEY}://oauth
+    console.info('[KakaoLogin] iOS redirectUri (Kakao Developers 등록 필요)', {
+      redirectUriScheme: maskKakaoScheme(getKakaoIosAppRedirectUri()),
+    });
   }
 }
