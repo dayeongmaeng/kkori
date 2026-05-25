@@ -13,7 +13,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "오늘의 사진을 찍기 위해 카메라가 필요해요."
       },
-      "bundleIdentifier": "com.anonymous.kkori"
+      "bundleIdentifier": "com.kkori.app"
     },
     "android": {
       "permissions": [
@@ -28,7 +28,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.kkori"
+      "package": "com.kkori.app"
     },
     "web": {
       "output": "static",

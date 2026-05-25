@@ -1,4 +1,4 @@
-package com.anonymous.kkori
+package com.kkori.app
 
 import android.app.Application
 import android.content.res.Configuration

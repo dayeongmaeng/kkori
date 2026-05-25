@@ -28,7 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>kkori</string>
-          <string>com.anonymous.kkori</string>
+          <string>com.kkori.app</string>
         </array>
       </dict>
     </array>

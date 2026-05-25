@@ -15,7 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const FEEDBACK_URL = 'https://open.kakao.com/o/seTWQ4ui';
 // TODO: 앱 출시 후 실제 스토어 URL로 교체
 const IOS_REVIEW_URL = 'itms-apps://itunes.apple.com/app/id'; // TODO: App Store ID 교체
-const ANDROID_REVIEW_URL = 'https://play.google.com/store/apps/details?id=com.anonymous.kkori'; // TODO: 실제 패키지명으로 교체
+const ANDROID_REVIEW_URL = 'https://play.google.com/store/apps/details?id=com.kkori.app'; // TODO: 실제 패키지명으로 교체
 const FEEDBACK_EMAIL = 'dayeongmaeng@gmail.com';
 const PRIVACY_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80909f5aef93dd5f7b72';
 const TERMS_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80d2b9b9f5efb2591b21';

@@ -1,4 +1,4 @@
-package com.anonymous.kkori
+package com.kkori.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
