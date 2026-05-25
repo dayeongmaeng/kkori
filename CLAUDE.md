@@ -41,6 +41,7 @@
 - 루트 Provider: `AuthProvider`, `DateProvider`, `PetProvider`
 - `DateProvider`는 KST 기준 날짜를 관리하며 자정과 앱 활성화 시 갱신한다.
 - 로그인 전에는 `AuthGate`가 로그인 화면을 표시한다.
+- `AppHeader` 좌측 반려동물 이름을 탭하면 드롭다운이 열려 반려동물 전환 및 추가가 가능하다. 선택한 반려동물 ID는 `pet-care:api:current-pet-id`에 캐시되어 앱 재실행 후에도 유지된다.
 - 이 저장소는 Expo 앱과 Vercel 공유 페이지/API 프록시 코드를 포함한다. Spring Boot 백엔드 코드는 별도 저장소에 있다.
 
 ## 코딩 규칙
@@ -147,6 +148,7 @@ API 코드 위치: `lib/api/`
 - 반려동물 프로필 카드, 오늘 기록 카드, 최근 7일 컨디션 차트, AI 리포트 프리뷰 구현.
 - 오늘 기록이 없으면 기록 추가 CTA를 보여주고, 기록이 있으면 요약 문구를 보여준다.
 - AI 리포트는 병원 방문용 리포트/주간 리포트 카드가 있으나 현재 출시 예정 상태다.
+- `AppHeader` 반려동물 전환 시 이름, 나이, 함께한 날, 최근 7일 컨디션 차트가 currentPet 기준으로 자동 갱신된다.
 
 ### 기록 탭
 
@@ -249,7 +251,7 @@ API 코드 위치: `lib/api/`
 - 문서에는 `EXPO_PUBLIC_DEV_API_URL` 언급이 있으나 현재 `lib/api/client.ts`는 개발 모드에서 항상 `http://localhost:8080`을 사용한다.
 - `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다.
 - 프로필 `gender` 요청 타입은 코드상 `male` / `female` 소문자로 전송한다. 서버 문서가 `MALE` / `FEMALE` 기준이면 정합성 확인이 필요하다.
-- AI 리포트, 반려동물 추가/전환, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
+- AI 리포트, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
 - 번들 ID/패키지가 `com.anonymous.kkori`로 되어 있다. App Store 제출 전 실제 번들 ID로 교체해야 한다.
 
 ## 다음 작업 후보

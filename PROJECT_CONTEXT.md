@@ -52,6 +52,7 @@
 - 설정 탭 캐시 비우기 선별 삭제, 정책 링크, 후원 UI, 로그아웃, **회원 탈퇴 UI** 구현 완료.
 - Web 환경 개선: 캐시 비우기, 권한 안내(알림/카메라/사진 접근), 외부 링크, 출시 예정 UI 모두 Web 대응 완료.
 - 개인정보처리방침/이용약관/초기 릴리즈노트 초안 작성 완료.
+- **반려동물 멀티 선택/추가 기능 구현 완료** (AppHeader 드롭다운): 반려동물 전환, 추가, currentPet 기반 전역 화면 갱신.
 
 ## 인증/세션
 
@@ -110,12 +111,14 @@
 - 오늘 기록 카드 구현.
 - 최근 7일 컨디션 차트 구현.
 - AI 리포트 프리뷰 구현. 실제 리포트 기능은 출시 예정.
+- `AppHeader` 드롭다운으로 반려동물 전환 시 이름, 나이, 함께한 날, 최근 7일 컨디션이 자동 갱신된다.
 
 ### 기록
 
 - 날짜 이동, 캘린더 모달, 기록 있는 날짜 표시 구현.
 - 기록 항목: 컨디션, 식사, 산책, 배변, 물 섭취, 기록 사진, 메모.
 - 수동 저장 방식.
+- `AppHeader` 반려동물 전환 시 기록 목록, 상태, 첨부 사진이 currentPet 기준으로 자동 갱신된다.
 - `POST /api/v1/logs`, `PUT /api/v1/logs/{externalId}`, `DELETE /api/v1/logs/{externalId}` 연동.
 - 기록 사진 업로드는 `POST /api/v1/logs/{externalId}/photos/upload` 사용.
 - 기록 사진 삭제는 `DELETE /api/v1/logs/{logExternalId}/photos/{photoExternalId}` 사용.
@@ -126,6 +129,7 @@
 - 하루 한 장 사진 기능 구현.
 - 오늘 사진 카드, 촬영/갤러리 선택, 캡션 입력 모달, 업로드 상태 표시 구현.
 - 웹은 file input 기반 선택, 네이티브는 `expo-camera` 촬영 지원.
+- `AppHeader` 반려동물 전환 시 하루한장 데이터가 currentPet 기준으로 자동 갱신된다.
 - 사진 업로드 전 1080px 기준 압축.
 - medium 1080px / thumbnail 300px 생성 후 서버/S3 업로드.
 - 같은 날짜에 기존 사진이 있으면 기존 `externalId`를 재사용한다.
@@ -151,6 +155,8 @@
 - 생일/함께한 날은 네이티브 DateTimePicker와 웹용 select picker를 분기 처리.
 - 프로필 사진은 512px 기준 압축 후 base64로 저장/전송.
 - 저장 후 pet 캐시와 current pet 상태 갱신.
+- `AppHeader` 반려동물 전환 시 프로필 탭이 currentPet 기준으로 자동 갱신된다.
+- `AppHeader` 드롭다운 하단 "반려동물 추가" 버튼 → 기존 프로필 입력 UI를 생성 모드로 재사용. 생성 성공 시 pet 목록 캐시 갱신 + 신규 pet을 currentPet으로 설정.
 - 반려동물 삭제 버튼 추가 방향 확정. API 연동 예정 (`DELETE /api/v1/pets/{externalId}` 호출 후 로컬 캐시 정리).
 
 ### 설정
@@ -214,7 +220,7 @@
 - 문서에는 `EXPO_PUBLIC_DEV_API_URL` 언급이 있으나 현재 `lib/api/client.ts`는 개발 모드에서 항상 `http://localhost:8080`을 사용한다.
 - `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다.
 - 프로필 `gender` 요청 타입은 코드상 `male` / `female` 소문자로 전송한다. 서버 문서가 `MALE` / `FEMALE` 기준이면 정합성 확인이 필요하다.
-- AI 리포트, 반려동물 추가/전환, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
+- AI 리포트, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
 
 ## 다음 작업 후보
 
