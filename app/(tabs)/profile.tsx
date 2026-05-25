@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -21,7 +22,6 @@ import { useCurrentPet } from "../../contexts/PetContext";
 import { SaveStatus } from "../../hooks/useAutoSave";
 import { petApi, PetResponse } from "../../lib/api/pet";
 import {
-  getCachedCurrentPetId,
   getCachedPetPhoto,
   getCachedPets,
   setCachedCurrentPetId,
@@ -206,7 +206,10 @@ const webPickerStyles = {
 };
 
 export default function ProfileScreen() {
-  const { setCurrentPet } = useCurrentPet();
+  const { currentPet, setCurrentPet } = useCurrentPet();
+  const petIdFromContext = currentPet?.externalId ?? null;
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isCreateMode = mode === "create";
   const [externalId, setExternalId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [breed, setBreed] = useState("");
@@ -302,6 +305,23 @@ export default function ProfileScreen() {
     if (pet.photoBase64) setPhotoUri(pet.photoBase64);
   }
 
+  function clearFormForCreate() {
+    setExternalId(null);
+    setName("");
+    setBreed("");
+    setGender(null);
+    setBirthDate("");
+    setBirthDateUnknown(false);
+    setAdoptionDate("");
+    setWeightKg("");
+    setNeutered(false);
+    setMedicalNotes("");
+    setPhotoUri(undefined);
+    setPhotoSourceUri(undefined);
+    setPhotoUploadState({ status: "idle" });
+    setIndicatorStatus("idle");
+  }
+
   function showError() {
     if (indicatorTimerRef.current) clearTimeout(indicatorTimerRef.current);
     setIndicatorStatus("error");
@@ -311,16 +331,30 @@ export default function ProfileScreen() {
     );
   }
 
+  // 반려동물 전환 시 이전 프로필 즉시 클리어 (create 모드 제외)
+  const isMountedRef = useRef(false);
   useEffect(() => {
+    if (!isMountedRef.current) { isMountedRef.current = true; return; }
+    if (!isCreateMode) clearFormForCreate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [petIdFromContext]);
+
+  useEffect(() => {
+    if (isCreateMode) {
+      clearFormForCreate();
+      return;
+    }
+
+    const targetId = petIdFromContext;
+
     async function load() {
       // 1단계: 캐시에서 즉시 로드
-      const cachedId = await getCachedCurrentPetId();
-      const cached = cachedId ? await getCachedPets() : [];
-      if (cachedId) {
-        const pet = cached.find((p) => p.externalId === cachedId);
+      const cached = targetId ? await getCachedPets() : [];
+      if (targetId) {
+        const pet = cached.find((p) => p.externalId === targetId);
         if (pet) {
           fillForm(pet);
-          const photo = await getCachedPetPhoto(cachedId);
+          const photo = await getCachedPetPhoto(targetId);
           if (photo) setPhotoUri(photo);
         }
       }
@@ -347,7 +381,6 @@ export default function ProfileScreen() {
         });
         await setCachedPets(mergedPets);
 
-        const targetId = cachedId;
         if (targetId) {
           const serverPet = mergedPets.find((p) => p.externalId === targetId);
           if (serverPet) fillForm(serverPet);
@@ -357,7 +390,8 @@ export default function ProfileScreen() {
       }
     }
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCreateMode, petIdFromContext]);
 
   async function prepareProfilePhoto(sourceUri: string) {
     setPhotoUploadState({ status: "compressing", progress: 40 });
@@ -451,6 +485,10 @@ export default function ProfileScreen() {
 
       setExternalId(savedPet.externalId);
       setCurrentPet(savedPet);
+
+      if (isCreateMode) {
+        router.setParams({ mode: undefined });
+      }
 
       if (photoUri) {
         setPhotoUploadState({ status: "success", progress: 100 });
@@ -846,7 +884,17 @@ export default function ProfileScreen() {
             {isSaving ? "저장 중..." : "저장"}
           </Text>
         </TouchableOpacity>
-        {externalId ? (
+        {isCreateMode ? (
+          <TouchableOpacity
+            style={[styles.cancelButton, (isSaving || isDeleting) && styles.saveButtonDisabled]}
+            onPress={() => router.setParams({ mode: undefined })}
+            activeOpacity={0.8}
+            disabled={isSaving || isDeleting}
+          >
+            <Text style={styles.cancelButtonText}>취소</Text>
+          </TouchableOpacity>
+        ) : null}
+        {!isCreateMode && externalId ? (
           <TouchableOpacity
             style={[styles.deleteButton, (isSaving || isDeleting) && styles.deleteButtonDisabled]}
             onPress={confirmDelete}
@@ -1153,5 +1201,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: colors.danger,
+  },
+  cancelButton: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.textSecondary,
   },
 });

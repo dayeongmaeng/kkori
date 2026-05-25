@@ -1,27 +1,29 @@
 import { Image } from "expo-image";
+import { router, useGlobalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
   Linking,
+  Modal,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, radius, spacing } from "../constants/theme";
+import { colors, radius, shadow, spacing } from "../constants/theme";
 import { useCurrentPet } from "../contexts/PetContext";
+import { PetResponse } from "../lib/api/pet";
+import { getCachedPets, setCachedCurrentPetId } from "../lib/cache/pet";
 
 const FEEDBACK_URL = "https://open.kakao.com/o/sqYtAKvi";
-
 const logoSource = require("../assets/logo.png");
 
 function Logo() {
   const [failed, setFailed] = useState(false);
-  if (failed) {
-    return <Text style={styles.logoText}>꼬리</Text>;
-  }
+  if (failed) return <Text style={styles.logoText}>꼬리</Text>;
   return (
     <Image
       source={logoSource}
@@ -34,15 +36,28 @@ function Logo() {
 
 export default function AppHeader() {
   const insets = useSafeAreaInsets();
-  const { currentPet } = useCurrentPet();
-  const petName = currentPet?.name ?? null;
+  const { currentPet, setCurrentPet } = useCurrentPet();
+  const { mode } = useGlobalSearchParams<{ mode?: string }>();
+  const isCreateMode = mode === "create";
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [pets, setPets] = useState<PetResponse[]>([]);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
-  function handlePetPress() {
-    if (Platform.OS === "web") {
-      window.alert("반려동물 추가 기능은 출시 예정이에요 🐾");
-    } else {
-      Alert.alert("알림", "반려동물 추가 기능은 출시 예정이에요 🐾");
-    }
+  async function handlePetPress() {
+    const cached = await getCachedPets();
+    setPets(cached);
+    setDropdownOpen(true);
+  }
+
+  function handleSelectPet(pet: PetResponse) {
+    setCurrentPet(pet);
+    setCachedCurrentPetId(pet.externalId);
+    setDropdownOpen(false);
+  }
+
+  function handleAddPet() {
+    setDropdownOpen(false);
+    router.navigate({ pathname: "/(tabs)/profile", params: { mode: "create" } } as any);
   }
 
   function handleBetaPress() {
@@ -67,7 +82,10 @@ export default function AppHeader() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
+    <View
+      style={[styles.container, { paddingTop: insets.top + 10 }]}
+      onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+    >
       {/* 좌측: 현재 펫 이름 + 드롭다운 화살표 */}
       <TouchableOpacity
         style={styles.petButton}
@@ -75,12 +93,9 @@ export default function AppHeader() {
         activeOpacity={0.7}
       >
         <Text style={styles.petName} numberOfLines={1}>
-          {petName ?? "반려동물 등록"}
+          {isCreateMode ? "반려동물 추가" : (currentPet?.name ?? "반려동물 등록")}
         </Text>
-        <Text style={styles.arrow}>▼</Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>출시 예정</Text>
-        </View>
+        <Text style={styles.arrow}>{dropdownOpen ? "▲" : "▼"}</Text>
       </TouchableOpacity>
 
       <View style={styles.center} />
@@ -96,6 +111,64 @@ export default function AppHeader() {
         </TouchableOpacity>
         <Logo />
       </View>
+
+      {/* 반려동물 선택 드롭다운 */}
+      <Modal
+        visible={dropdownOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDropdownOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setDropdownOpen(false)}>
+          <View style={styles.overlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.dropdown, { top: headerHeight }]}>
+                {pets.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyText}>등록된 반려동물이 없어요</Text>
+                  </View>
+                ) : (
+                  pets.map((pet) => {
+                    const isSelected = !isCreateMode && currentPet?.externalId === pet.externalId;
+                    return (
+                      <TouchableOpacity
+                        key={pet.externalId}
+                        style={[styles.petItem, isSelected && styles.petItemSelected]}
+                        onPress={() => handleSelectPet(pet)}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.petItemText,
+                            isSelected && styles.petItemTextSelected,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {pet.name}
+                        </Text>
+                        {isSelected && (
+                          <Text style={styles.checkmark}>✓</Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+                <View style={styles.dropdownDivider} />
+                <TouchableOpacity
+                  style={[styles.addPetRow, isCreateMode && styles.petItemSelected]}
+                  onPress={handleAddPet}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.addPetText}>+ 반려동물 추가</Text>
+                  {isCreateMode ? (
+                    <Text style={styles.checkmark}>✓</Text>
+                  ) : null}
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
@@ -135,17 +208,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  badge: {
-    backgroundColor: colors.accentSoft,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.accent,
-  },
   betaBadge: {
     backgroundColor: "#FFE4D1",
     borderRadius: 4,
@@ -166,5 +228,69 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 32,
     height: 32,
+  },
+  // 드롭다운
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.15)",
+  },
+  dropdown: {
+    position: "absolute",
+    left: 12,
+    width: 150,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadow.md,
+    overflow: "hidden",
+  },
+  emptyState: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: colors.textTertiary,
+  },
+  petItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+  },
+  petItemSelected: {
+    backgroundColor: colors.surfaceAlt,
+  },
+  petItemText: {
+    fontSize: 14,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  petItemTextSelected: {
+    fontWeight: "600",
+    color: colors.textPrimary,
+  },
+  checkmark: {
+    fontSize: 13,
+    color: colors.success,
+    marginLeft: 8,
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  addPetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: spacing.lg,
+    gap: 8,
+  },
+  addPetText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    flex: 1,
   },
 });

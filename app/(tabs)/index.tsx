@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 import AiReportPreview from '../../components/AiReportPreview';
 import EmptyPetState from '../../components/EmptyPetState';
@@ -8,10 +8,11 @@ import HomeTodayLogCard from '../../components/HomeTodayLogCard';
 import HomeProfileCard from '../../components/HomeProfileCard';
 import { colors, spacing } from '../../constants/theme';
 import { useDate } from '../../contexts/DateContext';
+import { useCurrentPet } from '../../contexts/PetContext';
 import { logApi, LogResponse } from '../../lib/api/log';
 import { PetResponse } from '../../lib/api/pet';
 import { getCachedLogByDate, getCachedLogs, setCachedLogs } from '../../lib/cache/log';
-import { getCachedCurrentPetId, getCachedPet } from '../../lib/cache/pet';
+import { getCachedPet } from '../../lib/cache/pet';
 
 function get6DaysAgo(today: string): string {
   const d = new Date(today + 'T00:00:00Z');
@@ -21,6 +22,8 @@ function get6DaysAgo(today: string): string {
 
 export default function HomeScreen() {
   const today = useDate();
+  const { currentPet } = useCurrentPet();
+  const petIdFromContext = currentPet?.externalId ?? null;
 
   const [pet, setPet] = useState<PetResponse | null>(null);
   const [todayLog, setTodayLog] = useState<LogResponse | null>(null);
@@ -29,7 +32,7 @@ export default function HomeScreen() {
 
   const loadData = useCallback(async () => {
     const sevenDaysAgo = get6DaysAgo(today);
-    const petId = await getCachedCurrentPetId();
+    const petId = petIdFromContext;
 
     if (!petId) {
       setPet(null);
@@ -62,9 +65,8 @@ export default function HomeScreen() {
     } catch {
       // 오프라인 — 캐시 유지
     }
-  // today가 바뀌면(자정) 새 날짜 기준으로 재로드
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [today]);
+  }, [today, petIdFromContext]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
@@ -74,6 +76,14 @@ export default function HomeScreen() {
     });
     return () => sub.remove();
   }, [loadData]);
+
+  // 반려동물 전환 시 이전 데이터 즉시 클리어
+  const isMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isMountedRef.current) { isMountedRef.current = true; return; }
+    setPet(null); setTodayLog(null); setRecentLogs([]); setLoaded(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [petIdFromContext]);
 
   if (!loaded) return null;
 

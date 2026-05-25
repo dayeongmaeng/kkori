@@ -2,6 +2,7 @@ import { pickImageUri } from '../../lib/imagePickerHelper';
 import { generateThumbnails } from '../../lib/photoUtils';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCurrentPet } from '../../contexts/PetContext';
 import {
   ActivityIndicator,
   Alert,
@@ -81,6 +82,9 @@ function formatDateKorean(dateStr: string) {
 }
 
 export default function PhotoScreen() {
+  const { currentPet } = useCurrentPet();
+  const petIdFromContext = currentPet?.externalId ?? null;
+
   const [hasPet, setHasPet] = useState<boolean | null>(null);
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -120,7 +124,7 @@ export default function PhotoScreen() {
   }
 
   const load = useCallback(async () => {
-    const petId = await getCachedCurrentPetId();
+    const petId = petIdFromContext;
     if (!petId) { setHasPet(false); return; }
     setHasPet(true);
 
@@ -138,13 +142,14 @@ export default function PhotoScreen() {
       console.warn('[PhotoLoad] 서버 fetch 실패:', e);
       // 오프라인 — 캐시 유지
     }
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [petIdFromContext]);
 
   useEffect(() => { load(); }, [load]);
 
   useFocusEffect(useCallback(() => {
     async function loadOnFocus() {
-      const petId = await getCachedCurrentPetId();
+      const petId = petIdFromContext;
       if (!petId) { setHasPet(false); return; }
       setHasPet(true);
       try {
@@ -157,7 +162,8 @@ export default function PhotoScreen() {
       }
     }
     loadOnFocus();
-  }, []));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [petIdFromContext]));
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
@@ -165,6 +171,14 @@ export default function PhotoScreen() {
     });
     return () => sub.remove();
   }, [load]);
+
+  // 반려동물 전환 시 이전 사진 즉시 클리어
+  const isMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isMountedRef.current) { isMountedRef.current = true; return; }
+    setHasPet(null); setPhotos([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [petIdFromContext]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

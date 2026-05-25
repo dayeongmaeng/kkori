@@ -34,6 +34,7 @@ import {
 import { initCaregiver } from '../../lib/api/initCaregiver';
 import { getCachedCurrentCaregiverId } from '../../lib/cache/caregiver';
 import { getCachedCurrentPetId } from '../../lib/cache/pet';
+import { useCurrentPet } from '../../contexts/PetContext';
 import {
   getCachedLogByDate,
   getCachedLogs,
@@ -144,6 +145,8 @@ function toEditableWalkMinutes(value: number | null | undefined): number | undef
 
 export default function LogScreen() {
   const today = useDate();
+  const { currentPet } = useCurrentPet();
+  const petIdFromContext = currentPet?.externalId ?? null;
 
   const [hasPet, setHasPet] = useState<boolean | null>(null);
   const [petId, setPetId] = useState<string | null>(null);
@@ -245,7 +248,7 @@ export default function LogScreen() {
         const effectiveDate = isViewingTodayRef.current ? today : dateRef.current;
         if (effectiveDate !== dateRef.current) setDate(effectiveDate);
 
-        const currentPetId = await getCachedCurrentPetId();
+        const currentPetId = petIdFromContext;
         if (seq !== loadSeqRef.current) return;
         if (!currentPetId) { setHasPet(false); resetStates(); setIsLoaded(true); return; }
         setPetId(currentPetId);
@@ -284,9 +287,8 @@ export default function LogScreen() {
         }
       }
       loadLog();
-    // today가 바뀌면(자정) 새 날짜 기준으로 재로드
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reloadKey, today])
+    }, [reloadKey, today, petIdFromContext])
   );
 
   useEffect(() => {
@@ -295,6 +297,20 @@ export default function LogScreen() {
     });
     return () => sub.remove();
   }, []);
+
+  // 반려동물 전환 시 이전 데이터 즉시 클리어 + 오늘 날짜로 초기화
+  const isMountedRef = useRef(false);
+  useEffect(() => {
+    if (!isMountedRef.current) { isMountedRef.current = true; return; }
+    isViewingTodayRef.current = true;
+    setDate(today);
+    resetStates();
+    setHasPet(null);
+    setPetId(null);
+    setIsLoaded(false);
+    setMarkedDates({});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [petIdFromContext]);
 
   useEffect(() => {
     return () => {
