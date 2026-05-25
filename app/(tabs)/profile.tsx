@@ -47,11 +47,7 @@ try {
 }
 
 const today = new Date();
-const minDate = new Date(
-  today.getFullYear() - 30,
-  today.getMonth(),
-  today.getDate(),
-);
+const minDate = new Date(1950, 0, 1);
 const maxDate = new Date(
   today.getFullYear(),
   today.getMonth(),
@@ -123,8 +119,8 @@ function WebDatePicker({
   onChange: (date: Date) => void;
 }) {
   const years = Array.from(
-    { length: 31 },
-    (_, i) => today.getFullYear() - 30 + i,
+    { length: today.getFullYear() - 1950 + 1 },
+    (_, i) => 1950 + i,
   );
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const daysInMonth = new Date(
