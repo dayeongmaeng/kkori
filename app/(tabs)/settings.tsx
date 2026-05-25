@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
 import {
   Bell, Camera, ChevronRight, Database, FileText,
   Heart, Image as ImageIcon, Info, LogOut, MessageCircle, Newspaper,
@@ -274,7 +273,6 @@ export default function SettingsScreen() {
     try {
       setIsLoggingOut(true);
       await logout();
-      router.replace('/');
     } catch (error) {
       console.warn('[Settings] logout cleanup failed:', error);
       setIsLoggingOut(false);
@@ -286,7 +284,6 @@ export default function SettingsScreen() {
     setIsDeletingAccount(true);
     try {
       await deleteAccount();
-      router.replace('/');
     } catch (error) {
       setIsDeletingAccount(false);
       const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
