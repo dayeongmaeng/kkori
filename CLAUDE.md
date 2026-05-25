@@ -89,7 +89,11 @@
 
 - Google OAuth, Kakao OAuth 로그인 화면이 구현되어 있다.
 - 로그인 성공 시 `/api/v1/auth/oauth/login`으로 서버 로그인 요청을 보내고 access/refresh token을 저장한다.
-- Google 로그인 시 OAuth access token을 서버로 함께 전달한다. 서버는 이를 `UserOAuthToken`에 암호화 저장해 탈퇴 시 revoke에 사용한다.
+- Google 로그인은 플랫폼별 흐름이 분리되어 있다:
+  - Web: `response_type=id_token token` 흐름. `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` 사용. access token 획득 후 서버로 전달.
+  - iOS: native OAuth 흐름. `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` 사용. idToken 기반 로그인.
+  - Android: 추후 지원 예정.
+- Google 로그인 시 OAuth access token을 서버로 함께 전달한다. 서버는 이를 `UserOAuthToken`에 AES-256-GCM 암호화 저장해 탈퇴 시 revoke에 사용한다.
 - 네이티브는 `expo-secure-store`, 웹은 AsyncStorage 기반으로 토큰을 저장한다.
 - API 요청에서 401이 발생하면 `/api/v1/auth/refresh`로 access token 갱신 후 원 요청을 재시도한다.
 - 로그아웃은 `/api/v1/auth/logout` 호출 후 인증 토큰과 세션 캐시를 정리한다.
