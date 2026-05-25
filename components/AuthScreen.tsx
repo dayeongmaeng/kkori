@@ -21,9 +21,14 @@ import {
 } from './googleAuthConfig';
 import {
   buildKakaoAuthorizeUrl,
+  buildKakaoNativeAppAuthorizeUrl,
+  canOpenKakaoApp,
+  getKakaoIosAppRedirectUri,
   getKakaoNativeReturnUri,
   getKakaoRedirectUri,
+  KAKAO_NATIVE_APP_KEY,
   KAKAO_REST_API_KEY,
+  logKakaoDiagnostics,
 } from './kakaoAuthConfig';
 import { s } from './AuthScreen.styles';
 
@@ -83,6 +88,8 @@ export default function AuthScreen() {
   const kakaoCallbackHandledRef = useRef(false);
   const kakaoLatestCallbackUrlRef = useRef<string | null>(null);
   const kakaoBrowserOpenRef = useRef(false);
+  // 진행 중인 Kakao 로그인에서 사용한 redirect_uri를 저장한다. Linking 콜백에서 참조한다.
+  const kakaoCurrentRedirectUriRef = useRef<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const missingMessage = requireGoogleClientId();
@@ -162,7 +169,11 @@ export default function AuthScreen() {
   }, []);
 
   const handleKakaoCallbackUrl = useCallback(async (url: string, redirectUri: string) => {
-    if (!url.startsWith('kkori://oauth/kakao') && !url.startsWith('kkori:///oauth/kakao')) {
+    const isKkoriCallback = url.startsWith('kkori://oauth/kakao') || url.startsWith('kkori:///oauth/kakao');
+    // iOS 카카오 앱 로그인: kakao{NATIVE_APP_KEY}://oauth?code=... 형식으로 콜백이 온다.
+    const isKakaoAppCallback =
+      Boolean(KAKAO_NATIVE_APP_KEY) && url.startsWith(`kakao${KAKAO_NATIVE_APP_KEY}://oauth`);
+    if (!isKkoriCallback && !isKakaoAppCallback) {
       return false;
     }
     if (kakaoLatestCallbackUrlRef.current === url) return true;
@@ -201,9 +212,10 @@ export default function AuthScreen() {
     return true;
   }, [clearLoginTimeout, completeKakaoLogin, dismissKakaoBrowserSafely, stopWithError]);
 
-  // 마운트 시 1회 Google auth 환경변수 진단 로그
+  // 마운트 시 1회 Google/Kakao auth 환경변수 진단 로그
   useEffect(() => {
     logGoogleAuthDiagnostics();
+    logKakaoDiagnostics();
   }, []);
 
   // client ID가 없는 경우 원인 파악용 안전 로그
@@ -364,7 +376,10 @@ export default function AuthScreen() {
     if (Platform.OS === 'web') return;
 
     const subscription = Linking.addEventListener('url', ({ url }) => {
-      void handleKakaoCallbackUrl(url, getKakaoRedirectUri());
+      // 현재 진행 중인 로그인에 사용한 redirect_uri를 우선 참조한다.
+      // iOS 카카오 앱 로그인: kakao{APP_KEY}://oauth, 웹브라우저 로그인: kkori://oauth/kakao 계열
+      const redirectUri = kakaoCurrentRedirectUriRef.current ?? getKakaoRedirectUri();
+      void handleKakaoCallbackUrl(url, redirectUri);
     });
 
     return () => subscription.remove();
@@ -440,17 +455,57 @@ export default function AuthScreen() {
       setLoginProvider('KAKAO');
       kakaoCallbackHandledRef.current = false;
       kakaoLatestCallbackUrlRef.current = null;
+      kakaoCurrentRedirectUriRef.current = null;
       startLoginTimeout();
-      const authorizeRedirectUri = getKakaoRedirectUri();
-      const browserReturnUri = getKakaoNativeReturnUri();
+
+      // iOS: 카카오 앱 설치 여부를 확인해 앱 로그인 우선, 미설치 시 웹 fallback
+      if (Platform.OS === 'ios') {
+        const hasNativeKey = Boolean(KAKAO_NATIVE_APP_KEY);
+        const kakaoAppInstalled = hasNativeKey && await canOpenKakaoApp();
+
+        console.info('[KakaoLogin]', {
+          platform: 'ios',
+          hasNativeAppKey: hasNativeKey,
+          usingKakaoAppLogin: kakaoAppInstalled,
+        });
+
+        if (kakaoAppInstalled) {
+          const appRedirectUri = getKakaoIosAppRedirectUri();
+          kakaoCurrentRedirectUriRef.current = appRedirectUri;
+          const appLoginUrl = buildKakaoNativeAppAuthorizeUrl(appRedirectUri);
+          // Kakao 앱으로 전환 후 콜백은 Linking.addEventListener로 수신한다.
+          await Linking.openURL(appLoginUrl);
+          return;
+        }
+        // 앱 미설치 시 아래 웹 브라우저 fallback으로 이어진다.
+      }
+
+      // iOS: kakao{NATIVE_APP_KEY}://oauth 사용 (앱 로그인 fallback 포함, API 전달값과 동일)
+      // Android/Web: 기존 redirect URI 유지
+      const authorizeRedirectUri =
+        Platform.OS === 'ios' && KAKAO_NATIVE_APP_KEY
+          ? getKakaoIosAppRedirectUri()
+          : getKakaoRedirectUri();
+      kakaoCurrentRedirectUriRef.current = authorizeRedirectUri;
+      // browserReturnUri: openAuthSessionAsync가 감지할 콜백 scheme. iOS는 redirectUri와 동일.
+      const browserReturnUri =
+        Platform.OS === 'ios' && KAKAO_NATIVE_APP_KEY
+          ? getKakaoIosAppRedirectUri()
+          : getKakaoNativeReturnUri();
       const authorizeUrl = buildKakaoAuthorizeUrl(authorizeRedirectUri);
       saveKakaoRedirectUri(authorizeRedirectUri);
+
+      console.info('[KakaoLogin]', {
+        platform: Platform.OS,
+        hasNativeAppKey: Boolean(KAKAO_NATIVE_APP_KEY),
+        usingKakaoAppLogin: false,
+      });
+
       if (__DEV__) {
+        // authorizeRedirectUri: Kakao Developers에 등록된 값과 일치 여부 확인용
         console.info('[KakaoLogin] authorize request', {
           provider: 'KAKAO',
           authorizeRedirectUri,
-          browserReturnUri,
-          authorizeUrl,
         });
       }
 
