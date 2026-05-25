@@ -37,6 +37,7 @@ import {
 } from "../../lib/imageUpload";
 
 type Gender = "male" | "female";
+type Species = "DOG" | "CAT";
 type DateField = "birthDate" | "adoptionDate";
 
 let DateTimePicker: any = null;
@@ -223,6 +224,8 @@ export default function ProfileScreen() {
   });
   const [breedFocused, setBreedFocused] = useState(false);
 
+  const [species, setSpecies] = useState<Species>("DOG");
+
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
@@ -290,6 +293,7 @@ export default function ProfileScreen() {
     const isBirthDateUnknown = pet.birthDateUnknown ?? !pet.birthDate;
     setExternalId(pet.externalId);
     setName(pet.name);
+    setSpecies((pet.species?.toUpperCase() as Species) === "CAT" ? "CAT" : "DOG");
     setBreed(pet.breed ?? "");
     setGender(normalizeGender(pet.gender));
     setBirthDate(isBirthDateUnknown ? "" : (pet.birthDate ?? ""));
@@ -304,6 +308,7 @@ export default function ProfileScreen() {
   function clearFormForCreate() {
     setExternalId(null);
     setName("");
+    setSpecies("DOG");
     setBreed("");
     setGender(null);
     setBirthDate("");
@@ -448,7 +453,7 @@ export default function ProfileScreen() {
 
       const body = {
         name: name.trim(),
-        species: "dog",
+        species,
         breed: breed.trim(),
         gender,
         birthDate: birthDateUnknown ? null : birthDate.trim(),
@@ -623,6 +628,31 @@ export default function ProfileScreen() {
             </View>
           ) : null}
         </TouchableOpacity>
+
+        {/* 반려동물 종류 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>반려동물 종류</Text>
+          <View style={styles.segmentRow}>
+            <TouchableOpacity
+              style={[styles.segmentButton, species === "DOG" && styles.segmentButtonActive]}
+              onPress={() => setSpecies("DOG")}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.segmentText, species === "DOG" && styles.segmentTextActive]}>
+                강아지
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segmentButton, styles.speciesButtonDisabled]}
+              activeOpacity={1}
+            >
+              <Text style={[styles.segmentText, styles.speciesTextDisabled]}>고양이</Text>
+              <View style={styles.comingSoonBadge}>
+                <Text style={styles.comingSoonText}>출시 예정</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* 이름 */}
         <View style={styles.field}>
@@ -1210,5 +1240,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: colors.textSecondary,
+  },
+  speciesButtonDisabled: {
+    opacity: 0.55,
+  },
+  speciesTextDisabled: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: colors.textQuaternary,
+  },
+  comingSoonBadge: {
+    position: "absolute",
+    top: 4,
+    right: 6,
+    backgroundColor: colors.accentSoft,
+    borderRadius: radius.full,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  comingSoonText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: colors.danger,
   },
 });
