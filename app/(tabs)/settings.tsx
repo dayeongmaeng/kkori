@@ -12,7 +12,7 @@ import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, StyleSh
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 
-const FEEDBACK_URL = 'https://open.kakao.com/o/seTWQ4ui';
+const FEEDBACK_URL = 'https://open.kakao.com/o/sqYtAKvi';
 // TODO: 앱 출시 후 실제 스토어 URL로 교체
 const IOS_REVIEW_URL = 'itms-apps://itunes.apple.com/app/id'; // TODO: App Store ID 교체
 const ANDROID_REVIEW_URL = 'https://play.google.com/store/apps/details?id=com.kkori.app'; // TODO: 실제 패키지명으로 교체
