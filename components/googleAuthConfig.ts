@@ -13,6 +13,11 @@ function getGoogleRedirectUri() {
     return `${window.location.origin}/oauth/google`;
   }
 
+  if (Platform.OS === 'ios' && GOOGLE_IOS_CLIENT_ID) {
+    const reversed = GOOGLE_IOS_CLIENT_ID.split('.').reverse().join('.');
+    return AuthSession.makeRedirectUri({ native: `${reversed}:/` });
+  }
+
   return AuthSession.makeRedirectUri({
     scheme: 'kkori',
     path: 'oauth/google',
@@ -57,6 +62,7 @@ export function logGoogleAuthDiagnostics(): void {
     platform,
     hostname,
     isDev,
+    redirectUri: GOOGLE_REDIRECT_URI,
     envVars: envEntries.map(e => ({
       varName: e.varName,
       exists: Boolean(e.value),

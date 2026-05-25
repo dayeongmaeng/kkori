@@ -1,4 +1,5 @@
 import * as AuthSession from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { Image } from 'expo-image';
@@ -13,9 +14,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { loginWithOAuth } from '../lib/api/auth';
 import {
   getGoogleClientId,
+  GOOGLE_IOS_CLIENT_ID,
   GOOGLE_REDIRECT_URI,
+  GOOGLE_WEB_CLIENT_ID,
   logGoogleAuthDiagnostics,
-  maskClientId,
 } from './googleAuthConfig';
 import {
   buildKakaoAuthorizeUrl,
@@ -86,21 +88,28 @@ export default function AuthScreen() {
   const missingMessage = requireGoogleClientId();
   const isLoggingIn = loginProvider !== null;
 
-  const googleConfig = useMemo(() => {
-    const nonce = generateGoogleNonce();
-    return {
-      clientId: getGoogleClientId(),
-      responseType: 'id_token token',
-      scopes: ['openid', 'profile', 'email'],
-      redirectUri: GOOGLE_REDIRECT_URI,
-      usePKCE: false,
-      nonce,
-      // nonce를 extraParams에도 넣어야 authorization URL 쿼리 파라미터에 실제로 포함된다.
-      extraParams: { nonce },
-    };
-  }, []);
+  // web: id_token + access_token implicit hybrid flow
+  const webNonce = useMemo(() => generateGoogleNonce(), []);
+  const webGoogleConfig = useMemo(() => ({
+    clientId: GOOGLE_WEB_CLIENT_ID ?? '',
+    responseType: 'id_token token',
+    scopes: ['openid', 'profile', 'email'],
+    redirectUri: GOOGLE_REDIRECT_URI,
+    usePKCE: false,
+    nonce: webNonce,
+    // nonce를 extraParams에도 넣어야 authorization URL 쿼리 파라미터에 실제로 포함된다.
+    extraParams: { nonce: webNonce },
+  }), [webNonce]);
+  const [webRequest, webResponse, webPromptAsync] = AuthSession.useAuthRequest(webGoogleConfig, GOOGLE_DISCOVERY);
 
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(googleConfig, GOOGLE_DISCOVERY);
+  // iOS: code + PKCE flow. Google provider가 자동으로 code exchange 후 params.id_token을 반환한다.
+  // webClientId는 web 환경에서 invariantClientId 오류를 방지하기 위해 전달한다.
+  const [iosRequest, iosResponse, iosPromptAsync] = Google.useAuthRequest({
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    redirectUri: GOOGLE_REDIRECT_URI,
+    scopes: ['openid', 'profile', 'email'],
+  });
 
   const clearLoginTimeout = useCallback(() => {
     if (!timeoutRef.current) return;
@@ -258,33 +267,42 @@ export default function AuthScreen() {
     void completeKakaoLogin(code, getSavedKakaoRedirectUri());
   }, [completeKakaoLogin, router, startLoginTimeout]);
 
+  // web Google 로그인 응답 처리 (id_token + access_token implicit hybrid flow)
   useEffect(() => {
-    if (!response) return;
+    if (!webResponse || Platform.OS !== 'web') return;
 
-    const idToken = response.type === 'success' ? response.params.id_token : undefined;
-    console.info('[GoogleLogin] auth response', { type: response.type, hasIdToken: Boolean(idToken) });
+    const idToken = webResponse.type === 'success' ? webResponse.params.id_token : undefined;
+    console.info('[GoogleLogin] web auth response', {
+      platform: Platform.OS,
+      selectedClientType: 'WEB',
+      responseType: 'id_token token',
+      hasClientId: Boolean(GOOGLE_WEB_CLIENT_ID),
+      hasIdToken: Boolean(idToken),
+      hasAccessToken: Boolean(webResponse.type === 'success' && webResponse.params.access_token),
+      type: webResponse.type,
+    });
 
-    if (response.type === 'cancel' || response.type === 'dismiss') {
+    if (webResponse.type === 'cancel' || webResponse.type === 'dismiss') {
       clearLoginTimeout();
       setLoginProvider(null);
       return;
     }
 
-    if (response.type === 'error') {
+    if (webResponse.type === 'error') {
       stopWithError('Google 인증 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
       return;
     }
 
-    if (response.type !== 'success') return;
+    if (webResponse.type !== 'success') return;
 
     if (!idToken) {
       stopWithError('Google 인증 정보를 가져오지 못했어요. 다시 한 번 시도해 주세요.');
       return;
     }
 
-    const googleOAuthAccessToken = response.params.access_token || undefined;
-    const googleRefreshToken = response.params.refresh_token || undefined;
-    console.info('[GoogleLogin] oauth token from response', {
+    const googleOAuthAccessToken = webResponse.params.access_token || undefined;
+    const googleRefreshToken = webResponse.params.refresh_token || undefined;
+    console.info('[GoogleLogin] web oauth token from response', {
       hasGoogleOAuthAccessToken: Boolean(googleOAuthAccessToken),
       hasGoogleRefreshToken: Boolean(googleRefreshToken),
     });
@@ -297,7 +315,50 @@ export default function AuthScreen() {
         clearLoginTimeout();
         setLoginProvider(null);
       });
-  }, [clearLoginTimeout, markLoggedIn, response, stopWithError]);
+  }, [clearLoginTimeout, markLoggedIn, webResponse, stopWithError]);
+
+  // iOS Google 로그인 응답 처리 (code + PKCE → Google provider 자동 code exchange → id_token)
+  useEffect(() => {
+    if (!iosResponse || Platform.OS !== 'ios') return;
+
+    const idToken = iosResponse.type === 'success' ? iosResponse.params.id_token : undefined;
+    console.info('[GoogleLogin] ios auth response', {
+      platform: Platform.OS,
+      selectedClientType: 'IOS',
+      responseType: 'code',
+      hasClientId: Boolean(GOOGLE_IOS_CLIENT_ID),
+      hasIdToken: Boolean(idToken),
+      hasAccessToken: Boolean(iosResponse.type === 'success' && iosResponse.params.access_token),
+      type: iosResponse.type,
+    });
+
+    if (iosResponse.type === 'cancel' || iosResponse.type === 'dismiss') {
+      clearLoginTimeout();
+      setLoginProvider(null);
+      return;
+    }
+
+    if (iosResponse.type === 'error') {
+      stopWithError('Google 인증 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
+    if (iosResponse.type !== 'success') return;
+
+    if (!idToken) {
+      stopWithError('Google 인증 정보를 가져오지 못했어요. 다시 한 번 시도해 주세요.');
+      return;
+    }
+
+    console.info('[GoogleLogin] server login request', { provider: 'GOOGLE' });
+    loginWithOAuth('GOOGLE', { idToken })
+      .then(markLoggedIn)
+      .catch(() => setErrorMessage('로그인을 완료하지 못했어요. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'))
+      .finally(() => {
+        clearLoginTimeout();
+        setLoginProvider(null);
+      });
+  }, [clearLoginTimeout, iosResponse, markLoggedIn, stopWithError]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -316,24 +377,31 @@ export default function AuthScreen() {
       return;
     }
 
+    const isIOS = Platform.OS === 'ios';
+    const selectedClientType = isIOS ? 'IOS' : 'WEB';
+    const responseType = isIOS ? 'code' : 'id_token token';
+    const activeRequest = isIOS ? iosRequest : webRequest;
+    const activePromptAsync = isIOS ? iosPromptAsync : webPromptAsync;
+
     try {
       console.info('[GoogleLogin] config', {
         platform: Platform.OS,
-        redirectUri: GOOGLE_REDIRECT_URI,
-        clientId: maskClientId(getGoogleClientId()),
+        selectedClientType,
+        responseType,
+        hasClientId: Boolean(isIOS ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID),
       });
 
-      if (__DEV__ && request) {
+      if (__DEV__ && activeRequest) {
         try {
-          const authorizeUrl = await request.makeAuthUrlAsync(GOOGLE_DISCOVERY);
+          const authorizeUrl = await activeRequest.makeAuthUrlAsync(GOOGLE_DISCOVERY);
           let parsed: URL | null = null;
           try { parsed = new URL(authorizeUrl); } catch {}
+          const authUrlClientId = parsed?.searchParams.get('client_id');
           console.info('[GoogleLogin] authorize URL params', {
-            response_type: parsed?.searchParams.get('response_type'),
-            scope: parsed?.searchParams.get('scope'),
-            hasClientId: Boolean(parsed?.searchParams.get('client_id')),
+            authUrlResponseType: parsed?.searchParams.get('response_type'),
+            authUrlHasNonce: Boolean(parsed?.searchParams.get('nonce')),
+            authUrlClientIdMatched: authUrlClientId === (isIOS ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID),
             hasRedirectUri: Boolean(parsed?.searchParams.get('redirect_uri')),
-            hasNonce: Boolean(parsed?.searchParams.get('nonce')),
           });
         } catch (logErr) {
           console.warn('[GoogleLogin] authorize URL inspection failed', logErr);
@@ -343,7 +411,7 @@ export default function AuthScreen() {
       setErrorMessage(null);
       setLoginProvider('GOOGLE');
       startLoginTimeout();
-      const result = await promptAsync();
+      const result = await activePromptAsync();
       console.info('[GoogleLogin] prompt result', { type: result.type });
       if (result.type === 'cancel' || result.type === 'dismiss') {
         clearLoginTimeout();
@@ -443,7 +511,7 @@ export default function AuthScreen() {
               : <MessageCircle size={19} color="#191919" style={s.buttonIcon} />}
             <Text style={s.kakaoText}>{loginProvider === 'KAKAO' ? '로그인 중이에요' : '카카오로 시작하기'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.googleButton, (!request || isLoggingIn) && s.buttonDisabled]} onPress={handleGoogleLogin} disabled={!request || isLoggingIn} activeOpacity={0.86}>
+          <TouchableOpacity style={[s.googleButton, (!(Platform.OS === 'ios' ? iosRequest : webRequest) || isLoggingIn) && s.buttonDisabled]} onPress={handleGoogleLogin} disabled={!(Platform.OS === 'ios' ? iosRequest : webRequest) || isLoggingIn} activeOpacity={0.86}>
             {loginProvider === 'GOOGLE' ? <ActivityIndicator color={colors.textPrimary} style={s.buttonIcon} /> : <Text style={s.googleMark}>G</Text>}
             <Text style={s.googleText}>{loginProvider === 'GOOGLE' ? '로그인 중이에요' : 'Google로 시작하기'}</Text>
           </TouchableOpacity>
