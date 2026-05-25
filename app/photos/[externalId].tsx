@@ -221,8 +221,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   logoImage: {
-    width: 32,
-    height: 32,
+    width: 42,
+    height: 42,
   },
   dateText: {
     marginTop: 2,

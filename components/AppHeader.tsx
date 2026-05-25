@@ -236,13 +236,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   logoText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
     color: colors.textPrimary,
   },
   logoImage: {
-    width: 32,
-    height: 32,
+    width: 42,
+    height: 42,
   },
   // 바텀시트
   backdrop: {
