@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '../constants/theme';
 
 export default function LoadingScreen() {
+  const [imageLoaded, setImageLoaded] = useState(false);
   const dot1 = useRef(new Animated.Value(0.3)).current;
   const dot2 = useRef(new Animated.Value(0.3)).current;
   const dot3 = useRef(new Animated.Value(0.3)).current;
@@ -32,11 +33,16 @@ export default function LoadingScreen() {
 
   return (
     <View style={s.container}>
-      <Image
-        source={require('../assets/images/splash-icon.png')}
-        style={s.logo}
-        resizeMode="contain"
-      />
+      <View style={s.logoWrapper}>
+        <Image
+          source={require('../assets/images/splash-icon.png')}
+          style={s.logo}
+          resizeMode="contain"
+          fadeDuration={0}
+          onLoad={() => setImageLoaded(true)}
+        />
+        {!imageLoaded && <View style={s.logoPlaceholder} />}
+      </View>
       <Text style={s.message}>꼬리를 준비하고 있어요</Text>
       <View style={s.dots}>
         <Animated.View style={[s.dot, { opacity: dot1 }]} />
@@ -55,9 +61,17 @@ const s = StyleSheet.create({
     backgroundColor: colors.background,
     gap: spacing.xl,
   },
+  logoWrapper: {
+    width: 120,
+    height: 120,
+  },
   logo: {
     width: 120,
     height: 120,
+  },
+  logoPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background,
   },
   message: {
     fontSize: 15,

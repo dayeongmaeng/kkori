@@ -1,6 +1,8 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { Asset } from 'expo-asset';
 import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
@@ -17,6 +19,8 @@ import { PetProvider } from '../contexts/PetContext';
 import { initApp } from '../lib/api/init';
 import { migrateLegacyData } from '../lib/storage';
 
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 export const unstable_settings = {
   anchor: '(tabs)',
 };
@@ -27,6 +31,16 @@ export default function RootLayout() {
 
   useEffect(() => {
     migrateLegacyData();
+
+    // 로고 preload 후 네이티브 스플래시 해제 → LoadingScreen에 로고 즉시 표시
+    Asset.fromModule(require('../assets/images/splash-icon.png'))
+      .downloadAsync()
+      .catch(() => {})
+      .finally(() => {
+        SplashScreen.hideAsync().catch(() => {});
+      });
+
+    // initApp은 로고 preload와 병렬 실행
     initApp()
       .catch((e) => console.error('[Init] 초기화 실패:', e))
       .finally(() => setAppReady(true));
