@@ -9,7 +9,6 @@ import {
   Modal,
   Platform,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -870,12 +869,13 @@ export default function ProfileScreen() {
         <View style={styles.field}>
           <View style={styles.switchRow}>
             <Text style={styles.label}>중성화 완료</Text>
-            <Switch
-              value={neutered}
-              onValueChange={setNeutered}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
+            <TouchableOpacity
+              onPress={() => setNeutered(!neutered)}
+              activeOpacity={0.85}
+              style={[styles.toggleTrack, neutered && styles.toggleTrackOn]}
+            >
+              <View style={[styles.toggleThumb, neutered && styles.toggleThumbOn]} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -1134,6 +1134,32 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  toggleTrack: {
+    width: 51,
+    height: 31,
+    borderRadius: 16,
+    backgroundColor: colors.border,
+    padding: 2,
+    justifyContent: "center",
+  },
+  toggleTrackOn: {
+    backgroundColor: colors.primary,
+  },
+  toggleThumb: {
+    width: 27,
+    height: 27,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    alignSelf: "flex-start",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  toggleThumbOn: {
+    alignSelf: "flex-end",
   },
   textarea: {
     height: 120,
