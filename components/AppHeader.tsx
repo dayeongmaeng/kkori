@@ -83,7 +83,7 @@ export default function AppHeader() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
       {/* 좌측: 현재 펫 이름 + 화살표 */}
       <TouchableOpacity
         style={styles.petButton}
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     flexDirection: "row",
     alignItems: "center",
-    paddingBottom: 10,
+    paddingBottom: 6,
     paddingLeft: 16,
     paddingRight: 10,
   },
@@ -241,8 +241,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   logoImage: {
-    width: 42,
-    height: 42,
+    width: 36,
+    height: 36,
   },
   // 바텀시트
   backdrop: {
