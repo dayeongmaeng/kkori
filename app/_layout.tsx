@@ -2,7 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import AuthGate from '../components/AuthGate';
+import LoadingScreen from '../components/LoadingScreen';
 import { AuthProvider } from '../contexts/AuthContext';
 import { DateProvider } from '../contexts/DateContext';
 import { PetProvider } from '../contexts/PetContext';
@@ -22,11 +23,22 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
     migrateLegacyData();
-    initApp().catch((e) => console.error('[Init] 초기화 실패:', e));
+    initApp()
+      .catch((e) => console.error('[Init] 초기화 실패:', e))
+      .finally(() => setAppReady(true));
   }, []);
+
+  if (!appReady) {
+    return (
+      <SafeAreaProvider>
+        <LoadingScreen />
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <SafeAreaProvider>
