@@ -63,6 +63,24 @@ export default function RootLayout() {
               {Platform.OS === 'web' && (
                 <Head>
                   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+                  <title>꼬리</title>
+                  <meta name="description" content="반려동물의 하루를 기록하고 추억을 남겨보세요." />
+                  <meta property="og:type" content="website" />
+                  <meta property="og:url" content="https://kkori.co.kr" />
+                  <meta property="og:title" content="꼬리" />
+                  <meta property="og:description" content="반려동물의 하루를 기록하고 추억을 남겨보세요." />
+                  <meta property="og:image" content="https://kkori.co.kr/og-image.png" />
+                  <meta property="og:image:width" content="1080" />
+                  <meta property="og:image:height" content="1080" />
+                  <meta property="og:site_name" content="꼬리" />
+                  <meta property="og:locale" content="ko_KR" />
+                  <meta name="twitter:card" content="summary" />
+                  <meta name="twitter:title" content="꼬리" />
+                  <meta name="twitter:description" content="반려동물의 하루를 기록하고 추억을 남겨보세요." />
+                  <meta name="twitter:image" content="https://kkori.co.kr/og-image.png" />
+                  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+                  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+                  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
                 </Head>
               )}
               <AuthGate>
