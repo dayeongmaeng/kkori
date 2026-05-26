@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 10,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -759,28 +759,28 @@ const styles = StyleSheet.create({
   saveBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.lg,
-    paddingVertical: 16,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   saveBtnDisabled: {
     opacity: 0.5,
   },
   saveBtnText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.textOnPrimary,
   },
   deleteBtn: {
     backgroundColor: colors.dangerBg,
     borderRadius: radius.lg,
-    paddingVertical: 14,
+    paddingVertical: 11,
     alignItems: 'center',
   },
   deleteBtnDisabled: {
     opacity: 0.5,
   },
   deleteBtnText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.danger,
   },

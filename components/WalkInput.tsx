@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: 16,
+    paddingVertical: 10,
+    fontSize: 15,
     color: colors.textPrimary,
   },
 });
