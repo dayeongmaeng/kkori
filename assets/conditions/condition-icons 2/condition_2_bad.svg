@@ -4,8 +4,9 @@
   <circle cx="414" cy="414" r="16" fill="#111111"></circle>
   <circle cx="580" cy="414" r="16" fill="#111111"></circle>
   <path d="M 580 438 Q 588 460, 580 476 Q 572 460, 580 438 Z" fill="#111111"></path>
+  <circle cx="497" cy="460" r="16" fill="#111111"></circle>
   <g stroke="#111111" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <path d="M 452 488 Q 498 452, 544 488"></path>
+    <path d="M 452 514 Q 498 478, 544 514"></path>
   </g>
 
 </svg>

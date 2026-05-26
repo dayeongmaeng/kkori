@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   betaBadge: {
-    backgroundColor: "#FFE4D1",
+    backgroundColor: colors.primarySoft,
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   betaText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#E8985C",
+    color: colors.primary,
     letterSpacing: 0.5,
   },
   logoText: {

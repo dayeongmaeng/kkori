@@ -65,7 +65,7 @@ export const s = StyleSheet.create({
   logoCaption: {
     fontSize: 12,
     lineHeight: 17,
-    color: '#9AA0A6',
+    color: colors.textTertiary,
     textAlign: 'center',
   },
   actions: {
@@ -125,7 +125,7 @@ export const s = StyleSheet.create({
   },
   errorText: {
     borderRadius: radius.lg,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.dangerBg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     fontSize: 13,

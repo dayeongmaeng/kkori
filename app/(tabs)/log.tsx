@@ -524,7 +524,7 @@ export default function LogScreen() {
       resetStates();
       setMarkedDates(buildMarkedDates(await getCachedLogs(currentPetId)));
       setSuccessMessage('삭제되었습니다 ✓');
-      setSuccessBgColor('rgba(233,75,90,0.88)');
+      setSuccessBgColor('rgba(214,106,106,0.88)');
       setSaveStatus('saved');
       saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     } catch {
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
     color: colors.textOnPrimary,
   },
   deleteBtn: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.dangerBg,
     borderRadius: radius.lg,
     paddingVertical: 14,
     alignItems: 'center',

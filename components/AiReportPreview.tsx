@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.md,
     right: spacing.md,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.warningBg,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.sm,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.accent,
+    color: colors.warning,
   },
   row: {
     flexDirection: 'row',

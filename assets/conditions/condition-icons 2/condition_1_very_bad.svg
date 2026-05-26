@@ -8,8 +8,9 @@
     <line x1="590" y1="392" x2="556" y2="430"></line>
   </g>
   <path d="M 414 442 Q 422 466, 414 478 Q 406 466, 414 442 Z" fill="#111111"></path>
+  <circle cx="497" cy="460" r="16" fill="#111111"></circle>
   <g stroke="#111111" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <path d="M 450 472 Q 462 460, 474 472 T 498 472 T 522 472 T 546 472"></path>
+    <path d="M 450 502 Q 462 490, 474 502 T 498 502 T 522 502 T 546 502"></path>
   </g>
 
 </svg>

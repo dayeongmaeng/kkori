@@ -1,26 +1,46 @@
+// Color System v1 + v2
 export const colors = {
-  primary: '#4E5968',
-  background: '#F7F8FA',
+  // Brand
+  primary: '#D88C73',
+  secondary: '#8F9A8D',
+  primarySoft: '#FFE4D1',
+
+  // Backgrounds
+  background: '#FAF8F5',
+  card: '#FFFFFF',
   surface: '#FFFFFF',
-  surfaceAlt: '#F2F4F6',
-  textPrimary: '#191F28',
-  textSecondary: '#4E5968',
+  surfaceAlt: '#F0EDE9',
+
+  // Text
+  text: '#2F2F2F',
+  textPrimary: '#2F2F2F',
+  textSecondary: '#6B6B6B',
   textTertiary: '#8B95A1',
   textQuaternary: '#B0B8C1',
   textOnPrimary: '#FFFFFF',
-  success: '#00B8A0',
-  warning: '#FFB930',
-  danger: '#E94B5A',
-  info: '#4A90E2',
-  border: '#E5E8EB',
-  divider: '#F2F4F6',
-  accent: '#E94B5A',
-  accentSoft: '#FFE5E5',
-  condition1: '#E94B5A',
+
+  // Semantic colors
+  danger: '#D66A6A',
+  dangerBg: '#F7ECEA',
+  success: '#8FA38D',
+  successBg: '#EEF2ED',
+  warning: '#C8A06B',
+  warningBg: '#F6F0E8',
+  info: '#8FA0B2',
+  infoBg: '#EEF2F5',
+
+  // UI elements
+  border: '#ECE7E2',
+  divider: '#ECE7E2',
+  accent: '#D66A6A',      // danger 별칭 — 하위 호환
+  accentSoft: '#F7ECEA',  // dangerBg 별칭 — 하위 호환
+
+  // Condition states (pet health — UI semantic과 별도)
+  condition1: '#D66A6A',
   condition2: '#FFB930',
   condition3: '#B0B8C1',
   condition4: '#7AC97A',
-  condition5: '#00B8A0',
+  condition5: '#8FA38D',
 } as const;
 
 export const spacing = {

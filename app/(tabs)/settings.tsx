@@ -463,12 +463,13 @@ export default function SettingsScreen() {
           disabled={isLoggingOut || isDeletingAccount}
         />
         <Row
-          icon={<UserX size={20} color={colors.textSecondary} />}
+          icon={<UserX size={20} color={colors.danger} />}
           label="회원 탈퇴"
           desc={isDeletingAccount ? '탈퇴 처리 중이에요' : '계정 및 모든 데이터 삭제'}
-          right={isDeletingAccount ? <ActivityIndicator color={colors.textSecondary} /> : undefined}
+          right={isDeletingAccount ? <ActivityIndicator color={colors.danger} /> : undefined}
           onPress={handleDeleteAccount}
           disabled={isDeletingAccount || isLoggingOut}
+          destructive
           last
         />
       </Card>
@@ -565,12 +566,12 @@ const s = StyleSheet.create({
   },
 
   badge: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.warningBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,
   },
-  badgeText: { fontSize: 11, fontWeight: '600', color: colors.accent },
+  badgeText: { fontSize: 11, fontWeight: '600', color: colors.warning },
 
   versionText: { fontSize: 13, color: colors.textTertiary },
 

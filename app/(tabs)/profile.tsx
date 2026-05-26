@@ -1215,7 +1215,7 @@ const styles = StyleSheet.create({
     color: colors.textOnPrimary,
   },
   deleteButton: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.dangerBg,
     borderRadius: radius.lg,
     paddingVertical: 14,
     alignItems: "center",
@@ -1253,7 +1253,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 4,
     right: 6,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.warningBg,
     borderRadius: radius.full,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -1261,6 +1261,6 @@ const styles = StyleSheet.create({
   comingSoonText: {
     fontSize: 9,
     fontWeight: "700",
-    color: colors.danger,
+    color: colors.warning,
   },
 });

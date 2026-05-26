@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   comingSoonBadge: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.warningBg,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.sm,
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
   comingSoonBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.accent,
+    color: colors.warning,
   },
   sectionLabel: {
     fontSize: 13,
