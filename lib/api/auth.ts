@@ -1,4 +1,5 @@
 import { clearAuthSessionCache, saveAuthTokens, StoredAuthTokens } from '../auth/tokenStorage';
+import { logger } from '../logger';
 import { getStoredDeviceId, initDeviceId } from './deviceId';
 import { api } from './client';
 
@@ -41,10 +42,10 @@ export async function loginWithOAuth(
     throw new Error('기기 정보를 찾을 수 없어요. 앱을 다시 실행한 뒤 시도해 주세요.');
   }
 
-  if (__DEV__ && provider === 'GOOGLE') {
-    console.info('[OAuthLogin] google payload keys', {
-      hasGoogleOAuthAccessToken: Boolean(token.googleOAuthAccessToken),
-      hasGoogleRefreshToken: Boolean(token.googleRefreshToken),
+  if (provider === 'GOOGLE') {
+    logger.debug('auth.oauth.google.payload', {
+      hasOAuthToken: Boolean(token.googleOAuthAccessToken),
+      hasRefreshToken: Boolean(token.googleRefreshToken),
     });
   }
 
@@ -66,10 +67,9 @@ export async function loginWithOAuth(
 
   await clearAuthSessionCache();
   await saveAuthTokens(result);
-  console.info('[OAuthLogin] login success', {
+  logger.info('auth.oauth.login.success', {
     provider,
     userId: result.user?.externalId,
-    email: result.user?.email,
   });
   return result;
 }

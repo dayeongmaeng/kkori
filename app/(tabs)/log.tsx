@@ -31,6 +31,7 @@ import {
   LogResponse,
   logApi,
 } from '../../lib/api/log';
+import { logger, toLogError } from '../../lib/logger';
 import { initCaregiver } from '../../lib/api/initCaregiver';
 import { getCachedCurrentCaregiverId } from '../../lib/cache/caregiver';
 import { getCachedCurrentPetId } from '../../lib/cache/pet';
@@ -354,14 +355,14 @@ export default function LogScreen() {
     let savedExtId = extId;
 
     if (extId) {
-      console.log('[LogSave] updateLog payload:', JSON.stringify(body, null, 2));
+      logger.debug('log.save.update', { logExternalId: extId, date: data.date });
       const result = await logApi.updateLog(extId, body);
       if (result) {
         const photos = result.photos?.length ? result.photos : toReadyLogPhotos(logPhotosRef.current);
         await upsertCachedLog(currentPetId, { ...result, photos });
       }
     } else {
-      console.log('[LogSave] createLog payload:', JSON.stringify(body, null, 2));
+      logger.debug('log.save.create', { date: data.date });
       const result = await logApi.createLog(body);
       savedExtId = result.externalId;
       if (dateRef.current === data.date) {
@@ -430,7 +431,7 @@ export default function LogScreen() {
       setSaveStatus('saved');
       saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
-      console.error('[LogSave] 저장 실패:', err);
+      logger.error('log.save.failed', toLogError(err));
       setSaveStatus('error');
     } finally {
       setIsSaving(false);
@@ -481,7 +482,7 @@ export default function LogScreen() {
       saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
       return savedId;
     } catch (err) {
-      console.error('[LogSave] 기록 사진 사전 저장 실패:', err);
+      logger.error('log.save.photo_presave.failed', toLogError(err));
       setSaveStatus('error');
       return null;
     } finally {

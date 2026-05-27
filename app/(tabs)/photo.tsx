@@ -1,4 +1,5 @@
 import { pickImageUri } from '../../lib/imagePickerHelper';
+import { logger, toLogError } from '../../lib/logger';
 import { generateThumbnails } from '../../lib/photoUtils';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -67,7 +68,7 @@ function PhotoCell({ photo, onPress }: { photo: LocalPhoto; onPress: () => void 
             } else {
               logUri = uri.slice(0, 50);
             }
-            console.warn('[PhotoCell] 이미지 로드 실패:', logUri);
+            logger.warn('photo.cell.image.load_failed', { uri: logUri });
           }
           setImgError(true);
         }}
@@ -106,10 +107,14 @@ export default function PhotoScreen() {
   const todayPhoto = photos.find((p) => p.date === today);
   const pastPhotos = photos.filter((p) => p.date !== today);
 
-  function debugPhotoUpload(message: string, payload?: unknown) {
-    if (__DEV__) {
-      console.log('[PhotoTabUpload]', message, payload ?? '');
-    }
+  function debugPhotoUpload(step: string, payload?: unknown) {
+    if (!__DEV__) return;
+    const extra: Record<string, unknown> =
+      payload === undefined ? {} :
+      (typeof payload === 'object' && payload !== null)
+        ? (payload as Record<string, unknown>)
+        : { value: String(payload) };
+    logger.debug('photo.tab.upload', { step, ...extra });
   }
 
   async function getDebugUriSize(uri: string): Promise<number | undefined> {
@@ -135,11 +140,11 @@ export default function PhotoScreen() {
     // 2단계: 서버에서 갱신 (백그라운드)
     try {
       const serverPhotos = await photoApi.getPhotos(petId);
-      console.log('[PhotoLoad] 서버 응답 원형:', JSON.stringify(serverPhotos)?.slice(0, 300));
+      logger.debug('photo.tab.load.server_response', { count: serverPhotos.length });
       await setCachedPhotos(petId, serverPhotos);
       setPhotos(await mergeWithLocal(serverPhotos));
     } catch (e) {
-      console.warn('[PhotoLoad] 서버 fetch 실패:', e);
+      logger.warn('photo.tab.load.server_failed', toLogError(e));
       // 오프라인 — 캐시 유지
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -392,7 +397,7 @@ export default function PhotoScreen() {
       uploadTimerRef.current = setTimeout(() => setUploadState({ status: 'idle' }), 1500);
     } catch (e) {
       debugPhotoUpload('upload fail', e);
-      console.warn('[PhotoTabUpload] 저장/업로드 실패:', e);
+      logger.warn('photo.tab.upload.failed', toLogError(e));
       setFailedUpload({
         sourceUri,
         preparedUri: lastPreparedUri,

@@ -55,6 +55,15 @@
 - Expo eject 제안 금지. Managed Workflow를 유지한다.
 - UI 텍스트는 한국어를 사용한다.
 
+## 로깅 정책
+
+- `console.log/warn/error/info`를 직접 사용하지 않는다. `lib/logger.ts`의 `logger.debug/info/warn/error(event, payload?)`를 사용한다.
+- 로그 이벤트 이름은 `도메인.행위.결과` 형식으로 작성한다. 예: `auth.google.login.start`, `photo.upload.request.failed`, `session.sync.caregiver.failed`
+- 개발 환경(`__DEV__`)에서는 `debug/info/warn/error`를 모두 출력한다. 운영 환경에서는 `warn/error`만 출력한다.
+- 로그에 accessToken, refreshToken, idToken, authorization code, 비밀번호, 사용자 입력 전문, API 응답 전문을 포함하지 않는다.
+- API 오류 로그에는 `status`, `errorCode`, `message` 수준만 남긴다. `toLogError(error)` 헬퍼를 사용한다.
+- 에러 payload는 직접 구성하지 않고 `import { toLogError } from '…/lib/logger'`를 사용한다.
+
 ## 웹 호환성 주의
 
 - 개발 중 웹 브라우저로 주로 테스트한다.
@@ -195,7 +204,7 @@ API 코드 위치: `lib/api/`
 - 생일/함께한 날은 네이티브 DateTimePicker와 웹용 select picker를 분기 처리한다.
 - 프로필 사진은 512px 기준으로 압축하고 base64로 저장/전송한다.
 - 저장 후 pet 캐시와 current pet 상태를 갱신한다.
-- 반려동물 삭제 버튼 추가 방향 확정. `DELETE /api/v1/pets/{externalId}` 호출 후 로컬 캐시 정리. API 연동 예정.
+- 반려동물 삭제 기능 구현 완료. `DELETE /api/v1/pets/{externalId}` 호출 후 로컬 캐시 정리, 폼 초기화, 다음 반려동물 자동 전환.
 
 ### 설정 탭
 
@@ -260,9 +269,8 @@ API 코드 위치: `lib/api/`
 
 ## 다음 작업 후보
 
-- 반려동물 삭제 버튼 API 연동 (프로필 탭 → `DELETE /api/v1/pets/{externalId}` + 로컬 캐시 정리)
 - 8080 외부 포트 닫기 확인
 - Vercel에 `kkori.co.kr` / `www.kkori.co.kr` 연결
 - 개인정보처리방침/계정삭제 안내 페이지 준비
-- `.env.example`과 실제 사용 환경변수 정합성 정리
+- `.env.example`과 실제 사용 환경변수 정합성 정리 (`EXPO_PUBLIC_SHARE_API_URL`, `WEB_BASE_URL` 등)
 - Phase D 회원가입/계정 모델 고도화 설계

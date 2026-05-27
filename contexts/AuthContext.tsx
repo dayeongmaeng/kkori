@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { clearAuthSessionCache, getAuthTokens } from '../lib/auth/tokenStorage';
 import { deleteAccount as deleteAccountFromServer, logoutFromServer } from '../lib/api/auth';
 import { syncServerSessionData } from '../lib/api/sessionSync';
+import { logger, toLogError } from '../lib/logger';
 
 interface AuthContextValue {
   isAuthenticated: boolean;
@@ -51,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsSessionLoading(true);
 
     syncServerSessionData()
-      .catch((error) => console.warn('[Auth] session data sync failed:', error))
+      .catch((error) => logger.warn('auth.session.sync.failed', toLogError(error)))
       .finally(() => {
         if (cancelled) return;
         setSessionDataVersion((version) => version + 1);
@@ -70,26 +71,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function logout() {
     const tokens = await getAuthTokens();
-    console.log({
+    logger.info('auth.logout.start', {
       provider: tokens?.user?.provider,
       userId: tokens?.user?.externalId,
     });
 
     try {
       await logoutFromServer();
-      console.log('logout api success');
+      logger.info('auth.logout.api.success');
     } catch (error) {
-      console.warn('[Auth] logout api failed:', error);
+      logger.warn('auth.logout.api.failed', toLogError(error));
     } finally {
       try {
         await clearAuthSessionCache();
-        console.log('local auth cleared');
+        logger.debug('auth.logout.local.cleared');
       } catch (error) {
-        console.warn('[Auth] local auth clear failed:', error);
+        logger.warn('auth.logout.local.failed', toLogError(error));
       }
       setIsAuthenticated(false);
       setSessionDataVersion((version) => version + 1);
-      console.log('logout complete');
+      logger.info('auth.logout.complete');
     }
   }
 
@@ -99,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await clearAuthSessionCache();
     } catch (error) {
-      console.warn('[Auth] deleteAccount local clear failed:', error);
+      logger.warn('auth.delete_account.local.failed', toLogError(error));
     }
     setIsAuthenticated(false);
     setSessionDataVersion((version) => version + 1);

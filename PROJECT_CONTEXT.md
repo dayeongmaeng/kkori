@@ -53,6 +53,8 @@
 - Web 환경 개선: 캐시 비우기, 권한 안내(알림/카메라/사진 접근), 외부 링크, 출시 예정 UI 모두 Web 대응 완료.
 - 개인정보처리방침/이용약관/초기 릴리즈노트 초안 작성 완료.
 - **반려동물 멀티 선택/추가 기능 구현 완료** (AppHeader 드롭다운): 반려동물 전환, 추가, currentPet 기반 전역 화면 갱신.
+- 반려동물 삭제 기능 구현 완료. `DELETE /api/v1/pets/{externalId}` 호출 후 로컬 캐시 정리, 폼 초기화, 다음 반려동물 자동 전환.
+- **클라이언트 로깅 정책 적용 완료.** `lib/logger.ts` 공통 logger 구현. 전체 `console.*` 직접 사용을 이벤트 기반 logger로 교체. 개발 환경 debug/info/warn/error 전 레벨 출력, 운영 환경 warn/error만 출력. 민감 정보(token류, API 응답 전문) 로그 제외, `toLogError()`로 ApiError 안전 추출. 권한 요청 및 이미지 선택/취소 로그 추가.
 
 ## 인증/세션
 
@@ -79,16 +81,18 @@
 - 응답 구조는 `{ success, data, error, timestamp }` 형태로 처리한다.
 - 204 응답도 정상 처리한다.
 
-주요 클라이언트 API 파일:
+주요 클라이언트 파일:
 
-- `lib/api/client.ts`
-- `lib/api/auth.ts`
-- `lib/api/device.ts`
-- `lib/api/caregiver.ts`
-- `lib/api/pet.ts`
-- `lib/api/photo.ts`
-- `lib/api/log.ts`
-- `lib/api/sessionSync.ts`
+- `lib/api/client.ts` — HTTP 클라이언트, 자동 토큰 갱신
+- `lib/api/auth.ts` — OAuth 로그인/로그아웃
+- `lib/api/device.ts` — 디바이스 등록
+- `lib/api/caregiver.ts` — 보호자 CRUD
+- `lib/api/pet.ts` — 반려동물 CRUD
+- `lib/api/photo.ts` — 사진 CRUD + 업로드
+- `lib/api/log.ts` — 기록 CRUD + 사진 업로드
+- `lib/api/sessionSync.ts` — 로그인 후 서버 데이터 전체 동기화
+- `lib/logger.ts` — 공통 logger (debug/info/warn/error, 운영 warn/error만), `toLogError()` 헬퍼
+- `lib/imagePickerHelper.ts` — 이미지 선택 래퍼 (권한 요청 포함)
 
 ## 캐시 구조
 
@@ -161,7 +165,7 @@
 - 저장 후 pet 캐시와 current pet 상태 갱신.
 - `AppHeader` 반려동물 전환 시 프로필 탭이 currentPet 기준으로 자동 갱신된다.
 - `AppHeader` 드롭다운 하단 "반려동물 추가" 버튼 → 기존 프로필 입력 UI를 생성 모드로 재사용. 생성 성공 시 pet 목록 캐시 갱신 + 신규 pet을 currentPet으로 설정.
-- 반려동물 삭제 버튼 추가 방향 확정. API 연동 예정 (`DELETE /api/v1/pets/{externalId}` 호출 후 로컬 캐시 정리).
+- 반려동물 삭제 기능 구현 완료. `DELETE /api/v1/pets/{externalId}` 호출 후 로컬 캐시 정리, 폼 초기화, 다음 반려동물 자동 전환.
 
 ### 설정
 
@@ -229,12 +233,11 @@
 ## 다음 작업 후보
 
 1. **[배포 전 필수]** 운영 DB 마이그레이션 — `user-withdrawal-migration.sql` + `user_oauth_token` DDL 수동 실행
-2. 반려동물 삭제 버튼 API 연동 (프로필 탭 → `DELETE /api/v1/pets/{externalId}` + 로컬 캐시 정리)
-3. 8080 외부 포트 닫기 확인
-4. Vercel에 `kkori.co.kr` / `www.kkori.co.kr` 연결 및 개인정보처리방침/이용약관/계정삭제 안내 페이지 배포
-5. `.env.example`과 실제 사용 환경변수 정합성 정리
-6. Google revoke 실기기 QA
-7. Phase F AI 리포트 설계
+2. 8080 외부 포트 닫기 확인
+3. Vercel에 `kkori.co.kr` / `www.kkori.co.kr` 연결 및 개인정보처리방침/이용약관/계정삭제 안내 페이지 배포
+4. `.env.example`과 실제 사용 환경변수 정합성 정리 (`EXPO_PUBLIC_SHARE_API_URL`, `WEB_BASE_URL` 등)
+5. Google revoke 실기기 QA
+6. Phase F AI 리포트 설계
 
 ## 작업 스타일
 

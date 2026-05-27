@@ -34,6 +34,7 @@ import {
   prepareImageForUpload,
   toBase64DataUri,
 } from "../../lib/imageUpload";
+import { logger, toLogError } from "../../lib/logger";
 
 type Gender = "male" | "female";
 type Species = "DOG" | "CAT";
@@ -499,7 +500,7 @@ export default function ProfileScreen() {
         setPhotoUploadState({ status: "idle" });
       }, 1500);
     } catch (e) {
-      console.error("[ProfileScreen] 서버 저장 실패:", e);
+      logger.error("profile.save.failed", toLogError(e));
       setIndicatorStatus("idle");
       if (photoUri) {
         setPhotoUploadState({
@@ -547,7 +548,7 @@ export default function ProfileScreen() {
         setCurrentPet(null);
       }
     } catch (e) {
-      console.error("[ProfileScreen] 삭제 실패:", e);
+      logger.error("profile.pet.delete.failed", toLogError(e));
       Alert.alert("삭제 실패", "반려동물을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.");
     } finally {
       setIsDeleting(false);

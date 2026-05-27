@@ -1,6 +1,8 @@
 import * as AuthSession from 'expo-auth-session';
 import { Linking, Platform } from 'react-native';
 
+import { logger } from '../lib/logger';
+
 export const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
 export const KAKAO_NATIVE_APP_KEY = process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY;
 
@@ -49,7 +51,7 @@ export function getKakaoNativeReturnUri() {
 // KAKAO_NATIVE_APP_KEY가 없으면 호출하지 말 것 (handleKakaoLogin에서 사전 차단).
 export function getKakaoIosAppRedirectUri(): string {
   if (!KAKAO_NATIVE_APP_KEY) {
-    console.warn('[KakaoLogin] getKakaoIosAppRedirectUri: KAKAO_NATIVE_APP_KEY not set');
+    logger.warn('auth.kakao.config.native_key_missing');
     return '';
   }
   return `kakao${KAKAO_NATIVE_APP_KEY}://oauth`;
@@ -93,17 +95,14 @@ export async function canOpenKakaoApp(): Promise<boolean> {
 // 진단 로그: 실제 key 값은 출력하지 않는다.
 // iOS에서는 Kakao Developers에 등록해야 할 redirect URI를 개발 환경에서만 출력한다.
 export function logKakaoDiagnostics(): void {
-  console.info('[KakaoLogin] diagnostics', {
+  logger.info('auth.kakao.config.diagnostics', {
     platform: Platform.OS,
-    hasBundleIdentifier: true, // com.kkori.app (app.json 기준)
     hasNativeAppKey: Boolean(KAKAO_NATIVE_APP_KEY),
     hasRestApiKey: Boolean(KAKAO_REST_API_KEY),
   });
 
   if (__DEV__ && Platform.OS === 'ios' && KAKAO_NATIVE_APP_KEY) {
-    // Kakao Developers > 앱 설정 > 플랫폼 > iOS > Redirect URI에 등록 필요 (key 원문 출력 금지)
-    // 실제 등록값 형식: kakao{NATIVE_APP_KEY}://oauth
-    console.info('[KakaoLogin] iOS redirectUri (Kakao Developers 등록 필요)', {
+    logger.info('auth.kakao.config.ios_redirect_scheme', {
       redirectUriScheme: maskKakaoScheme(getKakaoIosAppRedirectUri()),
     });
   }

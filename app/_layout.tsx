@@ -17,6 +17,7 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { DateProvider } from '../contexts/DateContext';
 import { PetProvider } from '../contexts/PetContext';
 import { initApp } from '../lib/api/init';
+import { logger, toLogError } from '../lib/logger';
 import { migrateLegacyData } from '../lib/storage';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -42,7 +43,7 @@ export default function RootLayout() {
 
     // initApp은 로고 preload와 병렬 실행
     initApp()
-      .catch((e) => console.error('[Init] 초기화 실패:', e))
+      .catch((e) => logger.error('app.init.failed', toLogError(e)))
       .finally(() => setAppReady(true));
   }, []);
 

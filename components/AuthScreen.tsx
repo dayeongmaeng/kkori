@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { loginWithOAuth } from '../lib/api/auth';
+import { logger, toLogError } from '../lib/logger';
 import {
   getGoogleClientId,
   GOOGLE_IOS_CLIENT_ID,
@@ -139,10 +140,7 @@ export default function AuthScreen() {
 
   const completeKakaoLogin = useCallback(async (code: string, redirectUri: string) => {
     try {
-      console.info('[KakaoLogin] server login request', {
-        provider: 'KAKAO',
-        serverRequestRedirectUri: redirectUri,
-      });
+      logger.info('auth.kakao.login.api.start', { provider: 'KAKAO' });
       await loginWithOAuth('KAKAO', { code, redirectUri });
       markLoggedIn();
       router.replace('/');
@@ -162,7 +160,7 @@ export default function AuthScreen() {
     try {
       await WebBrowser.dismissBrowser();
     } catch (error) {
-      console.warn('[KakaoLogin] dismissBrowser skipped', error);
+      logger.warn('auth.kakao.browser.dismiss.failed', toLogError(error));
     }
   }, []);
 
@@ -186,7 +184,7 @@ export default function AuthScreen() {
       code = callbackUrl.searchParams.get('code');
       error = callbackUrl.searchParams.get('error');
     } catch (parseError) {
-      console.warn('[KakaoLogin] callback URL parse failed', parseError);
+      logger.warn('auth.kakao.callback.parse.failed', toLogError(parseError));
       stopWithError('카카오 로그인에 실패했어요');
       return true;
     }
@@ -223,12 +221,10 @@ export default function AuthScreen() {
       Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.location.hostname
         : 'native';
-    console.warn('[GoogleAuth] client ID missing — check Vercel build-time env vars', {
+    logger.warn('auth.google.config.client_id_missing', {
       platform: Platform.OS,
       hostname,
       isDev: __DEV__,
-      message: missingMessage,
-      hint: 'EXPO_PUBLIC_* 변수는 expo export 실행 시점에 Vercel 환경변수로 주입되어야 합니다. 런타임에는 변경되지 않아요.',
     });
   }, [missingMessage]);
 
@@ -282,10 +278,7 @@ export default function AuthScreen() {
     if (!webResponse || Platform.OS !== 'web') return;
 
     const idToken = webResponse.type === 'success' ? webResponse.params.id_token : undefined;
-    console.info('[GoogleLogin] web auth response', {
-      platform: Platform.OS,
-      selectedClientType: 'WEB',
-      responseType: 'id_token token',
+    logger.info('auth.google.web.response', {
       hasClientId: Boolean(GOOGLE_WEB_CLIENT_ID),
       hasIdToken: Boolean(idToken),
       hasAccessToken: Boolean(webResponse.type === 'success' && webResponse.params.access_token),
@@ -312,12 +305,12 @@ export default function AuthScreen() {
 
     const googleOAuthAccessToken = webResponse.params.access_token || undefined;
     const googleRefreshToken = webResponse.params.refresh_token || undefined;
-    console.info('[GoogleLogin] web oauth token from response', {
-      hasGoogleOAuthAccessToken: Boolean(googleOAuthAccessToken),
-      hasGoogleRefreshToken: Boolean(googleRefreshToken),
+    logger.info('auth.google.web.token_received', {
+      hasOAuthToken: Boolean(googleOAuthAccessToken),
+      hasRefreshToken: Boolean(googleRefreshToken),
     });
 
-    console.info('[GoogleLogin] server login request', { provider: 'GOOGLE' });
+    logger.info('auth.google.login.api.start', { platform: 'web' });
     loginWithOAuth('GOOGLE', { idToken, googleOAuthAccessToken, googleRefreshToken })
       .then(markLoggedIn)
       .catch(() => setErrorMessage('로그인을 완료하지 못했어요. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'))
@@ -332,10 +325,7 @@ export default function AuthScreen() {
     if (!iosResponse || Platform.OS !== 'ios') return;
 
     const idToken = iosResponse.type === 'success' ? iosResponse.params.id_token : undefined;
-    console.info('[GoogleLogin] ios auth response', {
-      platform: Platform.OS,
-      selectedClientType: 'IOS',
-      responseType: 'code',
+    logger.info('auth.google.ios.response', {
       hasClientId: Boolean(GOOGLE_IOS_CLIENT_ID),
       hasIdToken: Boolean(idToken),
       hasAccessToken: Boolean(iosResponse.type === 'success' && iosResponse.params.access_token),
@@ -360,7 +350,7 @@ export default function AuthScreen() {
       return;
     }
 
-    console.info('[GoogleLogin] server login request', { provider: 'GOOGLE' });
+    logger.info('auth.google.login.api.start', { platform: 'ios' });
     loginWithOAuth('GOOGLE', { idToken })
       .then(markLoggedIn)
       .catch(() => setErrorMessage('로그인을 완료하지 못했어요. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'))
@@ -397,9 +387,9 @@ export default function AuthScreen() {
     const activePromptAsync = isIOS ? iosPromptAsync : webPromptAsync;
 
     try {
-      console.info('[GoogleLogin] config', {
+      logger.info('auth.google.login.start', {
         platform: Platform.OS,
-        selectedClientType,
+        clientType: selectedClientType,
         responseType,
         hasClientId: Boolean(isIOS ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID),
       });
@@ -410,14 +400,14 @@ export default function AuthScreen() {
           let parsed: URL | null = null;
           try { parsed = new URL(authorizeUrl); } catch {}
           const authUrlClientId = parsed?.searchParams.get('client_id');
-          console.info('[GoogleLogin] authorize URL params', {
-            authUrlResponseType: parsed?.searchParams.get('response_type'),
-            authUrlHasNonce: Boolean(parsed?.searchParams.get('nonce')),
-            authUrlClientIdMatched: authUrlClientId === (isIOS ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID),
+          logger.debug('auth.google.login.authorize_url', {
+            responseType: parsed?.searchParams.get('response_type'),
+            hasNonce: Boolean(parsed?.searchParams.get('nonce')),
+            clientIdMatched: authUrlClientId === (isIOS ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID),
             hasRedirectUri: Boolean(parsed?.searchParams.get('redirect_uri')),
           });
         } catch (logErr) {
-          console.warn('[GoogleLogin] authorize URL inspection failed', logErr);
+          logger.warn('auth.google.login.authorize_url.inspect_failed', toLogError(logErr));
         }
       }
 
@@ -425,7 +415,7 @@ export default function AuthScreen() {
       setLoginProvider('GOOGLE');
       startLoginTimeout();
       const result = await activePromptAsync();
-      console.info('[GoogleLogin] prompt result', { type: result.type });
+      logger.info('auth.google.login.prompt_result', { type: result.type });
       if (result.type === 'cancel' || result.type === 'dismiss') {
         clearLoginTimeout();
         setLoginProvider(null);
@@ -468,21 +458,15 @@ export default function AuthScreen() {
         const browserReturnUri = getKakaoNativeReturnUri();
         kakaoCurrentRedirectUriRef.current = iosAuthorizeRedirectUri;
 
-        console.info('[KakaoLogin]', {
+        logger.info('auth.kakao.login.start', {
           platform: 'ios',
           loginFlow: 'native',
           hasNativeAppKey: Boolean(KAKAO_NATIVE_APP_KEY),
-          usingWebRedirect: false,
         });
 
         if (__DEV__) {
-          // authorizeRedirectUri: Kakao Developers > REST API 키 > 리다이렉트 URI 등록 확인용
-          console.info('[KakaoLogin] iOS authorize request', {
-            provider: 'KAKAO',
-            platform: 'ios',
-            loginFlow: 'native',
+          logger.debug('auth.kakao.ios.authorize_request', {
             hasNativeAppKey: Boolean(KAKAO_NATIVE_APP_KEY),
-            usingWebRedirect: false,
           });
         }
 
@@ -526,10 +510,9 @@ export default function AuthScreen() {
       const browserReturnUri = getKakaoNativeReturnUri();
       const authorizeUrl = buildKakaoAuthorizeUrl(authorizeRedirectUri);
 
-      console.info('[KakaoLogin]', {
+      logger.info('auth.kakao.login.start', {
         platform: Platform.OS,
         hasNativeAppKey: Boolean(KAKAO_NATIVE_APP_KEY),
-        usingKakaoAppLogin: false,
       });
 
       kakaoBrowserOpenRef.current = true;

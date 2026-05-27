@@ -1,6 +1,8 @@
 import * as AuthSession from 'expo-auth-session';
 import { Platform } from 'react-native';
 
+import { logger } from '../lib/logger';
+
 // EXPO_PUBLIC_* 변수는 Metro 번들러가 빌드 타임에 리터럴로 치환한다.
 // Vercel에서는 expo export 실행 시점에 환경변수가 주입되어야 한다.
 // 런타임에 process.env로 동적으로 읽는 것이 아니므로, 배포 후에는 재빌드 없이 값을 바꿀 수 없다.
@@ -58,15 +60,13 @@ export function logGoogleAuthDiagnostics(): void {
     { varName: 'EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID', value: GOOGLE_ANDROID_CLIENT_ID },
   ];
 
-  console.info('[GoogleAuth] diagnostics', {
+  logger.info('auth.google.config.diagnostics', {
     platform,
     hostname,
     isDev,
-    redirectUri: GOOGLE_REDIRECT_URI,
     envVars: envEntries.map(e => ({
       varName: e.varName,
       exists: Boolean(e.value),
-      length: e.value?.length ?? 0,
       masked: debugMask(e.value),
     })),
   });
@@ -85,11 +85,10 @@ export function logGoogleAuthDiagnostics(): void {
     selectedValue = GOOGLE_WEB_CLIENT_ID;
   }
 
-  console.info('[GoogleAuth] selected client ID for platform', {
+  logger.info('auth.google.config.selected_client', {
     platform,
     varName: selectedVar,
     exists: Boolean(selectedValue),
-    length: selectedValue?.length ?? 0,
     masked: debugMask(selectedValue),
   });
 }

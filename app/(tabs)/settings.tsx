@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { logger, toLogError } from '../../lib/logger';
 
 const FEEDBACK_URL = 'https://open.kakao.com/o/sqYtAKvi';
 // TODO: 앱 출시 후 실제 스토어 URL로 교체
@@ -274,7 +275,7 @@ export default function SettingsScreen() {
       setIsLoggingOut(true);
       await logout();
     } catch (error) {
-      console.warn('[Settings] logout cleanup failed:', error);
+      logger.warn('settings.logout.failed', toLogError(error));
       setIsLoggingOut(false);
     }
   }

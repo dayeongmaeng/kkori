@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
 import { LocalPhoto } from '../lib/cache/photo';
+import { logger } from '../lib/logger';
 
 interface Props {
   todayPhoto?: LocalPhoto;
@@ -212,7 +213,7 @@ export default function TodayPhotoCard({
               } else {
                 logUri = displayUri.slice(0, 50);
               }
-              console.warn('[TodayPhotoCard] 이미지 로드 실패:', logUri);
+              logger.warn('photo.today_card.image.load_failed', { uri: logUri });
             }
             setShowFallback(true);
           }}

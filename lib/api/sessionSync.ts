@@ -6,6 +6,7 @@ import {
   setCachedCurrentPetId,
   setCachedPets,
 } from '../cache/pet';
+import { logger, toLogError } from '../logger';
 import { caregiverApi } from './caregiver';
 import { initDeviceId } from './deviceId';
 import { logApi } from './log';
@@ -40,13 +41,13 @@ async function syncPetChildren(petExternalId: string) {
   if (logsResult.status === 'fulfilled') {
     await setCachedLogs(petExternalId, logsResult.value);
   } else {
-    console.warn('[SessionSync] logs fetch failed:', logsResult.reason);
+    logger.warn('session.sync.logs.failed', toLogError(logsResult.reason));
   }
 
   if (photosResult.status === 'fulfilled') {
     await setCachedPhotos(petExternalId, photosResult.value);
   } else {
-    console.warn('[SessionSync] photos fetch failed:', photosResult.reason);
+    logger.warn('session.sync.photos.failed', toLogError(photosResult.reason));
   }
 }
 
@@ -56,7 +57,7 @@ export async function syncServerSessionData(): Promise<void> {
   try {
     await syncCaregiver();
   } catch (error) {
-    console.warn('[SessionSync] caregiver fetch failed:', error);
+    logger.warn('session.sync.caregiver.failed', toLogError(error));
   }
 
   const pets = await petApi.getPets();
@@ -64,7 +65,7 @@ export async function syncServerSessionData(): Promise<void> {
   if (!selectedPet) return;
 
   await Promise.all(pets.map((pet) => syncPetChildren(pet.externalId)));
-  console.log('[SessionSync] server data synced', {
+  logger.info('session.sync.success', {
     petCount: pets.length,
     currentPetId: selectedPet.externalId,
   });

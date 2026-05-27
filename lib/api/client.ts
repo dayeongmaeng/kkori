@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 import { clearAuthTokens, getAuthTokens, saveAuthTokens } from '../auth/tokenStorage';
+import { logger } from '../logger';
 import { ApiError, ApiResponse } from './types';
 
 const DEV_API_BASE_URL = 'http://localhost:8080';
@@ -13,9 +14,7 @@ const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
   (__DEV__ && Platform.OS === 'web' ? DEV_API_BASE_URL : PROD_API_BASE_URL);
 
-if (__DEV__) {
-  console.log('[API] baseURL:', API_BASE_URL);
-}
+logger.info('api.init', { baseUrl: API_BASE_URL });
 
 const DEVICE_ID_KEY = 'pet-care:device-id';
 const AUTH_REFRESH_PATH = '/api/v1/auth/refresh';

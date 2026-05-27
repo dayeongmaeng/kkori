@@ -2,6 +2,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Platform } from 'react-native';
 
+import { logger } from './logger';
+
 const RESIZE_WIDTH = 800;
 const COMPRESS_QUALITY = 0.6;
 
@@ -34,9 +36,11 @@ function pickImageWebRaw(): Promise<string | null> {
       if (document.body.contains(input)) document.body.removeChild(input);
       const file = input.files?.[0];
       if (!file) {
+        logger.debug('image.picker.web.canceled');
         resolve(null);
         return;
       }
+      logger.debug('image.picker.web.selected', { fileType: file.type });
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = () => resolve(null);
@@ -47,8 +51,12 @@ function pickImageWebRaw(): Promise<string | null> {
 }
 
 async function pickImageNativeRaw(options: PickImageOptions): Promise<string | null> {
+  logger.info('image.picker.permission.request');
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  logger.info('image.picker.permission.result', { status });
+
   if (status !== 'granted') {
+    logger.warn('image.picker.permission.denied');
     Alert.alert('권한 필요', '사진 접근 권한이 필요합니다.');
     return null;
   }
@@ -62,7 +70,11 @@ async function pickImageNativeRaw(options: PickImageOptions): Promise<string | n
       : {}),
     quality: 1,
   });
-  if (result.canceled || !result.assets?.[0]) return null;
+  if (result.canceled || !result.assets?.[0]) {
+    logger.debug('image.picker.canceled');
+    return null;
+  }
+  logger.debug('image.picker.selected');
   return result.assets[0].uri;
 }
 

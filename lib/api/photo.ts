@@ -1,5 +1,6 @@
-import { api } from './client';
+import { logger, toLogError } from '../logger';
 import type { ThumbnailFile } from '../photoUtils';
+import { api } from './client';
 
 export interface PhotoResponse {
   externalId: string;
@@ -81,15 +82,11 @@ export const photoApi = {
 
   uploadPhoto: async (externalId: string, medium: ThumbnailFile, thumbnail: ThumbnailFile): Promise<PhotoUploadResponse> => {
     const formData = new FormData();
-    if (__DEV__) {
-      console.log('[PhotoTabUpload]', 'FormData create start', {
-        externalId,
-        mediumUri: medium.uri,
-        mediumSize: medium.blob?.size,
-        thumbnailUri: thumbnail.uri,
-        thumbnailSize: thumbnail.blob?.size,
-      });
-    }
+    logger.debug('photo.upload.prepare.start', {
+      externalId,
+      hasMediumBlob: Boolean(medium.blob),
+      hasThumbnailBlob: Boolean(thumbnail.blob),
+    });
 
     function appendFile(key: string, file: ThumbnailFile) {
       if (file.blob) {
@@ -102,20 +99,14 @@ export const photoApi = {
     appendFile('medium', medium);
     appendFile('thumbnail', thumbnail);
 
-    if (__DEV__) {
-      console.log('[PhotoTabUpload]', 'API upload start', { externalId });
-    }
+    logger.debug('photo.upload.request.start', { externalId });
 
     try {
       const response = await api.postFormData<PhotoUploadResponse>(`/api/v1/photos/${externalId}/upload`, formData);
-      if (__DEV__) {
-        console.log('[PhotoTabUpload]', 'API upload success', { externalId });
-      }
+      logger.debug('photo.upload.request.success', { externalId });
       return response;
     } catch (error) {
-      if (__DEV__) {
-        console.warn('[PhotoTabUpload]', 'API upload fail', { externalId, error });
-      }
+      logger.warn('photo.upload.request.failed', { externalId, ...toLogError(error) });
       throw error;
     }
   },

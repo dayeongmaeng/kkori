@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { PhotoResponse } from '../api/photo';
+import { logger } from '../logger';
 import { getPhotoLocal } from '../photoLocalCache';
 
 export interface LocalPhoto {
@@ -55,7 +56,11 @@ export async function removeCachedPhoto(
 }
 
 export async function mergeWithLocal(input: unknown): Promise<LocalPhoto[]> {
-  console.log('[mergeWithLocal] 입력 타입:', typeof input, Array.isArray(input) ? `배열(${(input as any[]).length})` : JSON.stringify(input)?.slice(0, 200));
+  logger.debug('photo.cache.merge.input', {
+    type: typeof input,
+    isArray: Array.isArray(input),
+    count: Array.isArray(input) ? (input as unknown[]).length : undefined,
+  });
 
   // 서버가 배열 대신 다른 구조를 반환할 경우 안전하게 추출
   let photos: unknown[];
@@ -66,21 +71,21 @@ export async function mergeWithLocal(input: unknown): Promise<LocalPhoto[]> {
     const obj = input as Record<string, unknown>;
     const candidate = obj['content'] ?? obj['data'] ?? obj['items'] ?? obj['list'];
     photos = Array.isArray(candidate) ? candidate : [];
-    console.warn('[mergeWithLocal] 배열 아님 — 내부 필드 추출 시도:', Object.keys(obj), '→', photos.length, '건');
+    logger.warn('photo.cache.merge.not_array', { keys: Object.keys(obj), resolvedCount: photos.length });
   } else {
-    console.error('[mergeWithLocal] 예상치 못한 입력:', input);
+    logger.error('photo.cache.merge.invalid_input', { inputType: typeof input });
     photos = [];
   }
 
   // 각 항목 유효성 검사
   const valid = photos.filter((p): p is PhotoResponse => {
     if (p == null || typeof p !== 'object') {
-      console.warn('[mergeWithLocal] null/비객체 항목 스킵:', p);
+      logger.warn('photo.cache.merge.skip_null_item');
       return false;
     }
     const obj = p as Partial<PhotoResponse>;
     if (!obj.externalId) {
-      console.warn('[mergeWithLocal] externalId 누락 스킵:', obj);
+      logger.warn('photo.cache.merge.skip_missing_id');
       return false;
     }
     return true;
