@@ -328,7 +328,7 @@ export default function ProfileScreen() {
     setIndicatorStatus("error");
     indicatorTimerRef.current = setTimeout(
       () => setIndicatorStatus("idle"),
-      2200,
+      2500,
     );
   }
 
@@ -507,7 +507,7 @@ export default function ProfileScreen() {
       indicatorTimerRef.current = setTimeout(() => {
         setIndicatorStatus("idle");
         setPhotoUploadState({ status: "idle" });
-      }, 1500);
+      }, 2500);
     } catch (e) {
       logger.error("profile.save.failed", toLogError(e));
       setIndicatorStatus("idle");
@@ -947,7 +947,7 @@ export default function ProfileScreen() {
       <SaveIndicator
         status={indicatorStatus}
         labels={{
-          saving: "서버에 저장 중...",
+          saving: "저장 중...",
           saved: "저장되었습니다 ✓",
           error: "필수 항목을 입력해주세요",
         }}
@@ -956,6 +956,7 @@ export default function ProfileScreen() {
           saved: "rgba(255,255,255,0.90)",
           error: "rgba(255,255,255,0.90)",
         }}
+        centered
       />
     </View>
   );

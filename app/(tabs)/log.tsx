@@ -429,7 +429,7 @@ export default function LogScreen() {
       setSuccessMessage('저장되었습니다 ✓');
       setSuccessBgColor(undefined);
       setSaveStatus('saved');
-      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
     } catch (err) {
       logger.error('log.save.failed', toLogError(err));
       setSaveStatus('error');
@@ -479,7 +479,7 @@ export default function LogScreen() {
       setSuccessMessage('기록을 먼저 저장했어요 ✓');
       setSuccessBgColor(undefined);
       setSaveStatus('saved');
-      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
       return savedId;
     } catch (err) {
       logger.error('log.save.photo_presave.failed', toLogError(err));
@@ -527,7 +527,7 @@ export default function LogScreen() {
       setSuccessMessage('삭제되었습니다 ✓');
       setSuccessBgColor('rgba(214,106,106,0.88)');
       setSaveStatus('saved');
-      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
     } catch {
       setSaveStatus('error');
       Alert.alert('삭제 실패', '기록을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.');
@@ -580,6 +580,7 @@ export default function LogScreen() {
         status={saveStatus}
         labels={{ saved: successMessage }}
         backgroundColors={{ saved: successBgColor }}
+        centered
       />
 
       {/* 본문 */}
