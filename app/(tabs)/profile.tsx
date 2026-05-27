@@ -332,11 +332,14 @@ export default function ProfileScreen() {
     );
   }
 
-  // 반려동물 전환 시 이전 프로필 즉시 클리어 (create 모드 제외)
+  // 반려동물 전환 시 이전 프로필 즉시 클리어, create 모드면 해제 후 선택된 반려동물 로드
   const isMountedRef = useRef(false);
   useEffect(() => {
     if (!isMountedRef.current) { isMountedRef.current = true; return; }
-    if (!isCreateMode) clearFormForCreate();
+    clearFormForCreate();
+    if (isCreateMode) {
+      router.setParams({ mode: undefined });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [petIdFromContext]);
 
@@ -347,15 +350,18 @@ export default function ProfileScreen() {
     }
 
     const targetId = petIdFromContext;
+    let cancelled = false;
 
     async function load() {
       // 1단계: 캐시에서 즉시 로드
       const cached = targetId ? await getCachedPets() : [];
+      if (cancelled) return;
       if (targetId) {
         const pet = cached.find((p) => p.externalId === targetId);
         if (pet) {
           fillForm(pet);
           const photo = await getCachedPetPhoto(targetId);
+          if (cancelled) return;
           if (photo) setPhotoUri(photo);
         }
       }
@@ -363,6 +369,7 @@ export default function ProfileScreen() {
       // 2단계: 서버에서 최신 데이터 fetch (백그라운드)
       try {
         const serverPets = await petApi.getPets();
+        if (cancelled) return;
         const mergedPets = serverPets.map((serverPet) => {
           const cachedPet = cached.find(
             (p) => p.externalId === serverPet.externalId,
@@ -381,6 +388,7 @@ export default function ProfileScreen() {
           };
         });
         await setCachedPets(mergedPets);
+        if (cancelled) return;
 
         if (targetId) {
           const serverPet = mergedPets.find((p) => p.externalId === targetId);
@@ -391,6 +399,7 @@ export default function ProfileScreen() {
       }
     }
     load();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCreateMode, petIdFromContext]);
 
