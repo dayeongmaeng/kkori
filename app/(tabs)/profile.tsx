@@ -341,7 +341,11 @@ export default function ProfileScreen() {
 
   function openWeightPicker() {
     const parsed = parseFloat(weightKg);
-    setPickerWeight(!isNaN(parsed) && parsed > 0 ? parsed : 5.0);
+    const rounded =
+      !isNaN(parsed) && parsed > 0
+        ? Math.min(100.0, Math.max(0.1, Math.round(parsed * 10) / 10))
+        : 5.0;
+    setPickerWeight(rounded);
     setWeightPickerVisible(true);
   }
 
