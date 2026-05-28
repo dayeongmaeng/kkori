@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Asset } from 'expo-asset';
+import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
@@ -18,7 +19,20 @@ import { DateProvider } from '../contexts/DateContext';
 import { PetProvider } from '../contexts/PetContext';
 import { initApp } from '../lib/api/init';
 import { logger, toLogError } from '../lib/logger';
+import { setupAndroidChannel } from '../lib/notifications';
 import { migrateLegacyData } from '../lib/storage';
+
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -40,6 +54,10 @@ export default function RootLayout() {
       .finally(() => {
         SplashScreen.hideAsync().catch(() => {});
       });
+
+    if (Platform.OS !== 'web') {
+      void setupAndroidChannel();
+    }
 
     // initApp은 로고 preload와 병렬 실행
     initApp()

@@ -18,7 +18,7 @@
     "android": {
       "permissions": [
         "CAMERA",
-        "CAMERA"
+        "RECEIVE_BOOT_COMPLETED"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -50,7 +50,8 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

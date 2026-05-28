@@ -2,15 +2,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import {
-  Bell, Camera, ChevronRight, Database, FileText,
+  Bell, Camera, ChevronRight, Clock, Database, FileText,
   Heart, Image as ImageIcon, Info, LogOut, MessageCircle, Newspaper,
   PawPrint, Shield, Star, Trash2, UserX,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { logger, toLogError } from '../../lib/logger';
+import {
+  getNotificationPermissionStatus,
+  loadNotificationTime,
+  requestNotificationPermission,
+  saveNotificationTime,
+  scheduleDailyNotification,
+} from '../../lib/notifications';
+
+let DateTimePicker: any = null;
+try {
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
+} catch {
+  DateTimePicker = null;
+}
 
 const FEEDBACK_URL = 'https://open.kakao.com/o/sqYtAKvi';
 // TODO: 앱 출시 후 실제 스토어 URL로 교체
@@ -171,6 +185,13 @@ function Row({ icon, label, desc, right, onPress, disabled, last, destructive }:
   );
 }
 
+function formatNotifTime(hour: number, minute: number): string {
+  const period = hour < 12 ? '오전' : '오후';
+  const h = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  const m = minute.toString().padStart(2, '0');
+  return `${period} ${h}:${m}`;
+}
+
 export default function SettingsScreen() {
   const [wagCount, setWagCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -178,10 +199,29 @@ export default function SettingsScreen() {
   const [showWebReviewModal, setShowWebReviewModal] = useState(false);
   const [webNotifPerm, setWebNotifPerm] = useState<WebNotifPerm>('unsupported');
   const [webCameraPerm, setWebCameraPerm] = useState<WebCameraPerm>('unsupported');
+
+  const [notifTime, setNotifTime] = useState({ hour: 22, minute: 0 });
+  const [notifPermission, setNotifPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const pickerDateRef = useRef<Date>(new Date());
+
   const { logout, deleteAccount } = useAuth();
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web') {
+      void (async () => {
+        const [time, perm] = await Promise.all([
+          loadNotificationTime(),
+          getNotificationPermissionStatus(),
+        ]);
+        setNotifTime(time);
+        setNotifPermission(perm);
+        const d = new Date();
+        d.setHours(time.hour, time.minute, 0, 0);
+        pickerDateRef.current = d;
+      })();
+      return;
+    }
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setWebNotifPerm(Notification.permission as WebNotifPerm);
     }
@@ -192,6 +232,43 @@ export default function SettingsScreen() {
         .catch(() => setWebCameraPerm('unsupported'));
     }
   }, []);
+
+  async function handleNotifTimePress() {
+    if (notifPermission === 'denied') {
+      Alert.alert('알림 권한 필요', '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.', [
+        { text: '취소', style: 'cancel' },
+        { text: '설정 열기', onPress: openSettings },
+      ]);
+      return;
+    }
+    if (notifPermission === 'undetermined') {
+      const granted = await requestNotificationPermission();
+      const newPerm = granted ? 'granted' : 'denied';
+      setNotifPermission(newPerm);
+      if (!granted) {
+        Alert.alert('알림 권한 필요', '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.', [
+          { text: '취소', style: 'cancel' },
+          { text: '설정 열기', onPress: openSettings },
+        ]);
+        return;
+      }
+    }
+    setShowTimePicker(true);
+  }
+
+  async function handleTimeConfirm() {
+    setShowTimePicker(false);
+    const d = pickerDateRef.current;
+    const newTime = { hour: d.getHours(), minute: d.getMinutes() };
+    setNotifTime(newTime);
+    try {
+      await saveNotificationTime(newTime);
+      await scheduleDailyNotification(newTime.hour, newTime.minute);
+    } catch (error) {
+      logger.warn('notification.schedule.failed', toLogError(error));
+      Alert.alert('오류', '알림 설정에 실패했어요. 다시 시도해 주세요.');
+    }
+  }
 
   async function handleClearCache() {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -385,19 +462,16 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content}>
-    {/*
-           <GroupTitle label="알림" />
-            <Card>
-              <Row icon={<Bell size={20} color={colors.textSecondary} />} label="알림 권한" desc="시스템 설정 열기" onPress={openSettings} />
-              {<Row icon={<Bell size={20} color={colors.textQuaternary} />} label="약 복용 알림" right={<ComingSoonBadge />} disabled />}
-              {<Row icon={<Bell size={20} color={colors.textQuaternary} />} label="데일리 포토 리마인더" right={<ComingSoonBadge />} disabled last /> }
-            </Card>
-      */}
-
-      <GroupTitle label="권한" />
+      <GroupTitle label="알림" />
       <Card>
         {Platform.OS === 'web' ? (
           <>
+            <Row
+              icon={<Clock size={20} color={colors.textQuaternary} />}
+              label="일일 기록 알림"
+              desc="앱에서 이용할 수 있어요"
+              disabled
+            />
             <Row
               icon={<Bell size={20} color={colors.textSecondary} />}
               label="알림 권한"
@@ -407,7 +481,36 @@ export default function SettingsScreen() {
                   ? () => { void handleWebNotifPermission(); }
                   : undefined
               }
+              last
             />
+          </>
+        ) : (
+          <>
+            <Row
+              icon={<Clock size={20} color={colors.textSecondary} />}
+              label="일일 기록 알림"
+              desc={
+                notifPermission === 'granted'
+                  ? formatNotifTime(notifTime.hour, notifTime.minute)
+                  : '알림을 받으려면 권한 허용이 필요해요'
+              }
+              onPress={() => { void handleNotifTimePress(); }}
+            />
+            <Row
+              icon={<Bell size={20} color={colors.textSecondary} />}
+              label="알림 권한"
+              desc="시스템 설정 열기"
+              onPress={openSettings}
+              last
+            />
+          </>
+        )}
+      </Card>
+
+      <GroupTitle label="권한" />
+      <Card>
+        {Platform.OS === 'web' ? (
+          <>
             <Row
               icon={<Camera size={20} color={colors.textSecondary} />}
               label="카메라 권한"
@@ -423,7 +526,6 @@ export default function SettingsScreen() {
           </>
         ) : (
           <>
-            <Row icon={<Bell size={20} color={colors.textSecondary} />} label="알림 권한" desc="시스템 설정 열기" onPress={openSettings} />
             <Row icon={<Camera size={20} color={colors.textSecondary} />} label="카메라 권한" desc="시스템 설정 열기" onPress={openSettings} />
             <Row icon={<ImageIcon size={20} color={colors.textSecondary} />} label="사진 접근 권한" desc="시스템 설정 열기" onPress={openSettings} last />
           </>
@@ -474,6 +576,41 @@ export default function SettingsScreen() {
           last
         />
       </Card>
+      {/* 알림 시간 선택 모달 */}
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={showTimePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowTimePicker(false)}
+        >
+          <View style={s.modalOverlay}>
+            <View style={s.timePickerSheet}>
+              <View style={s.timePickerHeader}>
+                <TouchableOpacity onPress={() => setShowTimePicker(false)} style={s.timePickerHeaderBtn}>
+                  <Text style={s.timePickerCancel}>취소</Text>
+                </TouchableOpacity>
+                <Text style={s.timePickerTitle}>알림 시간</Text>
+                <TouchableOpacity onPress={() => { void handleTimeConfirm(); }} style={s.timePickerHeaderBtn}>
+                  <Text style={s.timePickerDone}>완료</Text>
+                </TouchableOpacity>
+              </View>
+              {DateTimePicker && (
+                <DateTimePicker
+                  value={pickerDateRef.current}
+                  mode="time"
+                  display="spinner"
+                  locale="ko-KR"
+                  onChange={(_: unknown, date?: Date) => {
+                    if (date) pickerDateRef.current = date;
+                  }}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
+
       <Modal
         visible={showWebReviewModal}
         transparent
@@ -582,6 +719,41 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
+  },
+
+  timePickerSheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    width: '100%',
+    maxWidth: 360,
+    overflow: 'hidden',
+  },
+  timePickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  timePickerHeaderBtn: {
+    minWidth: 40,
+  },
+  timePickerTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  timePickerCancel: {
+    fontSize: 15,
+    color: colors.textSecondary,
+  },
+  timePickerDone: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
+    textAlign: 'right',
   },
   modalCard: {
     backgroundColor: colors.surface,
