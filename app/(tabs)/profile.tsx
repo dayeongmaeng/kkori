@@ -85,6 +85,25 @@ const dogBreeds = [
   "믹스견",
 ];
 
+const catBreeds = [
+  "코리안 숏헤어",
+  "페르시안",
+  "러시안 블루",
+  "샴",
+  "랙돌",
+  "브리티시 숏헤어",
+  "아메리칸 숏헤어",
+  "스코티시 폴드",
+  "먼치킨",
+  "메인쿤",
+  "뱅갈",
+  "노르웨이 숲",
+  "아비시니안",
+  "터키시 앙고라",
+  "스핑크스",
+  "기타",
+];
+
 function formatBirthDate(date: Date) {
   const y = date.getFullYear();
   const m = date.getMonth() + 1;
@@ -293,8 +312,9 @@ export default function ProfileScreen() {
   const footerHeightRef = useRef(0);
   const lastScrollYRef = useRef(0);
   const footerVisibleRef = useRef(true);
+  const breedList = species === "CAT" ? catBreeds : dogBreeds;
   const breedSuggestions = breed.trim()
-    ? dogBreeds
+    ? breedList
         .filter((item) => item.includes(breed.trim()) && item !== breed.trim())
         .slice(0, 5)
     : [];
@@ -722,13 +742,13 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.segmentButton, styles.speciesButtonDisabled]}
-              activeOpacity={1}
+              style={[styles.segmentButton, species === "CAT" && styles.segmentButtonActive]}
+              onPress={() => setSpecies("CAT")}
+              activeOpacity={0.8}
             >
-              <Text style={[styles.segmentText, styles.speciesTextDisabled]}>고양이</Text>
-              <View style={styles.comingSoonBadge}>
-                <Text style={styles.comingSoonText}>출시 예정</Text>
-              </View>
+              <Text style={[styles.segmentText, species === "CAT" && styles.segmentTextActive]}>
+                고양이
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -740,7 +760,7 @@ export default function ProfileScreen() {
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="강아지 이름"
+            placeholder="이름"
             placeholderTextColor={colors.textQuaternary}
           />
         </View>
@@ -778,9 +798,9 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* 견종 */}
+        {/* 종류 */}
         <View style={styles.field}>
-          <Text style={styles.label}>견종 *</Text>
+          <Text style={styles.label}>종류 *</Text>
           <TextInput
             style={styles.input}
             value={breed}
@@ -789,7 +809,7 @@ export default function ProfileScreen() {
               setBreedFocused(true);
             }}
             onFocus={() => setBreedFocused(true)}
-            placeholder="예: 말티즈, 포메라니안"
+            placeholder={species === "CAT" ? "예: 코리안 숏헤어, 러시안 블루" : "예: 말티즈, 포메라니안"}
             placeholderTextColor={colors.textQuaternary}
           />
           {breedFocused && breedSuggestions.length > 0 ? (
@@ -942,7 +962,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity onPress={() => setWeightPickerVisible(false)}>
                   <Text style={styles.modalCancel}>취소</Text>
                 </TouchableOpacity>
-                <Text style={styles.modalTitle}>체중 선택</Text>
+                <Text style={styles.modalTitle}>체중 입력</Text>
                 <TouchableOpacity onPress={confirmWeightPicker}>
                   <Text style={styles.modalDone}>완료</Text>
                 </TouchableOpacity>
