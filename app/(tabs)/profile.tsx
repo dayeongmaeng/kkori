@@ -398,7 +398,7 @@ export default function ProfileScreen() {
     setIndicatorStatus("error");
     indicatorTimerRef.current = setTimeout(
       () => setIndicatorStatus("idle"),
-      2500,
+      2000,
     );
   }
 
@@ -577,7 +577,7 @@ export default function ProfileScreen() {
       indicatorTimerRef.current = setTimeout(() => {
         setIndicatorStatus("idle");
         setPhotoUploadState({ status: "idle" });
-      }, 2500);
+      }, 2000);
     } catch (e) {
       logger.error("profile.save.failed", toLogError(e));
       setIndicatorStatus("idle");

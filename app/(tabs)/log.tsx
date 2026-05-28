@@ -429,7 +429,7 @@ export default function LogScreen() {
       setSuccessMessage('저장되었습니다 ✓');
       setSuccessBgColor(undefined);
       setSaveStatus('saved');
-      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
       logger.error('log.save.failed', toLogError(err));
       setSaveStatus('error');
