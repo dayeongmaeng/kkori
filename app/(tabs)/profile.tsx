@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
+import { Picker } from "@react-native-picker/picker";
 import {
   ActivityIndicator,
   Alert,
@@ -53,6 +54,9 @@ const maxDate = new Date(
   today.getFullYear(),
   today.getMonth(),
   today.getDate() + 1,
+);
+const WEIGHT_VALUES = Array.from({ length: 1000 }, (_, i) =>
+  parseFloat(((i + 1) / 10).toFixed(1)),
 );
 const dogBreeds = [
   "말티즈",
@@ -190,6 +194,7 @@ const webPickerStyles = {
     flexDirection: "row" as const,
     gap: 8,
     justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
   select: {
     flex: 1,
@@ -200,7 +205,55 @@ const webPickerStyles = {
     backgroundColor: colors.surfaceAlt,
     color: colors.textPrimary,
   },
+  weightDot: {
+    fontSize: 24,
+    fontWeight: "700" as const,
+    color: colors.textPrimary,
+  },
+  weightUnit: {
+    fontSize: 16,
+    fontWeight: "600" as const,
+    color: colors.textSecondary,
+  },
 };
+
+function WebWeightPicker({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const intValue = Math.floor(value);
+  const decValue = Math.round((value % 1) * 10) % 10;
+  function update(int: number, dec: number) {
+    onChange(parseFloat(`${int}.${dec}`));
+  }
+  return (
+    <View style={webPickerStyles.row}>
+      <select
+        value={intValue}
+        onChange={(e) => update(Number(e.target.value), decValue)}
+        style={webPickerStyles.select as any}
+      >
+        {Array.from({ length: 101 }, (_, i) => (
+          <option key={i} value={i}>{i}</option>
+        ))}
+      </select>
+      <Text style={webPickerStyles.weightDot}>.</Text>
+      <select
+        value={decValue}
+        onChange={(e) => update(intValue, Number(e.target.value))}
+        style={{ ...webPickerStyles.select as any, maxWidth: 90 }}
+      >
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <option key={n} value={n}>{n}</option>
+        ))}
+      </select>
+      <Text style={webPickerStyles.weightUnit}>kg</Text>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const { currentPet, setCurrentPet } = useCurrentPet();
@@ -231,6 +284,8 @@ export default function ProfileScreen() {
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState<Date>(new Date(2020, 0, 1));
   const [dateField, setDateField] = useState<DateField>("birthDate");
+  const [weightPickerVisible, setWeightPickerVisible] = useState(false);
+  const [pickerWeight, setPickerWeight] = useState(5.0);
 
   const [indicatorStatus, setIndicatorStatus] = useState<SaveStatus>("idle");
   const indicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -282,6 +337,17 @@ export default function ProfileScreen() {
     setDateField(field);
     setPickerDate(parsed ?? new Date(2020, 0, 1));
     setDatePickerVisible(true);
+  }
+
+  function openWeightPicker() {
+    const parsed = parseFloat(weightKg);
+    setPickerWeight(!isNaN(parsed) && parsed > 0 ? parsed : 5.0);
+    setWeightPickerVisible(true);
+  }
+
+  function confirmWeightPicker() {
+    setWeightKg(pickerWeight.toFixed(1));
+    setWeightPickerVisible(false);
   }
 
   function formatStorageDate(value: string) {
@@ -859,20 +925,57 @@ export default function ProfileScreen() {
           </View>
         </Modal>
 
+        {/* 체중 선택 모달 */}
+        <Modal
+          visible={weightPickerVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setWeightPickerVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setWeightPickerVisible(false)}>
+                  <Text style={styles.modalCancel}>취소</Text>
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>체중 선택</Text>
+                <TouchableOpacity onPress={confirmWeightPicker}>
+                  <Text style={styles.modalDone}>완료</Text>
+                </TouchableOpacity>
+              </View>
+              {Platform.OS === "web" ? (
+                <View style={styles.webPickerWrapper}>
+                  <WebWeightPicker
+                    value={pickerWeight}
+                    onChange={setPickerWeight}
+                  />
+                </View>
+              ) : (
+                <Picker
+                  selectedValue={pickerWeight}
+                  onValueChange={(v) => setPickerWeight(v as number)}
+                  itemStyle={styles.weightPickerItem}
+                >
+                  {WEIGHT_VALUES.map((v) => (
+                    <Picker.Item key={v} label={`${v.toFixed(1)} kg`} value={v} />
+                  ))}
+                </Picker>
+              )}
+            </View>
+          </View>
+        </Modal>
+
         {/* 체중 */}
         <View style={styles.field}>
           <Text style={styles.label}>체중 *</Text>
-          <View style={styles.weightRow}>
-            <TextInput
-              style={[styles.input, styles.weightInput]}
-              value={weightKg}
-              onChangeText={setWeightKg}
-              placeholder="0.0"
-              placeholderTextColor={colors.textQuaternary}
-              keyboardType="decimal-pad"
-            />
-            <Text style={styles.weightUnit}>kg</Text>
-          </View>
+          <TouchableOpacity
+            style={[styles.input, styles.dateButton]}
+            onPress={openWeightPicker}
+          >
+            <Text style={weightKg ? styles.dateText : styles.datePlaceholder}>
+              {weightKg ? `${weightKg} kg` : "체중 선택"}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* 중성화 */}
@@ -1299,5 +1402,9 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "700",
     color: colors.warning,
+  },
+  weightPickerItem: {
+    fontSize: 20,
+    color: colors.textPrimary,
   },
 });

@@ -12,16 +12,10 @@ try {
     photo: require('../../assets/tabs/photo.png'),
     log: require('../../assets/tabs/log.png'),
     profile: require('../../assets/tabs/profile.png'),
+    settings: require('../../assets/tabs/settings.png'),
   };
 } catch {
   tabIcons = null;
-}
-
-let settingsIcon: any = null;
-try {
-  settingsIcon = require('../../assets/tabs/settings.png');
-} catch {
-  settingsIcon = null;
 }
 
 function TabIcon({
@@ -109,20 +103,9 @@ export default function TabLayout() {
           name="settings"
           options={{
             title: '설정',
-            tabBarIcon: ({ focused, color }) => {
-              const tintColor = focused ? colors.primary : colors.textTertiary;
-              if (settingsIcon) {
-                return (
-                  <Image
-                    source={settingsIcon}
-                    style={{ width: 24, height: 24 }}
-                    tintColor={tintColor}
-                    resizeMode="contain"
-                  />
-                );
-              }
-              return <Settings size={24} color={color} />;
-            },
+            tabBarIcon: ({ focused, color }) => (
+              <TabIcon name="settings" focused={focused} fallback={<Settings size={24} color={color} />} />
+            ),
           }}
         />
       </Tabs>
