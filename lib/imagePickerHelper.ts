@@ -63,11 +63,8 @@ async function pickImageNativeRaw(options: PickImageOptions): Promise<string | n
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: 'images',
     allowsMultipleSelection: false,
-    allowsEditing: options.allowsEditing ?? true,
+    allowsEditing: options.allowsEditing ?? false,
     ...(options.aspect ? { aspect: options.aspect } : {}),
-    ...(Platform.OS === 'ios'
-      ? { presentationStyle: ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN }
-      : {}),
     quality: 1,
   });
   if (result.canceled || !result.assets?.[0]) {
