@@ -553,7 +553,7 @@ export default function AuthScreen() {
 
         <View style={s.logoArea}>
           <Animated.View style={[s.logo, logoTransform]}>
-            <Image source={require('../assets/logo.png')} style={s.logoImage} contentFit="contain" />
+            <Image source={require('../assets/dog-logo.svg')} style={s.logoImage} contentFit="contain" />
           </Animated.View>
           <Text style={s.logoCaption}>17년의 시간을 기억하며</Text>
         </View>

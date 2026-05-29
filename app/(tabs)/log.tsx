@@ -6,6 +6,7 @@ import {
   Platform,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -16,12 +17,15 @@ import DatePickerModal from '../../components/DatePickerModal';
 import EmptyPetState from '../../components/EmptyPetState';
 import SaveIndicator from '../../components/SaveIndicator';
 import { useDate } from '../../contexts/DateContext';
+import CatToiletPicker from '../../components/CatToiletPicker';
 import ConditionPicker from '../../components/ConditionPicker';
 import MealPicker from '../../components/MealPicker';
 import MemoInput from '../../components/MemoInput';
 import PhotoAttacher from '../../components/PhotoAttacher';
 import type { LogPhotoAttachment } from '../../components/PhotoAttacher';
+import PlayInput from '../../components/PlayInput';
 import PoopPicker from '../../components/PoopPicker';
+import VomitInput from '../../components/VomitInput';
 import WalkInput from '../../components/WalkInput';
 import WaterPicker from '../../components/WaterPicker';
 import { colors, radius, spacing } from '../../constants/theme';
@@ -43,11 +47,10 @@ import {
   getLogPhotos,
   removeCachedLog,
   setCachedLogs,
-  setLogLocalExtras,
   setLogPhotos,
   upsertCachedLog,
 } from '../../lib/cache/log';
-import { ConditionScore, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../../lib/types';
+import { ConditionScore, MealAmount, StoolCondition, UrineAmount, UrineColor, WaterAmount } from '../../lib/types';
 
 const imgArrowLeft = require('../../assets/log/arrow-left.png');
 const imgArrowRight = require('../../assets/log/arrow-right.png');
@@ -90,9 +93,16 @@ type LogFormData = {
   walkNote: string;
   pooCondition: StoolCondition | undefined;
   urineColor: UrineColor | undefined;
+  urineNote: string;
   pooNote: string;
   water: WaterAmount | undefined;
   waterNote: string;
+  playMinutes: number | undefined;
+  playNote: string;
+  urineAmount: UrineAmount | undefined;
+  vomitCount: number | undefined;
+  vomitNote: string;
+  weightKg: string;
   memo: string;
 };
 
@@ -175,9 +185,16 @@ export default function LogScreen() {
   const [walkNote, setWalkNote] = useState('');
   const [pooCondition, setPooCondition] = useState<StoolCondition | undefined>();
   const [urineColor, setUrineColor] = useState<UrineColor | undefined>();
+  const [urineNote, setUrineNote] = useState('');
   const [pooNote, setPooNote] = useState('');
   const [water, setWater] = useState<WaterAmount | undefined>();
   const [waterNote, setWaterNote] = useState('');
+  const [playMinutes, setPlayMinutes] = useState<number | undefined>();
+  const [playNote, setPlayNote] = useState('');
+  const [urineAmount, setUrineAmount] = useState<UrineAmount | undefined>();
+  const [vomitCount, setVomitCount] = useState<number | undefined>();
+  const [vomitNote, setVomitNote] = useState('');
+  const [weightKg, setWeightKg] = useState('');
   const [memo, setMemo] = useState('');
   const [logPhotos, setLogPhotosState] = useState<LogPhotoAttachment[]>([]);
   logPhotosRef.current = logPhotos;
@@ -201,6 +218,8 @@ export default function LogScreen() {
     setReloadKey((k) => k + 1);
   }
 
+  const isCat = currentPet?.species?.toLowerCase() === 'cat';
+
   function resetStates() {
     setLogExternalId(null);
     setCondition(undefined);
@@ -210,9 +229,16 @@ export default function LogScreen() {
     setWalkNote('');
     setPooCondition(undefined);
     setUrineColor(undefined);
+    setUrineNote('');
     setPooNote('');
     setWater(undefined);
     setWaterNote('');
+    setPlayMinutes(undefined);
+    setPlayNote('');
+    setUrineAmount(undefined);
+    setVomitCount(undefined);
+    setVomitNote('');
+    setWeightKg('');
     setMemo('');
     setLogPhotosState([]);
   }
@@ -227,13 +253,21 @@ export default function LogScreen() {
     setPooCondition(log.pooCondition);
     setUrineColor(log.urineColor);
     setWater(log.water);
+    setPlayMinutes(log.playMinutes ?? undefined);
+    setUrineAmount(log.urineAmount);
+    setVomitCount(log.vomitCount);
+    setVomitNote(log.vomitNote ?? '');
+    setPlayNote(log.playNote ?? '');
+    setUrineNote(log.urineNote ?? '');
+    setWeightKg(log.weightKg !== undefined ? String(log.weightKg) : '');
     setMemo(log.memo ?? '');
 
+    // API 필드로 이관된 메모들은 서버 값 우선, 이전 로컬 extras는 폴백
     const extras = await getLogLocalExtras(log.externalId);
-    setMealNote(extras.mealNote ?? '');
-    setWalkNote(extras.walkNote ?? '');
-    setPooNote(extras.pooNote ?? '');
-    setWaterNote(extras.waterNote ?? '');
+    setMealNote(log.mealNote ?? extras.mealNote ?? '');
+    setWalkNote(log.walkNote ?? extras.walkNote ?? '');
+    setPooNote(log.pooNote ?? extras.pooNote ?? '');
+    setWaterNote(log.waterNote ?? extras.waterNote ?? '');
 
     const cachedPhotos = await getLogPhotos(log.externalId);
     const serverPhotos = log.photos ?? [];
@@ -323,8 +357,12 @@ export default function LogScreen() {
     date,
     logExternalId,
     condition, meal, mealNote, walkMinutes, walkNote,
-    pooCondition, urineColor, pooNote,
-    water, waterNote, memo,
+    pooCondition, urineColor, urineNote, pooNote,
+    water, waterNote,
+    playMinutes, playNote, urineAmount,
+    vomitCount, vomitNote,
+    weightKg,
+    memo,
   };
 
   const saveLog = useCallback(async (data: LogFormData): Promise<string | null> => {
@@ -338,17 +376,29 @@ export default function LogScreen() {
     }
     if (!caregiverId) throw new Error('보호자 정보가 초기화되지 않았습니다.');
 
+    const parsedWeight = parseFloat(data.weightKg);
     const body: LogRequest = {
       petExternalId: currentPetId,
       caregiverExternalId: caregiverId,
       date: data.date,
       meal: data.meal,
+      mealNote: data.mealNote.trim() || undefined,
       water: data.water,
+      waterNote: data.waterNote.trim() || undefined,
       walkMinutes: data.walkMinutes ?? null,
+      walkNote: data.walkNote.trim() || undefined,
       pooCondition: data.pooCondition,
+      pooNote: data.pooNote.trim() || undefined,
       urineColor: data.urineColor,
+      urineNote: data.urineNote.trim() || undefined,
+      urineAmount: data.urineAmount,
       condition: data.condition,
+      weightKg: data.weightKg.trim() && !isNaN(parsedWeight) && parsedWeight > 0 ? parsedWeight : undefined,
       memo: data.memo.trim() || undefined,
+      playMinutes: data.playMinutes ?? null,
+      playNote: data.playNote.trim() || undefined,
+      vomitCount: data.vomitCount,
+      vomitNote: data.vomitNote.trim() || undefined,
     };
 
     const extId = data.logExternalId;
@@ -371,15 +421,6 @@ export default function LogScreen() {
       }
       const photos = result.photos?.length ? result.photos : toReadyLogPhotos(logPhotosRef.current);
       await upsertCachedLog(currentPetId, { ...result, photos });
-    }
-
-    if (savedExtId) {
-      await setLogLocalExtras(savedExtId, {
-        mealNote: data.mealNote.trim() || undefined,
-        walkNote: data.walkNote.trim() || undefined,
-        pooNote: data.pooNote.trim() || undefined,
-        waterNote: data.waterNote.trim() || undefined,
-      });
     }
 
     return savedExtId;
@@ -465,15 +506,13 @@ export default function LogScreen() {
         date: dateRef.current,
         logExternalId: logExternalIdRef.current,
         condition,
-        meal,
-        mealNote,
-        walkMinutes,
-        walkNote,
-        pooCondition,
-        urineColor,
-        pooNote,
-        water,
-        waterNote,
+        meal, mealNote,
+        walkMinutes, walkNote,
+        pooCondition, urineColor, urineNote, pooNote,
+        water, waterNote,
+        playMinutes, playNote, urineAmount,
+        vomitCount, vomitNote,
+        weightKg,
         memo,
       });
       setSuccessMessage('기록을 먼저 저장했어요 ✓');
@@ -596,7 +635,7 @@ export default function LogScreen() {
         onMomentumScrollEnd={handleScrollEnd}
       >
         <Card title="오늘 컨디션은?">
-          <ConditionPicker value={condition} onChange={setCondition} />
+          <ConditionPicker value={condition} onChange={setCondition} iconSet={isCat ? 'cat' : 'dog'} />
         </Card>
         <Card title="식사는?">
           <MealPicker
@@ -606,30 +645,73 @@ export default function LogScreen() {
             onChangeNote={setMealNote}
           />
         </Card>
-        <Card title="산책">
-          <WalkInput
-            minutes={walkMinutes}
-            note={walkNote}
-            onChangeMinutes={setWalkMinutes}
-            onChangeNote={setWalkNote}
-          />
-        </Card>
-        <Card title="배변">
-          <PoopPicker
-            pooCondition={pooCondition}
-            urineColor={urineColor}
-            pooNote={pooNote}
-            onChangePooCondition={setPooCondition}
-            onChangeUrineColor={setUrineColor}
-            onChangePooNote={setPooNote}
-          />
-        </Card>
+
+        {/* 강아지 전용 */}
+        {!isCat && (
+          <>
+            <Card title="산책">
+              <WalkInput
+                minutes={walkMinutes}
+                note={walkNote}
+                onChangeMinutes={setWalkMinutes}
+                onChangeNote={setWalkNote}
+              />
+            </Card>
+            <Card title="배변">
+              <PoopPicker
+                pooCondition={pooCondition}
+                urineColor={urineColor}
+                pooNote={pooNote}
+                urineNote={urineNote}
+                onChangePooCondition={setPooCondition}
+                onChangeUrineColor={setUrineColor}
+                onChangePooNote={setPooNote}
+                onChangeUrineNote={setUrineNote}
+              />
+            </Card>
+          </>
+        )}
+
+        {/* 고양이 전용 */}
+        {isCat && (
+          <>
+            <Card title="놀이">
+              <PlayInput
+                minutes={playMinutes}
+                note={playNote}
+                onChangeMinutes={setPlayMinutes}
+                onChangeNote={setPlayNote}
+              />
+            </Card>
+            <Card title="화장실">
+              <CatToiletPicker
+                pooCondition={pooCondition}
+                pooNote={pooNote}
+                urineAmount={urineAmount}
+                urineNote={urineNote}
+                onChangePooCondition={setPooCondition}
+                onChangePooNote={setPooNote}
+                onChangeUrineAmount={setUrineAmount}
+                onChangeUrineNote={setUrineNote}
+              />
+            </Card>
+          </>
+        )}
+
         <Card title="물 섭취">
           <WaterPicker
             water={water}
             waterNote={waterNote}
             onChangeWater={setWater}
             onChangeNote={setWaterNote}
+          />
+        </Card>
+        <Card title="구토">
+          <VomitInput
+            count={vomitCount}
+            note={vomitNote}
+            onChangeCount={setVomitCount}
+            onChangeNote={setVomitNote}
           />
         </Card>
         <Card title="기록 사진 (선택)">
@@ -785,5 +867,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: colors.danger,
+  },
+  weightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  weightInput: {
+    width: 80,
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+    paddingBottom: 2,
+  },
+  weightUnit: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
 });

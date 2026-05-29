@@ -35,6 +35,7 @@ export interface PhotoUpdateRequest {
 
 export interface PhotoShareResponse {
   petName: string;
+  petSpecies?: string;
   date: string;
   caption?: string;
   mediumUrl?: string;

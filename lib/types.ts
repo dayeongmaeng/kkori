@@ -5,6 +5,7 @@ export type WaterAmount = 'LESS' | 'NORMAL' | 'MORE';
 export type StoolCondition = 'NORMAL' | 'SOFT' | 'HARD' | 'DIARRHEA';
 export type UrineColor = 'PALE' | 'NORMAL' | 'DARK';
 export type ConditionScore = 1 | 2 | 3 | 4 | 5;
+export type UrineAmount = 'LESS' | 'NORMAL' | 'MORE';
 
 export type CaregiverRole = 'owner' | 'family' | 'guest';
 

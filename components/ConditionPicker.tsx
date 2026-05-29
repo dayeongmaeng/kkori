@@ -4,13 +4,25 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius } from '../constants/theme';
 import { ConditionScore } from '../lib/types';
 
-// 실제 이미지 파일을 assets/conditions/1.png ~ 5.png에 넣으면 자동 적용
-const conditionImages: Record<ConditionScore, ReturnType<typeof require>> = {
-  1: require('../assets/conditions/1.png'),
-  2: require('../assets/conditions/2.png'),
-  3: require('../assets/conditions/3.png'),
-  4: require('../assets/conditions/4.png'),
-  5: require('../assets/conditions/5.png'),
+const dogConditionImages: Record<ConditionScore, ReturnType<typeof require>> = {
+  1: require('../assets/conditions/dog-1.svg'),
+  2: require('../assets/conditions/dog-2.svg'),
+  3: require('../assets/conditions/dog-3.svg'),
+  4: require('../assets/conditions/dog-4.svg'),
+  5: require('../assets/conditions/dog-5.svg'),
+};
+
+const catConditionImages: Record<ConditionScore, ReturnType<typeof require>> = {
+  1: require('../assets/conditions/cat-1.svg'),
+  2: require('../assets/conditions/cat-2.svg'),
+  3: require('../assets/conditions/cat-3.svg'),
+  4: require('../assets/conditions/cat-4.svg'),
+  5: require('../assets/conditions/cat-5.svg'),
+};
+
+const CONDITION_IMAGES: Record<'dog' | 'cat', Record<ConditionScore, ReturnType<typeof require>>> = {
+  dog: dogConditionImages,
+  cat: catConditionImages,
 };
 
 const OPTIONS: { value: ConditionScore; emoji: string }[] = [
@@ -21,7 +33,15 @@ const OPTIONS: { value: ConditionScore; emoji: string }[] = [
   { value: 5, emoji: '🤩' },
 ];
 
-function ConditionImage({ score, selected }: { score: ConditionScore; selected: boolean }) {
+function ConditionImage({
+  score,
+  selected,
+  iconSet,
+}: {
+  score: ConditionScore;
+  selected: boolean;
+  iconSet: 'dog' | 'cat';
+}) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
@@ -34,7 +54,7 @@ function ConditionImage({ score, selected }: { score: ConditionScore; selected: 
 
   return (
     <Image
-      source={conditionImages[score]}
+      source={CONDITION_IMAGES[iconSet][score]}
       style={[styles.image, selected && styles.imageSelected]}
       contentFit="contain"
       onError={() => setFailed(true)}
@@ -45,9 +65,10 @@ function ConditionImage({ score, selected }: { score: ConditionScore; selected: 
 interface Props {
   value?: ConditionScore;
   onChange: (value: ConditionScore | undefined) => void;
+  iconSet?: 'dog' | 'cat';
 }
 
-export default function ConditionPicker({ value, onChange }: Props) {
+export default function ConditionPicker({ value, onChange, iconSet = 'dog' }: Props) {
   function handlePress(score: ConditionScore) {
     onChange(value === score ? undefined : score);
   }
@@ -63,7 +84,7 @@ export default function ConditionPicker({ value, onChange }: Props) {
             onPress={() => handlePress(opt.value)}
             activeOpacity={0.7}
           >
-            <ConditionImage score={opt.value} selected={selected} />
+            <ConditionImage score={opt.value} selected={selected} iconSet={iconSet} />
           </TouchableOpacity>
         );
       })}

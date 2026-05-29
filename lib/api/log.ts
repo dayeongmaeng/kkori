@@ -1,5 +1,5 @@
 import { api } from './client';
-import { ConditionScore, MealAmount, StoolCondition, UrineColor, WaterAmount } from '../types';
+import { ConditionScore, MealAmount, StoolCondition, UrineAmount, UrineColor, WaterAmount } from '../types';
 import type { ThumbnailFile } from '../photoUtils';
 
 export interface LogPhotoResponse {
@@ -20,13 +20,23 @@ export interface LogResponse {
   petExternalId: string;
   date: string;
   meal?: MealAmount;
+  mealNote?: string;
   water?: WaterAmount;
+  waterNote?: string;
   walkMinutes?: number | null;
+  walkNote?: string;
   pooCondition?: StoolCondition;
+  pooNote?: string;
   urineColor?: UrineColor;
+  urineNote?: string;
+  urineAmount?: UrineAmount;
   condition?: ConditionScore;
   weightKg?: number;
   memo?: string;
+  playMinutes?: number | null;
+  playNote?: string;
+  vomitCount?: number;
+  vomitNote?: string;
   photos?: LogPhotoResponse[];
   createdAt: string;
   updatedAt: string;
@@ -37,13 +47,23 @@ export interface LogRequest {
   caregiverExternalId: string;
   date: string;
   meal?: MealAmount;
+  mealNote?: string;
   water?: WaterAmount;
+  waterNote?: string;
   walkMinutes?: number | null;
+  walkNote?: string;
   pooCondition?: StoolCondition;
+  pooNote?: string;
   urineColor?: UrineColor;
+  urineNote?: string;
+  urineAmount?: UrineAmount;
   condition?: ConditionScore;
   weightKg?: number;
   memo?: string;
+  playMinutes?: number | null;
+  playNote?: string;
+  vomitCount?: number;
+  vomitNote?: string;
 }
 
 export interface LogFilter {

@@ -166,13 +166,16 @@ API 코드 위치: `lib/api/`
 ### 기록 탭
 
 - 날짜 이동, 캘린더 모달, 기록 있는 날짜 표시 구현.
-- 기록 항목: 컨디션, 식사, 산책, 배변, 물 섭취, 기록 사진, 메모.
+- `currentPet.species` 기준으로 강아지/고양이 기록 UI를 분기한다. dog/DOG → 강아지, cat/CAT → 고양이, 미설정 → 강아지 기본값.
+- **강아지 기록 항목**: 컨디션, 식사(mealNote), 산책(walkMinutes/walkNote), 배변(pooCondition/pooNote + urineColor/urineNote), 물 섭취(waterNote), 구토(vomitCount/vomitNote), 체중(weightKg), 기록 사진, 오늘의 메모.
+- **고양이 기록 항목**: 컨디션, 식사(mealNote), 놀이(playMinutes/playNote), 화장실(pooCondition/pooNote + urineAmount/urineNote), 물 섭취(waterNote), 구토(vomitCount/vomitNote), 기록 사진, 오늘의 메모.
 - 자동저장은 제거되어 있고 사용자가 저장 버튼을 눌러야 서버에 저장된다.
 - 기존 기록은 `PUT /api/v1/logs/{externalId}`, 신규 기록은 `POST /api/v1/logs`를 호출한다.
 - 기록 삭제는 `DELETE /api/v1/logs/{externalId}` 호출 후 캐시 삭제와 화면 초기화를 함께 수행한다.
 - 기록 사진은 DailyLog별 최대 3장까지 첨부 가능하다.
 - 기록 사진 선택 후 압축/리사이즈, medium/thumbnail 생성, 서버 업로드, 재시도, 삭제, 큰 이미지 미리보기가 구현되어 있다.
-- 식사/산책/배변/물 섭취의 세부 메모는 서버 필드가 아니라 로컬 `log-extras` 캐시에 저장된다.
+- 식사/산책/배변/물 섭취 등 세부 메모 필드(mealNote, walkNote, pooNote, urineNote, waterNote 등)는 API 필드로 서버에 저장된다. 이전 로컬 `log-extras` 캐시는 구버전 데이터 폴백용으로 읽기만 유지된다.
+- 신규 API 필드: `mealNote`, `walkNote`, `pooNote`, `urineNote`, `waterNote`, `playMinutes`, `playNote`, `urineAmount`, `vomitCount`, `vomitNote`.
 
 ### 포토 탭
 
@@ -194,13 +197,14 @@ API 코드 위치: `lib/api/`
 - 공유 URL은 `{WEB_BASE_URL}/photos/{externalId}` 형태로 생성된다.
 - Vercel 설정에서 `/photos/:externalId`는 Expo 페이지보다 먼저 `api/share-photo.js`로 라우팅된다.
 - `api/share-photo.js`는 백엔드 공유 API를 호출해 정적 HTML 형태의 공유 페이지와 OG/Twitter 메타 태그를 렌더링한다.
+- 공유 화면(`app/photos/[externalId].tsx`)은 `PhotoShareResponse.petSpecies` 기반으로 로고를 분기한다. 서버가 petSpecies를 미지원 시 강아지 로고가 기본값으로 표시된다.
 
 ### 프로필 탭
 
 - 반려동물 프로필 생성/수정 화면 구현.
-- 필드: 사진, 이름, 성별, 견종, 생일, 생일 모름, 함께한 날, 체중, 중성화 여부, 건강 메모.
-- 현재 species는 저장 시 `"dog"`로 고정된다.
-- 견종은 클라이언트 상수 기반 자동완성 + 자유입력 구조다.
+- 필드: 사진, 이름, 반려동물 종류(강아지/고양이), 성별, 종류(품종), 생일, 생일 모름, 함께한 날, 체중, 중성화 여부, 건강 메모.
+- 반려동물 종류 선택: 강아지/고양이 모두 선택 및 저장 가능. species는 `"DOG"` 또는 `"CAT"`으로 전송된다.
+- 종류(품종) 입력: 강아지 선택 시 강아지 품종 자동완성, 고양이 선택 시 고양이 품종 자동완성으로 분기된다.
 - 생일/함께한 날은 네이티브 DateTimePicker와 웹용 select picker를 분기 처리한다.
 - 프로필 사진은 512px 기준으로 압축하고 base64로 저장/전송한다.
 - 저장 후 pet 캐시와 current pet 상태를 갱신한다.
@@ -266,6 +270,9 @@ API 코드 위치: `lib/api/`
 - 프로필 `gender` 요청 타입은 코드상 `male` / `female` 소문자로 전송한다. 서버 문서가 `MALE` / `FEMALE` 기준이면 정합성 확인이 필요하다.
 - AI 리포트, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
 - 번들 ID/패키지가 `com.kkori.app`로 되어 있다. App Store 제출 전 실제 번들 ID로 교체해야 한다.
+- 고양이 컨디션 이미지는 `assets/conditions/cat-3.png ~ cat-5.png`가 미추가 상태다. 추가 시 `ConditionPicker.tsx`의 `catConditionImages` 매핑을 교체한다.
+- 고양이 로고(`assets/cat-logo.png`)는 미추가 상태로 현재 강아지 로고를 공유한다. 추가 시 `AppHeader.tsx`, `app/photos/[externalId].tsx`의 `catLogoSource`/`catLogoImage`를 교체한다.
+- 공유 화면 로고 분기는 서버가 `PhotoShareResponse.petSpecies`를 응답에 포함해야 동작한다. 백엔드 미반영 시 강아지 로고가 기본값으로 표시된다.
 
 ## 다음 작업 후보
 

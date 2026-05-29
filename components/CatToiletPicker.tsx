@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
-import { StoolCondition, UrineColor } from '../lib/types';
+import { StoolCondition, UrineAmount } from '../lib/types';
 
 const STOOL_OPTIONS: { value: StoolCondition; label: string }[] = [
   { value: 'NORMAL', label: '정상' },
@@ -9,31 +9,31 @@ const STOOL_OPTIONS: { value: StoolCondition; label: string }[] = [
   { value: 'DIARRHEA', label: '설사' },
 ];
 
-const URINE_OPTIONS: { value: UrineColor; label: string }[] = [
-  { value: 'PALE', label: '연함' },
-  { value: 'NORMAL', label: '정상' },
-  { value: 'DARK', label: '진함' },
+const URINE_AMOUNT_OPTIONS: { value: UrineAmount; label: string }[] = [
+  { value: 'LESS', label: '적음' },
+  { value: 'NORMAL', label: '평소' },
+  { value: 'MORE', label: '많음' },
 ];
 
 interface Props {
   pooCondition?: StoolCondition;
-  urineColor?: UrineColor;
   pooNote?: string;
+  urineAmount?: UrineAmount;
   urineNote?: string;
   onChangePooCondition: (value: StoolCondition | undefined) => void;
-  onChangeUrineColor: (value: UrineColor | undefined) => void;
   onChangePooNote: (value: string) => void;
+  onChangeUrineAmount: (value: UrineAmount | undefined) => void;
   onChangeUrineNote: (value: string) => void;
 }
 
-export default function PoopPicker({
+export default function CatToiletPicker({
   pooCondition,
-  urineColor,
   pooNote,
+  urineAmount,
   urineNote,
   onChangePooCondition,
-  onChangeUrineColor,
   onChangePooNote,
+  onChangeUrineAmount,
   onChangeUrineNote,
 }: Props) {
   return (
@@ -71,13 +71,13 @@ export default function PoopPicker({
       {/* 소변 */}
       <Text style={styles.label}>소변 💧</Text>
       <View style={styles.optionRow}>
-        {URINE_OPTIONS.map((opt) => {
-          const selected = urineColor === opt.value;
+        {URINE_AMOUNT_OPTIONS.map((opt) => {
+          const selected = urineAmount === opt.value;
           return (
             <TouchableOpacity
               key={opt.value}
               style={[styles.optionBtn, selected && styles.optionBtnSelected]}
-              onPress={() => onChangeUrineColor(urineColor === opt.value ? undefined : opt.value)}
+              onPress={() => onChangeUrineAmount(urineAmount === opt.value ? undefined : opt.value)}
               activeOpacity={0.7}
             >
               <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   optionBtn: {
     flex: 1,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
   },

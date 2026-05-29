@@ -4,15 +4,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, Home, NotebookPen, PawPrint, Settings } from 'lucide-react-native';
 import AppHeader from '../../components/AppHeader';
 import { colors } from '../../constants/theme';
+import { useCurrentPet } from '../../contexts/PetContext';
 
 let tabIcons: Record<string, any> | null = null;
 try {
   tabIcons = {
-    home: require('../../assets/tabs/home.png'),
-    photo: require('../../assets/tabs/photo.png'),
-    log: require('../../assets/tabs/log.png'),
-    profile: require('../../assets/tabs/profile.png'),
-    settings: require('../../assets/tabs/settings.png'),
+    home: require('../../assets/tabs/home.svg'),
+    photo: require('../../assets/tabs/photo.svg'),
+    log: require('../../assets/tabs/records.svg'),
+    'dog-profile': require('../../assets/tabs/dog-profile.svg'),
+    'cat-profile': require('../../assets/tabs/cat-profile.svg'),
+    settings: require('../../assets/tabs/settings.svg'),
   };
 } catch {
   tabIcons = null;
@@ -43,6 +45,8 @@ function TabIcon({
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { currentPet } = useCurrentPet();
+  const profileIconName = currentPet?.species?.toLowerCase() === 'cat' ? 'cat-profile' : 'dog-profile';
 
   return (
     <View style={{ flex: 1 }}>
@@ -57,8 +61,21 @@ export default function TabLayout() {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
             borderTopWidth: 1,
+            paddingTop: 0,
             paddingBottom: insets.bottom,
             height: 56 + insets.bottom,
+          },
+          tabBarItemStyle: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 0,
+            margin: 0,
+          },
+          tabBarIconStyle: {
+            width: 40,
+            height: 40,
+            margin: 0,
           },
           tabBarShowLabel: false,
         }}
@@ -95,7 +112,7 @@ export default function TabLayout() {
           options={{
             title: '프로필',
             tabBarIcon: ({ focused, color }) => (
-              <TabIcon name="profile" focused={focused} fallback={<PawPrint size={24} color={color} />} />
+              <TabIcon name={profileIconName} focused={focused} fallback={<PawPrint size={24} color={color} />} />
             ),
           }}
         />

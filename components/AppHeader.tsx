@@ -21,14 +21,26 @@ import { PetResponse } from "../lib/api/pet";
 import { getCachedPets, setCachedCurrentPetId } from "../lib/cache/pet";
 
 const FEEDBACK_URL = "https://open.kakao.com/o/sqYtAKvi";
-const logoSource = require("../assets/logo.png");
 
-function Logo() {
+const dogLogoSource = require("../assets/dog-logo.svg");
+const catLogoSource: ReturnType<typeof require> = require("../assets/cat-logo.svg");
+
+const LOGO_SOURCES: Record<"dog" | "cat", ReturnType<typeof require>> = {
+  dog: dogLogoSource,
+  cat: catLogoSource,
+};
+
+function getLogoSource(species: string | undefined): ReturnType<typeof require> {
+  if (species?.toLowerCase() === "cat") return LOGO_SOURCES.cat;
+  return LOGO_SOURCES.dog;
+}
+
+function Logo({ species }: { species: string | undefined }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <Text style={styles.logoText}>꼬리</Text>;
   return (
     <Image
-      source={logoSource}
+      source={getLogoSource(species)}
       style={styles.logoImage}
       contentFit="contain"
       onError={() => setFailed(true)}
@@ -107,7 +119,7 @@ export default function AppHeader() {
         >
           <Text style={styles.betaText}>BETA ›</Text>
         </TouchableOpacity>
-        <Logo />
+        <Logo species={currentPet?.species} />
       </View>
 
       {/* 반려동물 선택 바텀시트 */}

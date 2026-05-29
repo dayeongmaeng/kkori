@@ -17,7 +17,18 @@ import { PhotoShareResponse, photoApi } from '../../lib/api/photo';
 import { WEB_BASE_URL } from '../../lib/api/client';
 import { colors, radius, spacing } from '../../constants/theme';
 
-const logoImage = require('../../assets/logo.png');
+const dogLogoImage = require('../../assets/dog-logo.svg');
+const catLogoImage: ReturnType<typeof require> = require('../../assets/cat-logo.svg');;
+
+const LOGO_IMAGES: Record<'dog' | 'cat', ReturnType<typeof require>> = {
+  dog: dogLogoImage,
+  cat: catLogoImage,
+};
+
+function getLogoImage(species: string | undefined): ReturnType<typeof require> {
+  if (species?.toLowerCase() === 'cat') return LOGO_IMAGES.cat;
+  return LOGO_IMAGES.dog;
+}
 
 function formatDateKorean(dateStr: string) {
   const [y, m, d] = dateStr.split('-');
@@ -108,7 +119,7 @@ export default function SharedPhotoScreen() {
           <View style={styles.topBar}>
             <View>
               <Image
-                source={logoImage}
+                source={getLogoImage(photo.petSpecies)}
                 style={styles.logoImage}
                 contentFit="contain"
                 contentPosition="right center"
