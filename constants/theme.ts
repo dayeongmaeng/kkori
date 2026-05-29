@@ -3,8 +3,8 @@ import { Platform, ViewStyle } from 'react-native';
 // Color System v1 + v2
 export const colors = {
   // Brand
-  primary: '#D88C73',
-  secondary: '#8F9A8D',
+  primary: '#8F9A8D',
+  secondary: '#B89C86',
   primarySoft: '#FFE4D1',
 
   // Backgrounds
