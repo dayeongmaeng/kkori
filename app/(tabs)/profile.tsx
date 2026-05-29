@@ -18,6 +18,7 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import SaveIndicator from "../../components/SaveIndicator";
 import { colors, radius, spacing } from "../../constants/theme";
+import { showConfirm } from "../../lib/dialog";
 import { useCurrentPet } from "../../contexts/PetContext";
 import { SaveStatus } from "../../hooks/useAutoSave";
 import { petApi, PetResponse } from "../../lib/api/pet";
@@ -656,20 +657,11 @@ export default function ProfileScreen() {
 
   function confirmDelete() {
     if (!externalId || isDeleting || isSaving) return;
-    if (Platform.OS === "web") {
-      const confirmed = window.confirm(
-        `${name} 프로필을 삭제할까요?\n모든 기록이 함께 삭제됩니다.`,
-      );
-      if (confirmed) void doDelete();
-      return;
-    }
-    Alert.alert(
+    showConfirm(
       "반려동물 삭제",
       `${name} 프로필을 삭제할까요?\n모든 기록이 함께 삭제됩니다.`,
-      [
-        { text: "취소", style: "cancel" },
-        { text: "삭제", style: "destructive", onPress: doDelete },
-      ],
+      doDelete,
+      { confirmText: "삭제", confirmStyle: "destructive" },
     );
   }
 

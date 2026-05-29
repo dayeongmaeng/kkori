@@ -24,6 +24,7 @@ import {
 } from "react-native";
 import PhotoActionSheet from "../../components/PhotoActionSheet";
 import { colors, spacing } from "../../constants/theme";
+import { showConfirm } from "../../lib/dialog";
 import { WEB_BASE_URL } from "../../lib/api/client";
 import { photoApi } from "../../lib/api/photo";
 import { getCachedCurrentPetId } from "../../lib/cache/pet";
@@ -270,16 +271,10 @@ export default function PhotoDetailScreen() {
       ? "오늘 사진을 삭제할까요?\n같은 날 다시 추가할 수 있어요."
       : "이 사진을 삭제할까요?\n해당 날짜에는 다시 추가할 수 없어요.";
 
-    if (Platform.OS === "web") {
-      if (window.confirm(message)) {
-        doDelete();
-      }
-      return;
-    }
-    Alert.alert("사진 삭제", message, [
-      { text: "취소", style: "cancel" },
-      { text: "삭제", style: "destructive", onPress: doDelete },
-    ]);
+    showConfirm("사진 삭제", message, doDelete, {
+      confirmText: "삭제",
+      confirmStyle: "destructive",
+    });
   }
 
   if (!loaded) {

@@ -1,16 +1,5 @@
-import { Platform, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { colors, radius, shadow, spacing } from '../constants/theme';
-
-const cardShadow: ViewStyle = Platform.select<ViewStyle>({
-  ios: {
-    shadowColor: shadow.sm.shadowColor,
-    shadowOffset: shadow.sm.shadowOffset,
-    shadowOpacity: shadow.sm.shadowOpacity,
-    shadowRadius: shadow.sm.shadowRadius,
-  },
-  android: { elevation: shadow.sm.elevation },
-  default: {},
-}) ?? {};
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, platformShadow, radius, shadow, spacing } from '../constants/theme';
 import IconImage from './IconImage';
 import { summarizeLog } from '../lib/logUtils';
 import { LogResponse } from '../lib/api/log';
@@ -67,7 +56,7 @@ const styles = StyleSheet.create({
   },
   filledCard: {
     backgroundColor: colors.surface,
-    ...cardShadow,
+    ...platformShadow(shadow.sm),
   },
   row: {
     flexDirection: 'row',

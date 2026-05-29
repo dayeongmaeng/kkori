@@ -9,6 +9,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
+import { showAlert, showConfirm } from '../../lib/dialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { logger, toLogError } from '../../lib/logger';
 import {
@@ -327,21 +328,11 @@ export default function SettingsScreen() {
   }
 
   function handleDonation() {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const confirmed = window.confirm(
-        '17년 함께한 반려견을 떠나보낸 경험으로 꼬리를 만들고 있어요.\n\n후원은 선택사항이며 앱 기능에 영향을 주지 않아요.\n\n확인을 누르면 토스로 이동해요.',
-      );
-      if (confirmed) openURL(DONATION_URL);
-      return;
-    }
-
-    Alert.alert(
+    showConfirm(
       '꼬리 응원하기',
       '17년 함께한 반려견을 떠나보낸 경험으로 꼬리를 만들고 있어요.\n\n후원은 선택사항이며 앱 기능에 영향을 주지 않아요.',
-      [
-        { text: '닫기', style: 'cancel' },
-        { text: '토스 열기', onPress: () => openURL(DONATION_URL) },
-      ],
+      () => openURL(DONATION_URL),
+      { confirmText: '토스 열기', cancelText: '닫기' },
     );
   }
 
@@ -370,11 +361,7 @@ export default function SettingsScreen() {
         : error instanceof Error
           ? error.message
           : '탈퇴 처리 중 오류가 발생했어요. 다시 시도해 주세요.';
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert(`탈퇴 실패\n\n${message}`);
-      } else {
-        Alert.alert('탈퇴 실패', message);
-      }
+      showAlert('탈퇴 실패', message);
     }
   }
 
@@ -389,43 +376,22 @@ export default function SettingsScreen() {
 
   function handleDeleteAccount() {
     if (isDeletingAccount) return;
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const confirmed = window.confirm(`회원 탈퇴\n\n${DELETE_ACCOUNT_MESSAGE}`);
-      if (confirmed) {
-        void performDeleteAccount();
-      }
-      return;
-    }
-
-    Alert.alert('회원 탈퇴', DELETE_ACCOUNT_MESSAGE, [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '탈퇴하기',
-        style: 'destructive',
-        onPress: () => { void performDeleteAccount(); },
-      },
-    ]);
+    showConfirm(
+      '회원 탈퇴',
+      DELETE_ACCOUNT_MESSAGE,
+      () => { void performDeleteAccount(); },
+      { confirmText: '탈퇴하기', confirmStyle: 'destructive' },
+    );
   }
 
   function handleLogout() {
     if (isLoggingOut) return;
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const confirmed = window.confirm('로그아웃할까요?\n\n다시 사용하려면 로그인이 필요해요');
-      if (confirmed) {
-        void performLogout();
-      }
-      return;
-    }
-
-    Alert.alert('로그아웃할까요?', '다시 사용하려면 로그인이 필요해요', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '로그아웃',
-        onPress: () => { void performLogout(); },
-      },
-    ]);
+    showConfirm(
+      '로그아웃할까요?',
+      '다시 사용하려면 로그인이 필요해요',
+      () => { void performLogout(); },
+      { confirmText: '로그아웃' },
+    );
   }
 
   async function handleWebNotifPermission() {
@@ -453,11 +419,7 @@ export default function SettingsScreen() {
     if (Platform.OS !== 'web') await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     const msgs = ['🐾 꼬리가 흔들려요!', '🐾🐾 더 빠르게!', '🐾🐾🐾 멈출 수가 없어요!!'];
     const msg = msgs[Math.min(next - 1, msgs.length - 1)];
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.alert(msg);
-      return;
-    }
-    Alert.alert('', msg);
+    showAlert('', msg);
   }
 
   return (

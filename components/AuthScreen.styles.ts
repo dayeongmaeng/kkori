@@ -1,6 +1,6 @@
 import { Dimensions, Platform, StyleSheet } from 'react-native';
 
-import { colors, radius, shadow, spacing } from '../constants/theme';
+import { colors, platformShadow, radius, shadow, spacing } from '../constants/theme';
 
 const { height } = Dimensions.get('window');
 const isShortScreen = height < 700;
@@ -91,11 +91,7 @@ export const s = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    ...Platform.select({
-      ios: shadow.sm,
-      android: { elevation: shadow.sm.elevation },
-      default: {},
-    }),
+    ...platformShadow(shadow.sm),
   },
   buttonDisabled: {
     opacity: 0.55,

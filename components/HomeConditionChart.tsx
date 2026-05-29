@@ -1,16 +1,5 @@
-import { Platform, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { colors, radius, shadow, spacing } from '../constants/theme';
-
-const cardShadow: ViewStyle = Platform.select<ViewStyle>({
-  ios: {
-    shadowColor: shadow.sm.shadowColor,
-    shadowOffset: shadow.sm.shadowOffset,
-    shadowOpacity: shadow.sm.shadowOpacity,
-    shadowRadius: shadow.sm.shadowRadius,
-  },
-  android: { elevation: shadow.sm.elevation },
-  default: {},
-}) ?? {};
+import { StyleSheet, Text, View } from 'react-native';
+import { colors, platformShadow, radius, shadow, spacing } from '../constants/theme';
 import { LogResponse } from '../lib/api/log';
 
 const BAR_MAX_HEIGHT = 72;
@@ -103,7 +92,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginHorizontal: spacing.lg,
-    ...cardShadow,
+    ...platformShadow(shadow.sm),
   },
   header: {
     flexDirection: 'row',

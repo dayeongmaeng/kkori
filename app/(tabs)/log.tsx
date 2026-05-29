@@ -3,7 +3,6 @@ import {
   Alert,
   Animated,
   AppState,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -51,6 +50,7 @@ import {
   upsertCachedLog,
 } from '../../lib/cache/log';
 import { ConditionScore, MealAmount, StoolCondition, UrineAmount, UrineColor, WaterAmount } from '../../lib/types';
+import { showConfirm } from '../../lib/dialog';
 
 const imgArrowLeft = require('../../assets/log/arrow-left.png');
 const imgArrowRight = require('../../assets/log/arrow-right.png');
@@ -531,22 +531,11 @@ export default function LogScreen() {
 
   function confirmDelete() {
     if (!logExternalId || !petId || isDeleting || isSaving) return;
-
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm(`${formatDateKorean(date)} 기록을 삭제할까요?`);
-      if (confirmed) {
-        void handleDelete();
-      }
-      return;
-    }
-
-    Alert.alert(
+    showConfirm(
       '기록을 삭제할까요?',
       `${formatDateKorean(date)} 기록이 사라져요.`,
-      [
-        { text: '취소', style: 'cancel' },
-        { text: '삭제', style: 'destructive', onPress: handleDelete },
-      ],
+      handleDelete,
+      { confirmText: '삭제', confirmStyle: 'destructive' },
     );
   }
 
@@ -776,7 +765,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingVertical: 3,
+    paddingVertical: 5,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

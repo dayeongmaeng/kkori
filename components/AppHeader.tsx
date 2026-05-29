@@ -2,11 +2,9 @@ import { Image } from "expo-image";
 import { router, useGlobalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   Dimensions,
   Linking,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +17,7 @@ import { colors, radius, spacing } from "../constants/theme";
 import { useCurrentPet } from "../contexts/PetContext";
 import { PetResponse } from "../lib/api/pet";
 import { getCachedPets, setCachedCurrentPetId } from "../lib/cache/pet";
+import { showConfirm } from "../lib/dialog";
 
 const FEEDBACK_URL = "https://open.kakao.com/o/sqYtAKvi";
 
@@ -74,24 +73,12 @@ export default function AppHeader() {
   }
 
   function handleBetaPress() {
-    if (Platform.OS === "web") {
-      if (
-        window.confirm(
-          "꼬리는 한창 만들어지고 있어요.\n여러분의 의견이 큰 도움이 돼요.\n\n카카오톡 오픈채팅으로 연결할까요?",
-        )
-      ) {
-        window.location.href = FEEDBACK_URL;
-      }
-    } else {
-      Alert.alert(
-        "베타 테스트 중이에요 🐾",
-        "꼬리는 한창 만들어지고 있어요.\n여러분의 의견이 큰 도움이 돼요.\n\n카카오톡 오픈채팅으로 연결할까요?",
-        [
-          { text: "취소", style: "cancel" },
-          { text: "의견 보내기", onPress: () => Linking.openURL(FEEDBACK_URL) },
-        ],
-      );
-    }
+    showConfirm(
+      "베타 테스트 중이에요 🐾",
+      "꼬리는 한창 만들어지고 있어요.\n여러분의 의견이 큰 도움이 돼요.\n\n카카오톡 오픈채팅으로 연결할까요?",
+      () => Linking.openURL(FEEDBACK_URL),
+      { confirmText: "의견 보내기" },
+    );
   }
 
   return (

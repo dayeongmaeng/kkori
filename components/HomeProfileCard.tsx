@@ -1,18 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Platform, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { colors, radius, shadow, spacing } from '../constants/theme';
-
-const cardShadow: ViewStyle = Platform.select<ViewStyle>({
-  ios: {
-    shadowColor: shadow.md.shadowColor,
-    shadowOffset: shadow.md.shadowOffset,
-    shadowOpacity: shadow.md.shadowOpacity,
-    shadowRadius: shadow.md.shadowRadius,
-  },
-  android: { elevation: shadow.md.elevation },
-  default: {},
-}) ?? {};
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { colors, platformShadow, radius, shadow, spacing } from '../constants/theme';
 import { formatAge, formatTogetherness } from '../lib/dateUtils';
 import { PetResponse } from '../lib/api/pet';
 
@@ -58,7 +47,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.lg,
     marginHorizontal: spacing.lg,
-    ...cardShadow,
+    ...platformShadow(shadow.md),
   },
   row: {
     flexDirection: 'row',

@@ -1,3 +1,5 @@
+import { Platform, ViewStyle } from 'react-native';
+
 // Color System v1 + v2
 export const colors = {
   // Brand
@@ -67,3 +69,26 @@ export const shadow = {
     elevation: 2,
   },
 } as const;
+
+type ShadowToken = {
+  shadowColor: string;
+  shadowOffset: { width: number; height: number };
+  shadowOpacity: number;
+  shadowRadius: number;
+  elevation: number;
+};
+
+export function platformShadow(token: ShadowToken): ViewStyle {
+  return (
+    Platform.select<ViewStyle>({
+      ios: {
+        shadowColor: token.shadowColor,
+        shadowOffset: token.shadowOffset,
+        shadowOpacity: token.shadowOpacity,
+        shadowRadius: token.shadowRadius,
+      },
+      android: { elevation: token.elevation },
+      default: {},
+    }) ?? {}
+  );
+}
