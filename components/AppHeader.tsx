@@ -95,7 +95,7 @@ export default function AppHeader() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
       {/* 좌측: 현재 펫 이름 + 화살표 */}
       <TouchableOpacity
         style={styles.petButton}
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     flexDirection: "row",
     alignItems: "center",
-    paddingBottom: 6,
+    paddingBottom: 10,
     paddingLeft: 16,
     paddingRight: 10,
   },
