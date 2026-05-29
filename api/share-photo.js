@@ -102,8 +102,8 @@ function renderPage({ photo, externalId, status = 200 }) {
     }
     .logo-img {
       display: block;
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       object-fit: contain;
       object-position: right center;
     }

@@ -63,7 +63,7 @@ export default function TabLayout() {
             borderTopWidth: 1,
             paddingTop: 0,
             paddingBottom: insets.bottom,
-            height: 56 + insets.bottom,
+            height: 50 + insets.bottom,
           },
           tabBarItemStyle: {
             flex: 1,
@@ -73,8 +73,8 @@ export default function TabLayout() {
             margin: 0,
           },
           tabBarIconStyle: {
-            width: 40,
-            height: 40,
+            width: 30,
+            height: 30,
             margin: 0,
           },
           tabBarShowLabel: false,
@@ -85,7 +85,7 @@ export default function TabLayout() {
           options={{
             title: '홈',
             tabBarIcon: ({ focused, color }) => (
-              <TabIcon name="home" focused={focused} fallback={<Home size={24} color={color} />} />
+              <TabIcon name="home" focused={focused} fallback={<Home size={30} color={color} />} />
             ),
           }}
         />
@@ -94,7 +94,7 @@ export default function TabLayout() {
           options={{
             title: '기록',
             tabBarIcon: ({ focused, color }) => (
-              <TabIcon name="log" focused={focused} fallback={<NotebookPen size={24} color={color} />} />
+              <TabIcon name="log" focused={focused} fallback={<NotebookPen size={30} color={color} />} />
             ),
           }}
         />
@@ -103,7 +103,7 @@ export default function TabLayout() {
           options={{
             title: '포토',
             tabBarIcon: ({ focused, color }) => (
-              <TabIcon name="photo" focused={focused} fallback={<Camera size={24} color={color} />} />
+              <TabIcon name="photo" focused={focused} fallback={<Camera size={30} color={color} />} />
             ),
           }}
         />
@@ -112,7 +112,7 @@ export default function TabLayout() {
           options={{
             title: '프로필',
             tabBarIcon: ({ focused, color }) => (
-              <TabIcon name={profileIconName} focused={focused} fallback={<PawPrint size={24} color={color} />} />
+              <TabIcon name={profileIconName} focused={focused} fallback={<PawPrint size={30} color={color} />} />
             ),
           }}
         />
@@ -121,7 +121,7 @@ export default function TabLayout() {
           options={{
             title: '설정',
             tabBarIcon: ({ focused, color }) => (
-              <TabIcon name="settings" focused={focused} fallback={<Settings size={24} color={color} />} />
+              <TabIcon name="settings" focused={focused} fallback={<Settings size={30} color={color} />} />
             ),
           }}
         />

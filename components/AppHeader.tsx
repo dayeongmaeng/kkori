@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   logoArea: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 8,
   },
   betaBadge: {
     backgroundColor: colors.primarySoft,
@@ -253,8 +253,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   logoImage: {
-    width: 36,
-    height: 36,
+    width: 28,
+    height: 28,
   },
   // 바텀시트
   backdrop: {
