@@ -101,6 +101,16 @@ export function logKakaoDiagnostics(): void {
     hasRestApiKey: Boolean(KAKAO_REST_API_KEY),
   });
 
+  if (__DEV__ && Platform.OS === 'ios') {
+    // iOS 실기기 로그인에서 사용되는 redirect URI와 앱 복귀 URI를 진단용으로 출력한다.
+    // iosAuthorizeRedirectUri: Kakao Developers에 등록된 redirect_uri (Vercel 경유)
+    // nativeReturnUri: ASWebAuthenticationSession이 감지해 앱으로 복귀시키는 kkori:// 딥링크
+    logger.debug('auth.kakao.config.ios_redirect_info', {
+      iosAuthorizeRedirectUri: getKakaoIosRedirectUri(),
+      nativeReturnUri: getKakaoNativeReturnUri(),
+    });
+  }
+
   if (__DEV__ && Platform.OS === 'ios' && KAKAO_NATIVE_APP_KEY) {
     logger.info('auth.kakao.config.ios_redirect_scheme', {
       redirectUriScheme: maskKakaoScheme(getKakaoIosAppRedirectUri()),

@@ -140,11 +140,13 @@ export default function AuthScreen() {
 
   const completeKakaoLogin = useCallback(async (code: string, redirectUri: string) => {
     try {
-      logger.info('auth.kakao.login.api.start', { provider: 'KAKAO' });
+      logger.info('auth.kakao.login.api.start', { provider: 'KAKAO', redirectUri });
       await loginWithOAuth('KAKAO', { code, redirectUri });
       markLoggedIn();
+      logger.info('auth.kakao.login.complete');
       router.replace('/');
-    } catch {
+    } catch (e) {
+      logger.warn('auth.kakao.login.api.failed', toLogError(e));
       setErrorMessage('카카오 로그인에 실패했어요');
     } finally {
       clearLoginTimeout();
@@ -165,6 +167,13 @@ export default function AuthScreen() {
   }, []);
 
   const handleKakaoCallbackUrl = useCallback(async (url: string, redirectUri: string) => {
+    // 진입 로그: 어떤 scheme의 URL이 수신됐는지, 이미 처리됐는지 확인한다.
+    logger.debug('auth.kakao.callback.received', {
+      urlScheme: url.split('://')[0],
+      isKkoriScheme: url.startsWith('kkori://') || url.startsWith('kkori:///'),
+      isKakaoNativeScheme: Boolean(KAKAO_NATIVE_APP_KEY) && url.startsWith(`kakao${KAKAO_NATIVE_APP_KEY}://`),
+      alreadyHandled: kakaoCallbackHandledRef.current,
+    });
     const isKkoriCallback = url.startsWith('kkori://oauth/kakao') || url.startsWith('kkori:///oauth/kakao');
     // iOS 카카오 앱 로그인: kakao{NATIVE_APP_KEY}://oauth?code=... 형식으로 콜백이 온다.
     const isKakaoAppCallback =
@@ -188,6 +197,8 @@ export default function AuthScreen() {
       stopWithError('카카오 로그인에 실패했어요');
       return true;
     }
+
+    logger.debug('auth.kakao.callback.parsed', { hasCode: Boolean(code), hasError: Boolean(error) });
 
     if (error) {
       clearLoginTimeout();
@@ -464,11 +475,13 @@ export default function AuthScreen() {
           hasNativeAppKey: Boolean(KAKAO_NATIVE_APP_KEY),
         });
 
-        if (__DEV__) {
-          logger.debug('auth.kakao.ios.authorize_request', {
-            hasNativeAppKey: Boolean(KAKAO_NATIVE_APP_KEY),
-          });
-        }
+        // 실제 사용 중인 redirect URI 값을 진단 로그로 출력한다.
+        // iosAuthorizeRedirectUri: Kakao가 code를 전달할 URL (Vercel 경유 → kkori:// 딥링크)
+        // browserReturnUri: ASWebAuthenticationSession이 감지하는 kkori:// URL
+        logger.debug('auth.kakao.ios.redirect_uris', {
+          iosAuthorizeRedirectUri,
+          browserReturnUri,
+        });
 
         const iosAuthorizeUrl = buildKakaoAuthorizeUrl(iosAuthorizeRedirectUri);
         kakaoBrowserOpenRef.current = true;
@@ -478,6 +491,13 @@ export default function AuthScreen() {
         } finally {
           kakaoBrowserOpenRef.current = false;
         }
+
+        // type: 'success'면 앱 복귀 성공. URL scheme이 kkori://이어야 정상이다.
+        logger.info('auth.kakao.ios.browser.result', {
+          type: iosResult.type,
+          urlScheme: iosResult.type === 'success' ? (iosResult.url?.split('://')[0] ?? '') : undefined,
+          isKkoriReturn: iosResult.type === 'success' ? iosResult.url?.startsWith('kkori://') : undefined,
+        });
 
         if (iosResult.type === 'cancel' || iosResult.type === 'dismiss') {
           clearLoginTimeout();
