@@ -49,9 +49,9 @@ export default function PhotoActionSheet({
 
                 <View style={styles.divider} />
 
-                <TouchableOpacity style={styles.menuItem} onPress={onShare} activeOpacity={0.6}>
-                  <Text style={styles.menuText}>공유하기</Text>
-                </TouchableOpacity>
+                {/*<TouchableOpacity style={styles.menuItem} onPress={onShare} activeOpacity={0.6}>*/}
+                {/*  <Text style={styles.menuText}>공유하기</Text>*/}
+                {/*</TouchableOpacity>*/}
 
                 <View style={styles.divider} />
 

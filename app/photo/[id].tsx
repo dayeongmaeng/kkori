@@ -20,7 +20,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ViewToken,
 } from "react-native";
 import PhotoActionSheet from "../../components/PhotoActionSheet";
 import { colors, spacing } from "../../constants/theme";
@@ -41,6 +40,9 @@ import { base64ToTempFile } from "../../lib/photoUtils";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const MAX_CAPTION = 100;
+const FEED_CAPTION_HEIGHT = 108;
+const FEED_SEPARATOR_HEIGHT = 8;
+const FEED_CARD_HEIGHT = SCREEN_WIDTH + FEED_CAPTION_HEIGHT;
 
 function formatDateKorean(dateStr: string) {
   const [y, m, d] = dateStr.split("-");
@@ -60,9 +62,8 @@ export default function PhotoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [initialIndex, setInitialIndex] = useState(0);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [listHeight, setListHeight] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [actionPhoto, setActionPhoto] = useState<LocalPhoto | null>(null);
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
   const [sharePreviewVisible, setSharePreviewVisible] = useState(false);
   const [captionModalVisible, setCaptionModalVisible] = useState(false);
@@ -89,7 +90,6 @@ export default function PhotoDetailScreen() {
       );
       setPhotos(merged);
       setInitialIndex(idx);
-      setCurrentIndex(idx);
       setLoaded(true);
 
       // 백그라운드 서버 갱신
@@ -97,12 +97,7 @@ export default function PhotoDetailScreen() {
         const serverPhotos = await photoApi.getPhotos(petId);
         await setCachedPhotos(petId, serverPhotos);
         const serverMerged = await mergeWithLocal(serverPhotos);
-        const serverIdx = Math.max(
-          0,
-          serverMerged.findIndex((p) => p.externalId === id),
-        );
         setPhotos(serverMerged);
-        setCurrentIndex(serverIdx);
       } catch {
         // 오프라인 — 캐시 유지
       }
@@ -120,26 +115,15 @@ export default function PhotoDetailScreen() {
     return () => clearTimeout(timer);
   }, [captionModalVisible]);
 
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      const idx = viewableItems[0]?.index;
-      if (idx != null) setCurrentIndex(idx);
-    },
-  );
-
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 });
-
-  const currentPhoto = photos[currentIndex] ?? null;
-
   function openSharePreview() {
     setActionSheetVisible(false);
-    if (!currentPhoto) return;
+    if (!actionPhoto) return;
     setSharePreviewVisible(true);
   }
 
   async function sharePhotoLink() {
-    if (!currentPhoto) return;
-    const url = buildPhotoShareUrl(currentPhoto.externalId);
+    if (!actionPhoto) return;
+    const url = buildPhotoShareUrl(actionPhoto.externalId);
     try {
       if (Platform.OS === "web") {
         if (navigator.share) {
@@ -160,8 +144,8 @@ export default function PhotoDetailScreen() {
   }
 
   async function openShareUrl() {
-    if (!currentPhoto) return;
-    const url = buildPhotoShareUrl(currentPhoto.externalId);
+    if (!actionPhoto) return;
+    const url = buildPhotoShareUrl(actionPhoto.externalId);
     try {
       await Linking.openURL(url);
     } catch {
@@ -174,16 +158,16 @@ export default function PhotoDetailScreen() {
 
   function openCaptionEditor() {
     setActionSheetVisible(false);
-    if (!currentPhoto) return;
-    setEditingPhotoId(currentPhoto.externalId);
-    setCaptionDraft(currentPhoto.caption ?? "");
+    if (!actionPhoto) return;
+    setEditingPhotoId(actionPhoto.externalId);
+    setCaptionDraft(actionPhoto.caption ?? "");
     setCaptionModalVisible(true);
   }
 
   async function handleSaveCaption() {
     const targetPhoto =
       photos.find((photo) => photo.externalId === editingPhotoId) ??
-      currentPhoto;
+      actionPhoto;
     if (!targetPhoto || isSavingCaption) return;
     const petId = await getCachedCurrentPetId();
     if (!petId) return;
@@ -196,18 +180,13 @@ export default function PhotoDetailScreen() {
       });
       await upsertCachedPhoto(petId, updated);
       const merged = await mergeWithLocal(await getCachedPhotos(petId));
-      const nextIndex = Math.max(
-        0,
-        merged.findIndex((p) => p.externalId === targetPhoto.externalId),
-      );
       setPhotos(merged);
-      setCurrentIndex(nextIndex);
       setCaptionModalVisible(false);
       setEditingPhotoId(null);
     } catch {
       Alert.alert(
         "저장 실패",
-        "캡션을 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
+        "오늘의 한 줄 기록을 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
       );
     } finally {
       setIsSavingCaption(false);
@@ -216,16 +195,16 @@ export default function PhotoDetailScreen() {
 
   async function handleSaveToAlbum() {
     setActionSheetVisible(false);
-    if (!currentPhoto) return;
-    if (!currentPhoto.photoUri) {
+    if (!actionPhoto) return;
+    if (!actionPhoto.photoUri) {
       Alert.alert("알림", "이 사진은 다른 기기에서 촬영되어 저장할 수 없어요.");
       return;
     }
     try {
       if (Platform.OS === "web") {
         const link = document.createElement("a");
-        link.href = currentPhoto.photoUri;
-        link.download = `photo_${currentPhoto.date}.jpg`;
+        link.href = actionPhoto.photoUri;
+        link.download = `photo_${actionPhoto.date}.jpg`;
         link.click();
         return;
       }
@@ -238,8 +217,8 @@ export default function PhotoDetailScreen() {
         return;
       }
       const tempUri = await base64ToTempFile(
-        currentPhoto.photoUri,
-        `photo_${currentPhoto.externalId}.jpg`,
+        actionPhoto.photoUri,
+        `photo_${actionPhoto.externalId}.jpg`,
       );
       await MediaLibrary.saveToLibraryAsync(tempUri);
       Alert.alert("완료", "사진첩에 저장됐어요 🐾");
@@ -249,13 +228,13 @@ export default function PhotoDetailScreen() {
   }
 
   async function doDelete() {
-    if (!currentPhoto) return;
+    if (!actionPhoto) return;
     const petId = await getCachedCurrentPetId();
     if (!petId) return;
     try {
-      await photoApi.deletePhoto(currentPhoto.externalId);
-      await deletePhotoLocal(currentPhoto.externalId);
-      await removeCachedPhoto(petId, currentPhoto.externalId);
+      await photoApi.deletePhoto(actionPhoto.externalId);
+      await deletePhotoLocal(actionPhoto.externalId);
+      await removeCachedPhoto(petId, actionPhoto.externalId);
       router.back();
     } catch {
       Alert.alert("오류", "삭제에 실패했어요. 다시 시도해주세요.");
@@ -264,9 +243,9 @@ export default function PhotoDetailScreen() {
 
   function handleDelete() {
     setActionSheetVisible(false);
-    if (!currentPhoto) return;
+    if (!actionPhoto) return;
 
-    const isToday = currentPhoto.date === getTodayKST();
+    const isToday = actionPhoto.date === getTodayKST();
     const message = isToday
       ? "오늘 사진을 삭제할까요?\n같은 날 다시 추가할 수 있어요."
       : "이 사진을 삭제할까요?\n해당 날짜에는 다시 추가할 수 없어요.";
@@ -309,78 +288,67 @@ export default function PhotoDetailScreen() {
         >
           <Text style={styles.headerBtnText}>뒤로</Text>
         </TouchableOpacity>
-        <Text style={styles.headerDate}>
-          {currentPhoto ? formatDateKorean(currentPhoto.date) : ""}
-        </Text>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() => setActionSheetVisible(true)}
-        >
-          <Text style={styles.headerBtnText}>•••</Text>
-        </TouchableOpacity>
+        <Text style={styles.headerDate}>하루 한 장</Text>
+        <View style={styles.headerBtn} />
       </View>
 
-      <View
-        style={styles.listContainer}
-        onLayout={(e) => setListHeight(e.nativeEvent.layout.height)}
-      >
-        {loaded && listHeight > 0 && (
+      <View style={styles.listContainer}>
+        {loaded && (
           <FlatList
             ref={flatListRef}
             data={photos}
             keyExtractor={(item) => item.externalId}
-            pagingEnabled
             showsVerticalScrollIndicator={false}
             initialScrollIndex={initialIndex}
-            onViewableItemsChanged={onViewableItemsChanged.current}
-            viewabilityConfig={viewabilityConfig.current}
             getItemLayout={(_, index) => ({
-              length: listHeight,
-              offset: listHeight * index,
+              length: FEED_CARD_HEIGHT,
+              offset: index * (FEED_CARD_HEIGHT + FEED_SEPARATOR_HEIGHT),
               index,
             })}
+            onScrollToIndexFailed={(info) => {
+              flatListRef.current?.scrollToOffset({
+                offset: info.index * (FEED_CARD_HEIGHT + FEED_SEPARATOR_HEIGHT),
+                animated: false,
+              });
+            }}
+            ItemSeparatorComponent={() => (
+              <View style={{ height: FEED_SEPARATOR_HEIGHT, backgroundColor: colors.background }} />
+            )}
             renderItem={({ item }) => (
-              <View style={[styles.page, { height: listHeight }]}>
+              <View style={styles.feedCard}>
                 {item.photoUri || item.mediumUrl ? (
                   <Image
                     source={{ uri: item.photoUri ?? item.mediumUrl }}
-                    style={styles.photo}
+                    style={styles.feedPhoto}
                     contentFit="cover"
                   />
                 ) : (
-                  <View style={[styles.photo, styles.noLocalPhoto]}>
+                  <View style={[styles.feedPhoto, styles.noLocalPhoto]}>
                     <Text style={styles.noLocalEmoji}>📲</Text>
                     <Text style={styles.noLocalText}>
                       다른 기기에서 찍은 사진이에요
                     </Text>
                   </View>
                 )}
-                <View style={styles.captionSection}>
-                  <View style={styles.captionHeader}>
-                    <View style={styles.captionMeta}>
-                      <Text style={styles.captionLabel}>캡션</Text>
-                      {item.edited && (
-                        <View style={styles.editedBadge}>
-                          <Text style={styles.editedBadgeText}>수정됨</Text>
-                        </View>
-                      )}
-                    </View>
+                <View style={styles.feedCaptionSection}>
+                  <View style={styles.feedCaptionRow}>
+                    <Text style={styles.feedDateText}>{formatDateKorean(item.date)}</Text>
                     <TouchableOpacity
-                      style={styles.captionEditBtn}
+                      style={styles.cardMenuBtn}
                       onPress={() => {
-                        setEditingPhotoId(item.externalId);
-                        setCaptionDraft(item.caption ?? "");
-                        setCaptionModalVisible(true);
+                        setActionPhoto(item);
+                        setActionSheetVisible(true);
                       }}
                       activeOpacity={0.75}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Text style={styles.captionEditBtnText}>수정</Text>
+                      <Text style={styles.cardMenuBtnText}>•••</Text>
                     </TouchableOpacity>
                   </View>
                   {item.caption ? (
-                    <Text style={styles.caption}>{item.caption}</Text>
+                    <Text style={styles.feedCaptionText} numberOfLines={3}>{item.caption}</Text>
                   ) : (
-                    <Text style={styles.captionEmpty}>캡션이 없어요</Text>
+                    <Text style={styles.feedCaptionEmpty}>오늘의 한 줄 기록이 없어요</Text>
                   )}
                 </View>
               </View>
@@ -425,12 +393,12 @@ export default function PhotoDetailScreen() {
                 </TouchableOpacity>
               </View>
 
-              {currentPhoto && (
+              {actionPhoto && (
                 <>
-                  {currentPhoto.mediumUrl || currentPhoto.photoUri ? (
+                  {actionPhoto.mediumUrl || actionPhoto.photoUri ? (
                     <Image
                       source={{
-                        uri: currentPhoto.mediumUrl ?? currentPhoto.photoUri,
+                        uri: actionPhoto.mediumUrl ?? actionPhoto.photoUri,
                       }}
                       style={styles.sharePhoto}
                       contentFit="cover"
@@ -444,19 +412,19 @@ export default function PhotoDetailScreen() {
                   )}
                   <View style={styles.shareContent}>
                     <Text style={styles.shareDate}>
-                      {formatDateKorean(currentPhoto.date)}
+                      {formatDateKorean(actionPhoto.date)}
                     </Text>
-                    {currentPhoto.caption ? (
+                    {actionPhoto.caption ? (
                       <Text style={styles.shareCaption}>
-                        {currentPhoto.caption}
+                        {actionPhoto.caption}
                       </Text>
                     ) : (
                       <Text style={styles.shareEmptyCaption}>
-                        캡션이 없는 사진이에요.
+                        오늘의 한 줄 기록이 없는 사진이에요.
                       </Text>
                     )}
                     {/* <Text style={styles.shareUrl} numberOfLines={1}>
-                    {buildPhotoShareUrl(currentPhoto.externalId)}
+                    {buildPhotoShareUrl(actionPhoto.externalId)}
                   </Text> */}
                   </View>
                 </>
@@ -499,7 +467,7 @@ export default function PhotoDetailScreen() {
               contentContainerStyle={styles.captionScrollContent}
             >
               <View style={styles.captionSheet}>
-                <Text style={styles.captionSheetTitle}>캡션 수정</Text>
+                <Text style={styles.captionSheetTitle}>오늘의 한 줄 기록 수정</Text>
                 <TextInput
                   ref={captionInputRef}
                   style={styles.captionInput}
@@ -593,12 +561,40 @@ const styles = StyleSheet.create({
   listContainer: {
     flex: 1,
   },
-  page: {
+  feedCard: {
     width: SCREEN_WIDTH,
+    backgroundColor: colors.surface,
   },
-  photo: {
+  feedPhoto: {
     width: SCREEN_WIDTH,
-    aspectRatio: 1,
+    height: SCREEN_WIDTH,
+  },
+  feedCaptionSection: {
+    height: FEED_CAPTION_HEIGHT,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  feedCaptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  feedDateText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  feedCaptionText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.textPrimary,
+  },
+  feedCaptionEmpty: {
+    fontSize: 14,
+    color: colors.textTertiary,
+    fontStyle: "italic",
   },
   noLocalPhoto: {
     backgroundColor: colors.surfaceAlt,
@@ -614,24 +610,10 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: "center",
   },
-  captionSection: {
-    padding: spacing.lg,
-  },
-  captionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
   captionMeta: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-  },
-  captionLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.textTertiary,
   },
   editedBadge: {
     borderRadius: 999,
@@ -644,26 +626,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.textTertiary,
   },
-  captionEditBtn: {
-    borderRadius: 999,
-    backgroundColor: colors.surfaceAlt,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 7,
+  cardMenuBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
   },
-  captionEditBtnText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.textSecondary,
-  },
-  caption: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.textPrimary,
-  },
-  captionEmpty: {
+  cardMenuBtnText: {
     fontSize: 15,
+    fontWeight: "700",
     color: colors.textTertiary,
-    fontStyle: "italic",
+    letterSpacing: 1,
   },
   notFoundEmoji: {
     fontSize: 48,

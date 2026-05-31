@@ -149,7 +149,7 @@ export default function SharedPhotoScreen() {
             {photo.caption ? (
               <Text style={styles.caption}>{photo.caption}</Text>
             ) : (
-              <Text style={styles.emptyCaption}>캡션이 없는 사진이에요.</Text>
+              <Text style={styles.emptyCaption}>오늘의 한 줄 기록이 없는 사진이에요.</Text>
             )}
           </View>
 

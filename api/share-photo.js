@@ -27,7 +27,7 @@ function escapeHtml(value = '') {
 function formatDateKorean(dateStr = '') {
   const [year, month, day] = dateStr.split('-');
   if (!year || !month || !day) return '';
-  return `${year}년 ${Number(month)}월 ${Number(day)}일`;
+  return `${year}년 ${Numbe1r(month)}월 ${Number(day)}일`;
 }
 
 function renderPage({ photo, externalId, status = 200 }) {
@@ -249,7 +249,7 @@ function renderPage({ photo, externalId, status = 200 }) {
         <section class="content">
           <h1>${escapeHtml(petName)}의 하루 한 장</h1>
           ${edited ? `<div class="edited">수정됨</div>` : ''}
-          ${caption ? `<p class="caption">${escapeHtml(caption)}</p>` : `<p class="caption empty">캡션이 없는 사진이에요.</p>`}
+          ${caption ? `<p class="caption">${escapeHtml(caption)}</p>` : `<p class="caption empty">오늘의 한 줄 기록이 없는 사진이에요.</p>`}
         </section>
         <footer class="footer">
           <p class="footer-copy">반려동물의 식사, 산책, 컨디션과 소중한 사진을 꼬리에서 함께 기록해요.</p>

@@ -80,7 +80,7 @@ export default function CaptionModal({ visible, photoBase64, onSave, onCancel }:
               style={styles.input}
               value={caption}
               onChangeText={(t) => setCaption(t.slice(0, MAX_CAPTION))}
-              placeholder="오늘 어떤 하루였나요?"
+              placeholder="한 줄 기록을 남겨보세요"
               placeholderTextColor={colors.textQuaternary}
               multiline
               editable

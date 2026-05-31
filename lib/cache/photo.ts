@@ -100,7 +100,7 @@ export async function mergeWithLocal(input: unknown): Promise<LocalPhoto[]> {
       mediumUrl: p.mediumUrl,
       thumbnailUrl: p.thumbnailUrl,
       caption: p.caption ?? p.memo,
-      edited: p.edited ?? (Boolean(p.createdAt && p.updatedAt) && p.createdAt !== p.updatedAt),
+      edited: p.edited ?? false,
       createdAt: p.createdAt ?? '',
       updatedAt: p.updatedAt ?? '',
     })),

@@ -35,7 +35,7 @@ export default function LoadingScreen() {
     <View style={s.container}>
       <View style={s.logoWrapper}>
         <Image
-          source={require('../assets/images/splash-icon.png')}
+          source={require('../assets/images/splash.png')}
           style={s.logo}
           resizeMode="contain"
           fadeDuration={0}

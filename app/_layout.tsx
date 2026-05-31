@@ -48,7 +48,7 @@ export default function RootLayout() {
     migrateLegacyData();
 
     // 로고 preload 후 네이티브 스플래시 해제 → LoadingScreen에 로고 즉시 표시
-    Asset.fromModule(require('../assets/images/splash-icon.png'))
+    Asset.fromModule(require('../assets/images/splash.png'))
       .downloadAsync()
       .catch(() => {})
       .finally(() => {
