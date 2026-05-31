@@ -80,7 +80,11 @@ export default function ConditionPicker({ value, onChange, iconSet = 'dog' }: Pr
         return (
           <TouchableOpacity
             key={opt.value}
-            style={[styles.btn, selected && styles.btnSelected]}
+            style={[
+              styles.btn,
+              selected && styles.btnSelected,
+              value !== undefined && !selected && styles.btnDimmed,
+            ]}
             onPress={() => handlePress(opt.value)}
             activeOpacity={0.7}
           >
@@ -106,6 +110,9 @@ const styles = StyleSheet.create({
   },
   btnSelected: {
     backgroundColor: colors.surfaceAlt,
+  },
+  btnDimmed: {
+    opacity: 0.4,
   },
   image: {
     width: '75%',

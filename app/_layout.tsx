@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Asset } from 'expo-asset';
+import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
@@ -20,6 +21,7 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { DateProvider } from '../contexts/DateContext';
 import { PetProvider } from '../contexts/PetContext';
 import { initApp } from '../lib/api/init';
+import { getAuthTokens } from '../lib/auth/tokenStorage';
 import { logger, toLogError } from '../lib/logger';
 import { setupAndroidChannel } from '../lib/notifications';
 import { migrateLegacyData } from '../lib/storage';
@@ -49,6 +51,18 @@ export default function RootLayout() {
   const [appReady, setAppReady] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(false);
+  // 웹: URL을 동기적으로 확인. 네이티브: useEffect에서 비동기로 확인.
+  const [isOAuthCallback, setIsOAuthCallback] = useState(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const { pathname, search, hash } = window.location;
+      return (
+        pathname.includes('/oauth/') ||
+        hash.includes('access_token') ||
+        new URLSearchParams(search).has('access_token')
+      );
+    }
+    return false;
+  });
 
   useEffect(() => {
     migrateLegacyData();
@@ -65,19 +79,47 @@ export default function RootLayout() {
       void setupAndroidChannel();
     }
 
-    // initApp은 로고 preload와 병렬 실행
-    initApp()
-      .catch((e) => logger.error('app.init.failed', toLogError(e)))
-      .finally(() => setAppReady(true));
+    // 네이티브 OAuth 딥링크 감지를 initApp과 병렬 실행
+    const nativeOAuthDetect =
+      Platform.OS !== 'web'
+        ? Linking.getInitialURL()
+            .then((url) => {
+              if (url && (url.includes('/oauth/kakao') || url.includes('access_token'))) {
+                setIsOAuthCallback(true);
+              }
+            })
+            .catch(() => {})
+        : Promise.resolve();
+
+    // initApp과 OAuth 감지가 모두 완료된 뒤 appReady를 설정
+    Promise.all([
+      initApp().catch((e) => logger.error('app.init.failed', toLogError(e))),
+      nativeOAuthDetect,
+    ]).finally(() => setAppReady(true));
   }, []);
 
   useEffect(() => {
     if (!appReady) return;
-    AsyncStorage.getItem(ONBOARDING_KEY)
-      .then((val) => setOnboardingDone(val !== null))
+
+    // OAuth 콜백 처리 중이면 온보딩을 건너뛴다
+    if (isOAuthCallback) {
+      setOnboardingDone(true);
+      setOnboardingChecked(true);
+      return;
+    }
+
+    // 온보딩 완료 여부와 인증 토큰을 함께 확인한다.
+    // 이미 로그인된 사용자는 온보딩 플래그 유무와 관계없이 온보딩을 건너뛴다.
+    Promise.all([
+      AsyncStorage.getItem(ONBOARDING_KEY).catch(() => null),
+      getAuthTokens().catch(() => null),
+    ])
+      .then(([onboardingVal, tokens]) => {
+        setOnboardingDone(onboardingVal !== null || Boolean(tokens));
+      })
       .catch(() => setOnboardingDone(true))
       .finally(() => setOnboardingChecked(true));
-  }, [appReady]);
+  }, [appReady, isOAuthCallback]);
 
   if (!appReady || !onboardingChecked) {
     return (
