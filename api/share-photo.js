@@ -3,11 +3,13 @@ const DEFAULT_WEB_BASE_URL = 'https://kkori.vercel.app';
 const fs = require('fs');
 const path = require('path');
 
-function getLogoDataUri() {
+function getLogoDataUri(species) {
   try {
-    const logoPath = path.join(process.cwd(), 'assets', 'logo.png');
+    const isCat = String(species || '').toUpperCase() === 'CAT';
+    const logoFile = isCat ? 'cat-logo.svg' : 'dog-logo.svg';
+    const logoPath = path.join(process.cwd(), 'assets', logoFile);
     const logo = fs.readFileSync(logoPath).toString('base64');
-    return `data:image/png;base64,${logo}`;
+    return `data:image/svg+xml;base64,${logo}`;
   } catch {
     return '';
   }
@@ -36,9 +38,10 @@ function renderPage({ photo, externalId, status = 200 }) {
   const dateText = formatDateKorean(photo?.date);
   const caption = photo?.caption || '';
   const edited = Boolean(photo?.edited);
+  const petSpecies = photo?.petSpecies || '';
   const title = photo ? `${petName}의 하루 한 장` : '사진을 찾을 수 없어요';
   const description = caption || (photo ? '꼬리에서 공유한 반려동물의 소중한 순간이에요.' : '공유 링크가 만료되었거나 삭제된 사진일 수 있어요.');
-  const logoDataUri = getLogoDataUri();
+  const logoDataUri = getLogoDataUri(petSpecies);
 
   return `<!doctype html>
 <html lang="ko">
