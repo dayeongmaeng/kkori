@@ -161,9 +161,8 @@ export default function LogScreen() {
   const { currentPet } = useCurrentPet();
   const petIdFromContext = currentPet?.externalId ?? null;
 
-  const [hasPet, setHasPet] = useState<boolean | null>(null);
-  const [petId, setPetId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const hasPet = petIdFromContext !== null;
   const [date, setDate] = useState(today);
   const [reloadKey, setReloadKey] = useState(0);
   const isViewingTodayRef = useRef(true);
@@ -172,11 +171,11 @@ export default function LogScreen() {
   const [markedDates, setMarkedDates] = useState<Record<string, { marked: true; dotColor: string }>>({});
   const loadSeqRef = useRef(0);
 
-  const petIdRef = useRef<string | null>(null);
+  const petIdFromContextRef = useRef<string | null>(petIdFromContext);
+  petIdFromContextRef.current = petIdFromContext;
   const dateRef = useRef(date);
   const logExternalIdRef = useRef<string | null>(null);
   const logPhotosRef = useRef<LogPhotoAttachment[]>([]);
-  petIdRef.current = petId;
   dateRef.current = date;
   logExternalIdRef.current = logExternalId;
 
@@ -245,7 +244,8 @@ export default function LogScreen() {
     setLogPhotosState([]);
   }
 
-  async function applyLog(log: LogResponse) {
+  async function applyLog(log: LogResponse, seq: number) {
+    if (seq !== loadSeqRef.current) return;
     setLogExternalId(log.externalId);
     logExternalIdRef.current = log.externalId;
 
@@ -266,12 +266,14 @@ export default function LogScreen() {
 
     // API 필드로 이관된 메모들은 서버 값 우선, 이전 로컬 extras는 폴백
     const extras = await getLogLocalExtras(log.externalId);
+    if (seq !== loadSeqRef.current) return;
     setMealNote(log.mealNote ?? extras.mealNote ?? '');
     setWalkNote(log.walkNote ?? extras.walkNote ?? '');
     setPooNote(log.pooNote ?? extras.pooNote ?? '');
     setWaterNote(log.waterNote ?? extras.waterNote ?? '');
 
     const cachedPhotos = await getLogPhotos(log.externalId);
+    if (seq !== loadSeqRef.current) return;
     const serverPhotos = log.photos ?? [];
     const photos = serverPhotos.length > 0 ? serverPhotos : cachedPhotos;
     setLogPhotosState(photos.map((photo) => ({ ...photo, status: 'ready' as const })));
@@ -287,19 +289,18 @@ export default function LogScreen() {
 
         const currentPetId = petIdFromContext;
         if (seq !== loadSeqRef.current) return;
-        if (!currentPetId) { setHasPet(false); resetStates(); setIsLoaded(true); return; }
-        setPetId(currentPetId);
-        setHasPet(true);
+        if (!currentPetId) { resetStates(); setIsLoaded(true); return; }
 
         const [cachedLog, cachedLogs] = await Promise.all([
           getCachedLogByDate(currentPetId, effectiveDate),
           getCachedLogs(currentPetId),
         ]);
 
+        if (seq !== loadSeqRef.current) return;
         setMarkedDates(buildMarkedDates(cachedLogs));
 
         if (cachedLog) {
-          await applyLog(cachedLog);
+          await applyLog(cachedLog, seq);
         } else {
           resetStates();
         }
@@ -315,8 +316,8 @@ export default function LogScreen() {
           const serverLog = serverLogs.find((l) => l.date === effectiveDate);
           if (serverLog) {
             await upsertCachedLog(currentPetId, serverLog);
-            await applyLog(serverLog);
-          } else {
+            await applyLog(serverLog, seq);
+          } else if (seq === loadSeqRef.current) {
             resetStates();
           }
         } catch {
@@ -342,10 +343,9 @@ export default function LogScreen() {
     isViewingTodayRef.current = true;
     setDate(today);
     resetStates();
-    setHasPet(null);
-    setPetId(null);
     setIsLoaded(false);
     setMarkedDates({});
+    setSaveStatus('idle');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [petIdFromContext]);
 
@@ -368,7 +368,7 @@ export default function LogScreen() {
   };
 
   const saveLog = useCallback(async (data: LogFormData): Promise<string | null> => {
-    const currentPetId = petIdRef.current;
+    const currentPetId = petIdFromContextRef.current;
     if (!currentPetId) return null;
 
     let caregiverId = await getCachedCurrentCaregiverId();
@@ -482,7 +482,7 @@ export default function LogScreen() {
   }
 
   async function persistLogPhotos(nextPhotos: LogPhotoAttachment[]) {
-    const currentPetId = petIdRef.current;
+    const currentPetId = petIdFromContextRef.current;
     const currentLogExternalId = logExternalIdRef.current;
     if (!currentPetId || !currentLogExternalId) return;
 
@@ -532,7 +532,7 @@ export default function LogScreen() {
   }
 
   function confirmDelete() {
-    if (!logExternalId || !petId || isDeleting || isSaving) return;
+    if (!logExternalId || !petIdFromContextRef.current || isDeleting || isSaving) return;
     showConfirm(
       '기록을 삭제할까요?',
       `${formatDateKorean(date)} 기록이 사라져요.`,
@@ -542,7 +542,7 @@ export default function LogScreen() {
   }
 
   async function handleDelete() {
-    const currentPetId = petIdRef.current;
+    const currentPetId = petIdFromContextRef.current;
     const currentLogExternalId = logExternalIdRef.current;
     const currentDate = dateRef.current;
     if (!currentPetId || !currentLogExternalId || isDeleting) return;
@@ -570,7 +570,7 @@ export default function LogScreen() {
   const isBusy = isSaving || isDeleting || !isLoaded;
   const hasLog = Boolean(logExternalId);
 
-  if (hasPet === false) {
+  if (!hasPet) {
     return (
       <View style={styles.container}>
         <EmptyPetState />

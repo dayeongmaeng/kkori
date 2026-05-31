@@ -65,6 +65,10 @@ export default function AppHeader() {
     setCurrentPet(pet);
     setCachedCurrentPetId(pet.externalId);
     setSheetOpen(false);
+    // create mode 중 반려동물 선택 시 — 같은 pet을 선택해도 mode 해제 보장
+    if (isCreateMode) {
+      router.setParams({ mode: undefined });
+    }
   }
 
   function handleAddPet() {
