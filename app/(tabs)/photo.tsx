@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pickImageUri } from '../../lib/imagePickerHelper';
 import { logger, toLogError } from '../../lib/logger';
 import { generateThumbnails } from '../../lib/photoUtils';
@@ -19,6 +20,7 @@ import {
 import { Image } from 'expo-image';
 import CaptionModal from '../../components/CaptionModal';
 import EmptyPetState from '../../components/EmptyPetState';
+import FeatureHintModal from '../../components/FeatureHintModal';
 import TodayPhotoCard from '../../components/TodayPhotoCard';
 import { photoApi } from '../../lib/api/photo';
 import {
@@ -87,6 +89,7 @@ export default function PhotoScreen() {
   const petIdFromContext = currentPet?.externalId ?? null;
 
   const [hasPet, setHasPet] = useState<boolean | null>(null);
+  const [showHint, setShowHint] = useState(false);
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
@@ -169,6 +172,17 @@ export default function PhotoScreen() {
     loadOnFocus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [petIdFromContext]));
+
+  useFocusEffect(useCallback(() => {
+    AsyncStorage.getItem('pet-care:hint:photo')
+      .then((val) => { if (!val) setShowHint(true); })
+      .catch(() => {});
+  }, []));
+
+  function handleHintClose() {
+    setShowHint(false);
+    AsyncStorage.setItem('pet-care:hint:photo', '1').catch(() => {});
+  }
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
@@ -485,10 +499,20 @@ export default function PhotoScreen() {
     </View>
   );
 
+  const photoHint = (
+    <FeatureHintModal
+      visible={showHint}
+      title="하루 한 장"
+      body={'특별한 날이 아니어도 괜찮아요.\n오늘의 모습 한 장만 남겨보세요.'}
+      onClose={handleHintClose}
+    />
+  );
+
   if (hasPet === false) {
     return (
       <View style={styles.container}>
         <EmptyPetState />
+        {photoHint}
       </View>
     );
   }
@@ -519,6 +543,7 @@ export default function PhotoScreen() {
           onCancel={handleCancelModal}
         />
       )}
+      {photoHint}
     </View>
   );
 }

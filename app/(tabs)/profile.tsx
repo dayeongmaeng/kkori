@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Picker } from "@react-native-picker/picker";
 import {
   ActivityIndicator,
@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import FeatureHintModal from "../../components/FeatureHintModal";
 import SaveIndicator from "../../components/SaveIndicator";
 import { colors, radius, spacing } from "../../constants/theme";
 import { showConfirm } from "../../lib/dialog";
@@ -308,6 +309,7 @@ export default function ProfileScreen() {
   const [pickerWeight, setPickerWeight] = useState(5.0);
 
   const [indicatorStatus, setIndicatorStatus] = useState<SaveStatus>("idle");
+  const [showHint, setShowHint] = useState(false);
   const indicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const footerAnim = useRef(new Animated.Value(0)).current;
   const footerHeightRef = useRef(0);
@@ -493,6 +495,17 @@ export default function ProfileScreen() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCreateMode, petIdFromContext]);
+
+  useFocusEffect(useCallback(() => {
+    AsyncStorage.getItem('pet-care:hint:profile')
+      .then((val) => { if (!val) setShowHint(true); })
+      .catch(() => {});
+  }, []));
+
+  function handleHintClose() {
+    setShowHint(false);
+    AsyncStorage.setItem('pet-care:hint:profile', '1').catch(() => {});
+  }
 
   async function prepareProfilePhoto(sourceUri: string) {
     setPhotoUploadState({ status: "compressing", progress: 40 });
@@ -1076,6 +1089,12 @@ export default function ProfileScreen() {
           error: "rgba(255,255,255,0.90)",
         }}
         centered
+      />
+      <FeatureHintModal
+        visible={showHint}
+        title="프로필"
+        body={'생일이나 함께한 날을 입력하면\n성장 기록을 더 쉽게 확인할 수 있어요.'}
+        onClose={handleHintClose}
       />
     </View>
   );

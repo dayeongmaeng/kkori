@@ -2,13 +2,10 @@ import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
-import { CatProfileIcon, DogProfileIcon, HomeIcon, PhotoIcon, RecordsIcon, SettingsIcon } from '../../components/TabIcons';
+import { HomeIcon, PawOutlineIcon, PhotoIcon, RecordsIcon, SettingsIcon } from '../../components/TabIcons';
 import { colors } from '../../constants/theme';
-import { useCurrentPet } from '../../contexts/PetContext';
-
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const { currentPet } = useCurrentPet();
 
   return (
     <View style={{ flex: 1 }}>
@@ -67,12 +64,7 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: '프로필',
-            tabBarIcon: ({ color }) =>
-              currentPet?.species?.toLowerCase() === 'cat' ? (
-                <CatProfileIcon color={color} />
-              ) : (
-                <DogProfileIcon color={color} />
-              ),
+            tabBarIcon: ({ color }) => <PawOutlineIcon color={color} />,
           }}
         />
         <Tabs.Screen

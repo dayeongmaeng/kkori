@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Asset } from 'expo-asset';
 import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
@@ -14,6 +15,7 @@ import Toast from 'react-native-toast-message';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import AuthGate from '../components/AuthGate';
 import LoadingScreen from '../components/LoadingScreen';
+import OnboardingScreen from '../components/OnboardingScreen';
 import { AuthProvider } from '../contexts/AuthContext';
 import { DateProvider } from '../contexts/DateContext';
 import { PetProvider } from '../contexts/PetContext';
@@ -21,6 +23,8 @@ import { initApp } from '../lib/api/init';
 import { logger, toLogError } from '../lib/logger';
 import { setupAndroidChannel } from '../lib/notifications';
 import { migrateLegacyData } from '../lib/storage';
+
+const ONBOARDING_KEY = 'pet-care:onboarding:completed';
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -43,6 +47,8 @@ export const unstable_settings = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [appReady, setAppReady] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState(false);
 
   useEffect(() => {
     migrateLegacyData();
@@ -65,10 +71,31 @@ export default function RootLayout() {
       .finally(() => setAppReady(true));
   }, []);
 
-  if (!appReady) {
+  useEffect(() => {
+    if (!appReady) return;
+    AsyncStorage.getItem(ONBOARDING_KEY)
+      .then((val) => setOnboardingDone(val !== null))
+      .catch(() => setOnboardingDone(true))
+      .finally(() => setOnboardingChecked(true));
+  }, [appReady]);
+
+  if (!appReady || !onboardingChecked) {
     return (
       <SafeAreaProvider>
         <LoadingScreen />
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!onboardingDone) {
+    return (
+      <SafeAreaProvider>
+        <OnboardingScreen
+          onComplete={() => {
+            AsyncStorage.setItem(ONBOARDING_KEY, '1').catch(() => {});
+            setOnboardingDone(true);
+          }}
+        />
       </SafeAreaProvider>
     );
   }

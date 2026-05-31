@@ -1,8 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 import AiReportPreview from '../../components/AiReportPreview';
 import EmptyPetState from '../../components/EmptyPetState';
+import FeatureHintModal from '../../components/FeatureHintModal';
 import HomeConditionChart from '../../components/HomeConditionChart';
 import HomeTodayLogCard from '../../components/HomeTodayLogCard';
 import HomeProfileCard from '../../components/HomeProfileCard';
@@ -29,6 +31,7 @@ export default function HomeScreen() {
   const [todayLog, setTodayLog] = useState<LogResponse | null>(null);
   const [recentLogs, setRecentLogs] = useState<LogResponse[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [showHint, setShowHint] = useState(false);
 
   const loadData = useCallback(async () => {
     const sevenDaysAgo = get6DaysAgo(today);
@@ -70,6 +73,17 @@ export default function HomeScreen() {
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
+  useFocusEffect(useCallback(() => {
+    AsyncStorage.getItem('pet-care:hint:home')
+      .then((val) => { if (!val) setShowHint(true); })
+      .catch(() => {});
+  }, []));
+
+  function handleHintClose() {
+    setShowHint(false);
+    AsyncStorage.setItem('pet-care:hint:home', '1').catch(() => {});
+  }
+
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') loadData();
@@ -87,10 +101,20 @@ export default function HomeScreen() {
 
   if (!loaded) return null;
 
+  const hint = (
+    <FeatureHintModal
+      visible={showHint}
+      title="홈 화면"
+      body="우리 아이의 오늘을 한눈에 확인할 수 있어요."
+      onClose={handleHintClose}
+    />
+  );
+
   if (!pet) {
     return (
       <View style={styles.container}>
         <EmptyPetState />
+        {hint}
       </View>
     );
   }
@@ -105,6 +129,7 @@ export default function HomeScreen() {
       />
       <HomeConditionChart logs={recentLogs} today={today} />
       <AiReportPreview petName={pet.name} />
+      {hint}
     </ScrollView>
   );
 }

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -14,6 +15,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useFocusEffect } from 'expo-router';
 import DatePickerModal from '../../components/DatePickerModal';
 import EmptyPetState from '../../components/EmptyPetState';
+import FeatureHintModal from '../../components/FeatureHintModal';
 import SaveIndicator from '../../components/SaveIndicator';
 import { useDate } from '../../contexts/DateContext';
 import CatToiletPicker from '../../components/CatToiletPicker';
@@ -163,6 +165,7 @@ export default function LogScreen() {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const hasPet = petIdFromContext !== null;
+  const [showHint, setShowHint] = useState(false);
   const [date, setDate] = useState(today);
   const [reloadKey, setReloadKey] = useState(0);
   const isViewingTodayRef = useRef(true);
@@ -328,6 +331,17 @@ export default function LogScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [reloadKey, today, petIdFromContext])
   );
+
+  useFocusEffect(useCallback(() => {
+    AsyncStorage.getItem('pet-care:hint:log')
+      .then((val) => { if (!val) setShowHint(true); })
+      .catch(() => {});
+  }, []));
+
+  function handleHintClose() {
+    setShowHint(false);
+    AsyncStorage.setItem('pet-care:hint:log', '1').catch(() => {});
+  }
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (appState) => {
@@ -570,10 +584,20 @@ export default function LogScreen() {
   const isBusy = isSaving || isDeleting || !isLoaded;
   const hasLog = Boolean(logExternalId);
 
+  const logHint = (
+    <FeatureHintModal
+      visible={showHint}
+      title="기록하기"
+      body={'식사, 산책, 배변, 건강 상태를 기록해보세요.\n작은 변화도 나중에는 중요한 기록이 됩니다.'}
+      onClose={handleHintClose}
+    />
+  );
+
   if (!hasPet) {
     return (
       <View style={styles.container}>
         <EmptyPetState />
+        {logHint}
       </View>
     );
   }
@@ -752,6 +776,7 @@ export default function LogScreen() {
           </TouchableOpacity>
         )}
       </Animated.View>
+      {logHint}
     </View>
   );
 }

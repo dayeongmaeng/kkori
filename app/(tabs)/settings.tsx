@@ -11,6 +11,7 @@ import { ActivityIndicator, Alert, AppState, Linking, Modal, Platform, ScrollVie
 import { colors, radius, spacing } from '../../constants/theme';
 import { showAlert, showConfirm } from '../../lib/dialog';
 import { useAuth } from '../../contexts/AuthContext';
+import { getAuthTokens } from '../../lib/auth/tokenStorage';
 import { logger, toLogError } from '../../lib/logger';
 import {
   getNotificationPermissionStatus,
@@ -186,6 +187,14 @@ function Row({ icon, label, desc, right, onPress, disabled, last, destructive }:
   );
 }
 
+function getProviderLabel(provider: string | null): string | undefined {
+  if (!provider) return undefined;
+  const p = provider.toUpperCase();
+  if (p === 'GOOGLE') return 'Google 계정으로 로그인 중';
+  if (p === 'KAKAO') return '카카오 계정으로 로그인 중';
+  return undefined;
+}
+
 function formatNotifTime(hour: number, minute: number): string {
   const period = hour < 12 ? '오전' : '오후';
   const h = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
@@ -197,6 +206,7 @@ export default function SettingsScreen() {
   const [wagCount, setWagCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [loginProvider, setLoginProvider] = useState<string | null>(null);
   const [showWebReviewModal, setShowWebReviewModal] = useState(false);
   const [webNotifPerm, setWebNotifPerm] = useState<WebNotifPerm>('unsupported');
   const [webCameraPerm, setWebCameraPerm] = useState<WebCameraPerm>('unsupported');
@@ -207,6 +217,12 @@ export default function SettingsScreen() {
   const pickerDateRef = useRef<Date>(new Date());
 
   const { logout, deleteAccount } = useAuth();
+
+  useEffect(() => {
+    void getAuthTokens().then((tokens) => {
+      setLoginProvider(tokens?.user?.provider ?? null);
+    });
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -536,7 +552,7 @@ export default function SettingsScreen() {
         <Row
           icon={<LogOut size={20} color={colors.textSecondary} />}
           label="로그아웃"
-          desc={isLoggingOut ? '로그아웃 중이에요' : undefined}
+          desc={isLoggingOut ? '로그아웃 중이에요' : getProviderLabel(loginProvider)}
           right={isLoggingOut ? <ActivityIndicator color={colors.textSecondary} /> : undefined}
           onPress={handleLogout}
           disabled={isLoggingOut || isDeletingAccount}
