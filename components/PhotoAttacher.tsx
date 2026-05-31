@@ -127,10 +127,10 @@ export default function PhotoAttacher({
     if (disabled || photos.length >= MAX_PHOTOS) return;
     if (photos.some((p) => isBusy(p.status))) return;
 
-    const sourceUri = await pickImageUri({ allowsEditing: false });
+    const sourceUri = await pickImageUri({ allowsEditing: true, aspect: [1, 1] });
     if (!sourceUri) return;
 
-    const tempId = `log-photo-${Date.now()}`;
+    const tempId = `log-photo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const tempPhoto: LogPhotoAttachment = {
       externalId: tempId,
       mediumUrl: '',

@@ -6,7 +6,9 @@ PODS:
   - EXImageLoader (6.0.0):
     - ExpoModulesCore
     - React-Core
-  - Expo (54.0.34):
+  - EXNotifications (0.32.17):
+    - ExpoModulesCore
+  - Expo (54.0.35):
     - ExpoModulesCore
     - hermes-engine
     - RCTRequired
@@ -39,13 +41,13 @@ PODS:
     - ZXingObjC/PDF417
   - ExpoCrypto (15.0.9):
     - ExpoModulesCore
-  - ExpoFileSystem (19.0.22):
+  - ExpoFileSystem (19.0.23):
     - ExpoModulesCore
-  - ExpoFont (14.0.11):
+  - ExpoFont (14.0.12):
     - ExpoModulesCore
   - ExpoHaptics (15.0.8):
     - ExpoModulesCore
-  - ExpoHead (6.0.23):
+  - ExpoHead (6.0.24):
     - ExpoModulesCore
     - RNScreens
   - ExpoImage (3.0.11):
@@ -1844,6 +1846,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNCPicker (2.11.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RNDateTimePicker (8.4.4):
     - hermes-engine
     - RCTRequired
@@ -2144,11 +2168,12 @@ PODS:
     - ZXingObjC/Core
 
 DEPENDENCIES:
-  - EXApplication (from `../node_modules/expo-auth-session/node_modules/expo-application/ios`)
+  - EXApplication (from `../node_modules/expo-application/ios`)
   - EXConstants (from `../node_modules/expo-constants/ios`)
   - EXImageLoader (from `../node_modules/expo-image-loader/ios`)
+  - EXNotifications (from `../node_modules/expo-notifications/ios`)
   - Expo (from `../node_modules/expo`)
-  - ExpoAsset (from `../node_modules/expo-asset/ios`)
+  - ExpoAsset (from `../node_modules/expo/node_modules/expo-asset/ios`)
   - ExpoCamera (from `../node_modules/expo-camera/ios`)
   - ExpoCrypto (from `../node_modules/expo-crypto/ios`)
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
@@ -2158,7 +2183,7 @@ DEPENDENCIES:
   - ExpoImage (from `../node_modules/expo-image/ios`)
   - ExpoImageManipulator (from `../node_modules/expo-image-manipulator/ios`)
   - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
-  - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
+  - ExpoKeepAwake (from `../node_modules/expo/node_modules/expo-keep-awake/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
   - ExpoMediaLibrary (from `../node_modules/expo-media-library/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
@@ -2237,6 +2262,7 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
+  - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
@@ -2258,15 +2284,17 @@ SPEC REPOS:
 
 EXTERNAL SOURCES:
   EXApplication:
-    :path: "../node_modules/expo-auth-session/node_modules/expo-application/ios"
+    :path: "../node_modules/expo-application/ios"
   EXConstants:
     :path: "../node_modules/expo-constants/ios"
   EXImageLoader:
     :path: "../node_modules/expo-image-loader/ios"
+  EXNotifications:
+    :path: "../node_modules/expo-notifications/ios"
   Expo:
     :path: "../node_modules/expo"
   ExpoAsset:
-    :path: "../node_modules/expo-asset/ios"
+    :path: "../node_modules/expo/node_modules/expo-asset/ios"
   ExpoCamera:
     :path: "../node_modules/expo-camera/ios"
   ExpoCrypto:
@@ -2286,7 +2314,7 @@ EXTERNAL SOURCES:
   ExpoImagePicker:
     :path: "../node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
-    :path: "../node_modules/expo-keep-awake/ios"
+    :path: "../node_modules/expo/node_modules/expo-keep-awake/ios"
   ExpoLinking:
     :path: "../node_modules/expo-linking/ios"
   ExpoMediaLibrary:
@@ -2442,6 +2470,8 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-async-storage/async-storage"
+  RNCPicker:
+    :path: "../node_modules/@react-native-picker/picker"
   RNDateTimePicker:
     :path: "../node_modules/@react-native-community/datetimepicker"
   RNGestureHandler:
@@ -2461,14 +2491,15 @@ SPEC CHECKSUMS:
   EXApplication: 1e98d4b1dccdf30627f92917f4b2c5a53c330e5f
   EXConstants: fce59a631a06c4151602843667f7cfe35f81e271
   EXImageLoader: 189e3476581efe3ad4d1d3fb4735b7179eb26f05
-  Expo: 514ae3ec54a086aab509f255abfbf37be0fcc0e2
+  EXNotifications: c67e92b9fdfe785ff9dbdc5f4c0ff935de357da7
+  Expo: edf5879dd9f83d2aa5b05d012412c810bc182ac1
   ExpoAsset: 9e5a7c9c0a9fb83ad5b2bb365141f2bd7f289b66
   ExpoCamera: 6a326deb45ba840749652e4c15198317aa78497e
   ExpoCrypto: e2a2c4c748aac8485e5675f027b7901f511d43ff
-  ExpoFileSystem: ad991457efaa14253723f1dda997eac6024c700d
-  ExpoFont: f543ce20a228dd702813668b1a07b46f51878d47
+  ExpoFileSystem: a8e7fb1e958471764fb48d281cf9fa81a9e4d77c
+  ExpoFont: dfb7c572372b610da45b41e3b436321fd6a97215
   ExpoHaptics: d3a6375d8dcc3a1083d003bc2298ff654fafb536
-  ExpoHead: 7e19b2272edf492262acf8afb391a295198a6b23
+  ExpoHead: 33924c5829f9a3f98a5bd432d23c0e02ef64afcc
   ExpoImage: 686f972bff29525733aa13357f6691dc90aa03d8
   ExpoImageManipulator: 607a5c8c88085381639458a46cc55fb9d3869148
   ExpoImagePicker: ade85e148f735fc7e6f27dfe3eef28eb3887e90a
@@ -2553,6 +2584,7 @@ SPEC CHECKSUMS:
   ReactCommon: 08810150b1206cc44aecf5f6ae19af32f29151a8
   ReactNativeDependencies: 71ce9c28beb282aa720ea7b46980fff9669f428a
   RNCAsyncStorage: 3a4f5e2777dae1688b781a487923a08569e27fe4
+  RNCPicker: a7170edbcbf8288de8edb2502e08e7fc757fa755
   RNDateTimePicker: be0e44bcb9ed0607c7c5f47dbedd88cf091f6791
   RNGestureHandler: 2914750df066d89bf9d8f48a10ad5f0051108ac3
   RNReanimated: 41f496c18437fd0aa841234917af84e98fd5b9a2

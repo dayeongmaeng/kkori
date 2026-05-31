@@ -75,7 +75,10 @@ export const photoApi = {
     }
 
     const json = await res.json();
-    return json?.data ?? json;
+    if (json?.success === false) {
+      throw new Error(`공유 사진 조회 실패: ${json.error?.message ?? '서버 오류'}`);
+    }
+    return (json?.data ?? json) as PhotoShareResponse;
   },
 
   deletePhoto: (externalId: string) =>
@@ -93,7 +96,8 @@ export const photoApi = {
       if (file.blob) {
         formData.append(key, file.blob, file.name);
       } else {
-        formData.append(key, { uri: file.uri, name: file.name, type: file.type } as any);
+        // React Native FormData는 { uri, name, type } 객체로 네이티브 파일 업로드를 지원한다.
+        formData.append(key, { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
       }
     }
 

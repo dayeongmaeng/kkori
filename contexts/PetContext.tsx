@@ -24,11 +24,18 @@ export function PetProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    getCachedCurrentPetId().then(async (petId) => {
-      if (!petId) return;
+    let cancelled = false;
+
+    async function loadCachedPet() {
+      const petId = await getCachedCurrentPetId();
+      if (cancelled || !petId) return;
       const pet = await getCachedPet(petId);
+      if (cancelled) return;
       if (pet) setCurrentPet(pet);
-    });
+    }
+
+    void loadCachedPet();
+    return () => { cancelled = true; };
   }, [isAuthenticated, isAuthLoading, sessionDataVersion]);
 
   return (

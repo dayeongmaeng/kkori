@@ -103,7 +103,8 @@ export const logApi = {
       if (file.blob) {
         formData.append(key, file.blob, file.name);
       } else {
-        formData.append(key, { uri: file.uri, name: file.name, type: file.type } as any);
+        // React Native FormData는 { uri, name, type } 객체로 네이티브 파일 업로드를 지원한다.
+        formData.append(key, { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
       }
     }
 

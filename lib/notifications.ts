@@ -48,11 +48,15 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 export async function setupAndroidChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-    name: '일일 리마인더',
-    importance: Notifications.AndroidImportance.DEFAULT,
-    vibrationPattern: [0, 250, 250, 250],
-  });
+  try {
+    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+      name: '일일 리마인더',
+      importance: Notifications.AndroidImportance.DEFAULT,
+      vibrationPattern: [0, 250, 250, 250],
+    });
+  } catch (error) {
+    logger.warn('notification.channel.setup.failed', toLogError(error));
+  }
 }
 
 export async function scheduleDailyNotification(hour: number, minute: number): Promise<void> {

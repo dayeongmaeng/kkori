@@ -7,7 +7,7 @@ import {
   PawPrint, Shield, Star, Trash2, UserX,
 } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
 import { showAlert, showConfirm } from '../../lib/dialog';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,10 +31,10 @@ const FEEDBACK_URL = 'https://open.kakao.com/o/sqYtAKvi';
 // TODO: 앱 출시 후 실제 스토어 URL로 교체
 const IOS_REVIEW_URL = 'itms-apps://itunes.apple.com/app/id'; // TODO: App Store ID 교체
 const ANDROID_REVIEW_URL = 'https://play.google.com/store/apps/details?id=com.kkori.app'; // TODO: 실제 패키지명으로 교체
-const FEEDBACK_EMAIL = 'dayeongmaeng@gmail.com';
-const PRIVACY_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80909f5aef93dd5f7b72';
-const TERMS_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80d2b9b9f5efb2591b21';
-const NEWS_URL = 'https://fine-megaraptor-e63.notion.site/366df0ef164c80338ad5c5c5e794ed3e?pvs=73';
+const FEEDBACK_EMAIL = 'kkutudio@gmail.com';
+const PRIVACY_URL = 'https://torpid-yttrium-aa3.notion.site/3719bc69e8b380f6992ed04922f50616';
+const TERMS_URL = 'https://torpid-yttrium-aa3.notion.site/3719bc69e8b380978bf9e524688d01d9';
+const NEWS_URL = 'https://torpid-yttrium-aa3.notion.site/3719bc69e8b38098ab2eef6b6395968e';
 const DONATION_URL = 'supertoss://send?bank=%EC%B9%B4%EC%B9%B4%EC%98%A4%EB%B1%85%ED%81%AC&accountNo=3333227317180';
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 const CACHE_KEYS = [
@@ -234,6 +234,19 @@ export default function SettingsScreen() {
     }
   }, []);
 
+  // 앱이 백그라운드에서 돌아올 때 알림 권한 상태를 다시 확인한다.
+  // 사용자가 시스템 설정에서 권한을 변경하고 돌아오는 경우를 감지하기 위함.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active') {
+        const perm = await getNotificationPermissionStatus();
+        setNotifPermission(perm);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   async function handleNotifTimePress() {
     if (notifPermission === 'denied') {
       Alert.alert('알림 권한 필요', '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.', [
@@ -423,7 +436,8 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={s.content}>
+    <View style={s.container}>
+    <ScrollView contentContainerStyle={s.content}>
       <GroupTitle label="알림" />
       <Card>
         {Platform.OS === 'web' ? (
@@ -621,6 +635,10 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </Modal>
     </ScrollView>
+    {(isLoggingOut || isDeletingAccount) && (
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-only" />
+    )}
+    </View>
   );
 }
 

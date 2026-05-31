@@ -33,10 +33,24 @@ export const logger = {
   error: (event: string, payload?: LogPayload) => emit('error', event, payload),
 };
 
+/** URL 쿼리 파라미터를 제거해 토큰 등 민감 정보가 로그에 포함되지 않도록 한다. */
+function stripUrlQuery(message: string): string {
+  return message.replace(/https?:\/\/[^\s"']+/g, (url) => {
+    try {
+      const u = new URL(url);
+      if (!u.search) return url;
+      u.search = '';
+      return u.toString() + '[?…]';
+    } catch {
+      return url;
+    }
+  });
+}
+
 /** 에러 객체에서 status/errorCode/message 수준만 추출한다. 응답 전문은 포함하지 않는다. */
 export function toLogError(error: unknown): LogPayload {
   if (error instanceof Error) {
-    const result: LogPayload = { message: error.message };
+    const result: LogPayload = { message: stripUrlQuery(error.message) };
     const e = error as { statusCode?: unknown; error?: { code?: unknown } };
     if (typeof e.statusCode === 'number') result.status = e.statusCode;
     if (e.error?.code !== undefined) result.errorCode = String(e.error.code);

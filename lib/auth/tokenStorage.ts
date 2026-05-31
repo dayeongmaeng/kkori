@@ -57,11 +57,14 @@ export async function getAuthTokens(): Promise<StoredAuthTokens | null> {
 
   if (!accessToken || !refreshToken) return null;
 
-  return {
-    accessToken,
-    refreshToken,
-    user: userJson ? (JSON.parse(userJson) as AuthUser) : undefined,
-  };
+  let user: AuthUser | undefined;
+  try {
+    user = userJson ? (JSON.parse(userJson) as AuthUser) : undefined;
+  } catch {
+    user = undefined;
+  }
+
+  return { accessToken, refreshToken, user };
 }
 
 export async function saveAuthTokens(tokens: StoredAuthTokens): Promise<void> {

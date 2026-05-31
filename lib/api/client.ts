@@ -9,9 +9,11 @@ const DEV_API_BASE_URL = 'http://localhost:8080';
 const PROD_API_BASE_URL = 'https://api.kkori.co.kr';
 export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://kkori.vercel.app';
 
-// EXPO_PUBLIC_API_URL 최우선. 없으면 web 개발 환경만 localhost, 그 외(실기기 포함)는 운영 URL.
+// EXPO_PUBLIC_API_URL 또는 EXPO_PUBLIC_API_BASE_URL 중 설정된 값을 우선 사용한다.
+// 없으면 web 개발 환경만 localhost, 그 외(실기기 포함)는 운영 URL.
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
+  process.env.EXPO_PUBLIC_API_BASE_URL ??
   (__DEV__ && Platform.OS === 'web' ? DEV_API_BASE_URL : PROD_API_BASE_URL);
 
 logger.info('api.init', { baseUrl: API_BASE_URL });
@@ -48,7 +50,18 @@ async function buildBaseHeaders(skipDeviceId = false, skipAuth = false): Promise
   return headers;
 }
 
+// 동시에 여러 401 응답이 와도 토큰 갱신 요청은 한 번만 실행되도록 Promise를 공유한다.
+let refreshTokenPromise: Promise<string | null> | null = null;
+
 async function refreshAccessToken(): Promise<string | null> {
+  if (refreshTokenPromise) return refreshTokenPromise;
+  refreshTokenPromise = doRefreshAccessToken().finally(() => {
+    refreshTokenPromise = null;
+  });
+  return refreshTokenPromise;
+}
+
+async function doRefreshAccessToken(): Promise<string | null> {
   const tokens = await getAuthTokens();
   if (!tokens?.refreshToken) return null;
 

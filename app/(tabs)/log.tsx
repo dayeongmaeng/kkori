@@ -107,7 +107,9 @@ type LogFormData = {
 };
 
 function formatDateKorean(dateStr: string) {
-  const [y, m, d] = dateStr.split('-');
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [y, m, d] = parts;
   return `${y}년 ${Number(m)}월 ${Number(d)}일`;
 }
 
