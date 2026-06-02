@@ -149,8 +149,9 @@ API 코드 위치: `lib/api/`
   - `pet-care:api:current-caregiver-id`
   - `pet-care:api:logs:{petExternalId}`
   - `pet-care:api:photos:{petExternalId}`
+  - `pet-care:api:pet-photo:{petExternalId}` — 반려동물 프로필 사진(base64)
   - `pet-care:photo-data:{externalId}`
-  - `pet-care:log-extras:{logExternalId}`
+  - `pet-care:log-extras:{logExternalId}` — 레거시. 구버전 데이터 폴백용 읽기 전용.
   - `pet-care:log-photos:{logExternalId}`
 - 설정 탭의 캐시 비우기는 `AsyncStorage.clear()`가 아니라 지정된 캐시 키/프리픽스만 선별 삭제한다.
 

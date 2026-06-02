@@ -55,6 +55,10 @@
 - **반려동물 멀티 선택/추가 기능 구현 완료** (AppHeader 드롭다운): 반려동물 전환, 추가, currentPet 기반 전역 화면 갱신.
 - 반려동물 삭제 기능 구현 완료. `DELETE /api/v1/pets/{externalId}` 호출 후 로컬 캐시 정리, 폼 초기화, 다음 반려동물 자동 전환.
 - **클라이언트 로깅 정책 적용 완료.** `lib/logger.ts` 공통 logger 구현. 전체 `console.*` 직접 사용을 이벤트 기반 logger로 교체. 개발 환경 debug/info/warn/error 전 레벨 출력, 운영 환경 warn/error만 출력. 민감 정보(token류, API 응답 전문) 로그 제외, `toLogError()`로 ApiError 안전 추출. 권한 요청 및 이미지 선택/취소 로그 추가.
+- **고양이 기록 항목 추가 완료.** `currentPet.species` 기준으로 dog/DOG → 강아지, cat/CAT → 고양이 기록 UI로 분기. 고양이 전용 항목: 놀이(playMinutes/playNote), 화장실(urineAmount). 강아지 전용: 산책(walkMinutes/walkNote), 체중(weightKg).
+- **기록 세부 메모 필드 서버 API 전환 완료.** mealNote, walkNote, pooNote, urineNote, waterNote, playMinutes, playNote, urineAmount, vomitCount, vomitNote가 서버 API 필드로 저장된다. 이전 로컬 `log-extras` 캐시는 구버전 데이터 폴백용 읽기 전용으로만 유지.
+- **반려동물 종류(강아지/고양이) 선택 저장 완료.** species `"DOG"` / `"CAT"` 전송. 품종 자동완성도 species 기준으로 강아지/고양이 목록 분기.
+- **온보딩 화면 구현 완료.** 최초 실행 시 온보딩 슬라이드를 표시한다.
 
 ## 인증/세션
 
@@ -105,8 +109,9 @@
 - `pet-care:api:current-caregiver-id`
 - `pet-care:api:logs:{petExternalId}`
 - `pet-care:api:photos:{petExternalId}`
+- `pet-care:api:pet-photo:{petExternalId}` — 반려동물 프로필 사진(base64)
 - `pet-care:photo-data:{externalId}`
-- `pet-care:log-extras:{logExternalId}`
+- `pet-care:log-extras:{logExternalId}` — 레거시. 구버전 데이터 폴백용 읽기 전용.
 - `pet-care:log-photos:{logExternalId}`
 
 설정 탭의 캐시 비우기는 `AsyncStorage.clear()`가 아니라 지정된 캐시 키/프리픽스만 삭제한다.
@@ -124,13 +129,15 @@
 ### 기록
 
 - 날짜 이동, 캘린더 모달, 기록 있는 날짜 표시 구현.
-- 기록 항목: 컨디션, 식사, 산책, 배변, 물 섭취, 기록 사진, 메모.
-- 수동 저장 방식.
+- `currentPet.species` 기준으로 강아지/고양이 기록 UI를 분기한다. 미설정 시 강아지가 기본값.
+- **강아지 기록 항목**: 컨디션, 식사(mealNote), 산책(walkMinutes/walkNote), 배변(pooCondition/pooNote + urineColor/urineNote), 물 섭취(waterNote), 구토(vomitCount/vomitNote), 체중(weightKg), 기록 사진, 메모.
+- **고양이 기록 항목**: 컨디션, 식사(mealNote), 놀이(playMinutes/playNote), 화장실(pooCondition/pooNote + urineAmount/urineNote), 물 섭취(waterNote), 구토(vomitCount/vomitNote), 기록 사진, 메모.
+- 수동 저장 방식. 세부 메모 필드는 모두 서버 API 필드로 저장된다.
+- 이전 로컬 `log-extras` 캐시는 구버전 데이터 폴백용 읽기 전용으로만 유지.
 - `AppHeader` 반려동물 전환 시 기록 목록, 상태, 첨부 사진이 currentPet 기준으로 자동 갱신된다.
 - `POST /api/v1/logs`, `PUT /api/v1/logs/{externalId}`, `DELETE /api/v1/logs/{externalId}` 연동.
 - 기록 사진 업로드는 `POST /api/v1/logs/{externalId}/photos/upload` 사용.
 - 기록 사진 삭제는 `DELETE /api/v1/logs/{logExternalId}/photos/{photoExternalId}` 사용.
-- 식사/산책/배변/물 섭취의 세부 메모는 서버 필드가 아니라 로컬 `log-extras` 캐시에 저장된다.
 
 ### 포토
 
@@ -157,9 +164,9 @@
 ### 프로필
 
 - 반려동물 프로필 생성/수정 화면 구현.
-- 필드: 사진, 이름, 성별, 견종, 생일, 생일 모름, 함께한 날, 체중, 중성화 여부, 건강 메모.
-- 저장 시 species는 `"dog"`로 고정.
-- 견종은 클라이언트 상수 기반 자동완성 + 자유입력.
+- 필드: 사진, 이름, 반려동물 종류(강아지/고양이), 성별, 품종, 생일, 생일 모름, 함께한 날, 체중, 중성화 여부, 건강 메모.
+- 반려동물 종류 선택: 강아지/고양이 모두 선택 및 저장 가능. species는 `"DOG"` 또는 `"CAT"`으로 전송.
+- 품종 자동완성: 강아지 선택 시 강아지 품종, 고양이 선택 시 고양이 품종 목록으로 자동 분기. 자유입력도 가능.
 - 생일/함께한 날은 네이티브 DateTimePicker와 웹용 select picker를 분기 처리.
 - 프로필 사진은 512px 기준 압축 후 base64로 저장/전송.
 - 저장 후 pet 캐시와 current pet 상태 갱신.
