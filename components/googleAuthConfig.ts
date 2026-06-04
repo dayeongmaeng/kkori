@@ -20,6 +20,13 @@ function getGoogleRedirectUri() {
     return AuthSession.makeRedirectUri({ native: `${reversed}:/` });
   }
 
+  // Android OAuth 클라이언트는 reverse client ID 스킴만 허용한다.
+  // kkori:// 커스텀 스킴을 전달하면 Google이 Error 400을 반환한다.
+  if (Platform.OS === 'android' && GOOGLE_ANDROID_CLIENT_ID) {
+    const reversed = GOOGLE_ANDROID_CLIENT_ID.split('.').reverse().join('.');
+    return AuthSession.makeRedirectUri({ native: `${reversed}:/` });
+  }
+
   return AuthSession.makeRedirectUri({
     scheme: 'kkori',
     path: 'oauth/google',

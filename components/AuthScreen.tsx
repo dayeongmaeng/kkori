@@ -14,7 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { loginWithOAuth } from '../lib/api/auth';
 import { logger, toLogError } from '../lib/logger';
 import {
-  getGoogleClientId,
+  getGoogleClientId, GOOGLE_ANDROID_CLIENT_ID,
   GOOGLE_IOS_CLIENT_ID,
   GOOGLE_REDIRECT_URI,
   GOOGLE_WEB_CLIENT_ID,
@@ -109,8 +109,21 @@ export default function AuthScreen() {
   const [webRequest, webResponse, webPromptAsync] = AuthSession.useAuthRequest(webGoogleConfig, GOOGLE_DISCOVERY);
 
   // iOS: code + PKCE flow. Google provider가 자동으로 code exchange 후 params.id_token을 반환한다.
-  // webClientId는 web 환경에서 invariantClientId 오류를 방지하기 위해 전달한다.
+  // Google.useAuthRequest는 훅이므로 Android에서도 초기화된다. androidClientId가 없으면
+  // Android 초기화 시 "androidClientId must be defined" 오류가 발생하므로 반드시 포함해야 한다.
   const [iosRequest, iosResponse, iosPromptAsync] = Google.useAuthRequest({
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    redirectUri: GOOGLE_REDIRECT_URI,
+    scopes: ['openid', 'profile', 'email'],
+  });
+
+  // Android: GOOGLE_REDIRECT_URI가 Android에서 reverse Android client ID 스킴으로 계산된다.
+  // (예: com.googleusercontent.apps.{prefix}:/)
+  // Google Android OAuth 클라이언트는 이 스킴만 허용하고, kkori:// 커스텀 스킴은 거부한다.
+  const [androidRequest, androidResponse, androidPromptAsync] = Google.useAuthRequest({
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID,
     webClientId: GOOGLE_WEB_CLIENT_ID,
     redirectUri: GOOGLE_REDIRECT_URI,
@@ -331,6 +344,45 @@ export default function AuthScreen() {
       });
   }, [clearLoginTimeout, markLoggedIn, webResponse, stopWithError]);
 
+  // Android Google 로그인 응답 처리 (code + PKCE → Google provider 자동 code exchange → id_token)
+  useEffect(() => {
+    if (!androidResponse || Platform.OS !== 'android') return;
+
+    const idToken = androidResponse.type === 'success' ? androidResponse.params.id_token : undefined;
+    logger.info('auth.google.android.response', {
+      hasClientId: Boolean(GOOGLE_ANDROID_CLIENT_ID),
+      hasIdToken: Boolean(idToken),
+      type: androidResponse.type,
+    });
+
+    if (androidResponse.type === 'cancel' || androidResponse.type === 'dismiss') {
+      clearLoginTimeout();
+      setLoginProvider(null);
+      return;
+    }
+
+    if (androidResponse.type === 'error') {
+      stopWithError('Google 인증 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
+    if (androidResponse.type !== 'success') return;
+
+    if (!idToken) {
+      stopWithError('Google 인증 정보를 가져오지 못했어요. 다시 한 번 시도해 주세요.');
+      return;
+    }
+
+    logger.info('auth.google.login.api.start', { platform: 'android' });
+    loginWithOAuth('GOOGLE', { idToken })
+      .then(markLoggedIn)
+      .catch(() => setErrorMessage('로그인을 완료하지 못했어요. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'))
+      .finally(() => {
+        clearLoginTimeout();
+        setLoginProvider(null);
+      });
+  }, [androidResponse, clearLoginTimeout, markLoggedIn, stopWithError]);
+
   // iOS Google 로그인 응답 처리 (code + PKCE → Google provider 자동 code exchange → id_token)
   useEffect(() => {
     if (!iosResponse || Platform.OS !== 'ios') return;
@@ -392,17 +444,18 @@ export default function AuthScreen() {
     }
 
     const isIOS = Platform.OS === 'ios';
-    const selectedClientType = isIOS ? 'IOS' : 'WEB';
-    const responseType = isIOS ? 'code' : 'id_token token';
-    const activeRequest = isIOS ? iosRequest : webRequest;
-    const activePromptAsync = isIOS ? iosPromptAsync : webPromptAsync;
+    const isAndroid = Platform.OS === 'android';
+    const selectedClientType = isIOS ? 'IOS' : isAndroid ? 'ANDROID' : 'WEB';
+    const responseType = isIOS || isAndroid ? 'code' : 'id_token token';
+    const activeRequest = isIOS ? iosRequest : isAndroid ? androidRequest : webRequest;
+    const activePromptAsync = isIOS ? iosPromptAsync : isAndroid ? androidPromptAsync : webPromptAsync;
 
     try {
       logger.info('auth.google.login.start', {
         platform: Platform.OS,
         clientType: selectedClientType,
         responseType,
-        hasClientId: Boolean(isIOS ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID),
+        hasClientId: Boolean(isIOS ? GOOGLE_IOS_CLIENT_ID : isAndroid ? GOOGLE_ANDROID_CLIENT_ID : GOOGLE_WEB_CLIENT_ID),
       });
 
       if (__DEV__ && activeRequest) {
@@ -414,7 +467,7 @@ export default function AuthScreen() {
           logger.debug('auth.google.login.authorize_url', {
             responseType: parsed?.searchParams.get('response_type'),
             hasNonce: Boolean(parsed?.searchParams.get('nonce')),
-            clientIdMatched: authUrlClientId === (isIOS ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID),
+            clientIdMatched: authUrlClientId === (isIOS ? GOOGLE_IOS_CLIENT_ID : isAndroid ? GOOGLE_ANDROID_CLIENT_ID : GOOGLE_WEB_CLIENT_ID),
             hasRedirectUri: Boolean(parsed?.searchParams.get('redirect_uri')),
           });
         } catch (logErr) {
@@ -585,7 +638,7 @@ export default function AuthScreen() {
               : <MessageCircle size={19} color="#191919" style={s.buttonIcon} />}
             <Text style={s.kakaoText}>{loginProvider === 'KAKAO' ? '로그인 중이에요' : '카카오로 시작하기'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.googleButton, (!(Platform.OS === 'ios' ? iosRequest : webRequest) || isLoggingIn) && s.buttonDisabled]} onPress={handleGoogleLogin} disabled={!(Platform.OS === 'ios' ? iosRequest : webRequest) || isLoggingIn} activeOpacity={0.86}>
+          <TouchableOpacity style={[s.googleButton, (!(Platform.OS === 'ios' ? iosRequest : Platform.OS === 'android' ? androidRequest : webRequest) || isLoggingIn) && s.buttonDisabled]} onPress={handleGoogleLogin} disabled={!(Platform.OS === 'ios' ? iosRequest : Platform.OS === 'android' ? androidRequest : webRequest) || isLoggingIn} activeOpacity={0.86}>
             {loginProvider === 'GOOGLE' ? <ActivityIndicator color={colors.textPrimary} style={s.buttonIcon} /> : <Text style={s.googleMark}>G</Text>}
             <Text style={s.googleText}>{loginProvider === 'GOOGLE' ? '로그인 중이에요' : 'Google로 시작하기'}</Text>
           </TouchableOpacity>

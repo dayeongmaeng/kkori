@@ -3,6 +3,11 @@ const reversedIosClientId = iosClientId
   ? iosClientId.split('.').reverse().join('.')
   : undefined;
 
+const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+const reversedAndroidClientId = androidClientId
+  ? androidClientId.split('.').reverse().join('.')
+  : undefined;
+
 const kakaoNativeAppKey = process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY;
 // kakao{NATIVE_APP_KEY} 형식의 URL scheme — Kakao 앱이 인증 후 이 scheme으로 리다이렉트한다.
 const kakaoUrlScheme = kakaoNativeAppKey ? `kakao${kakaoNativeAppKey}` : undefined;
@@ -30,21 +35,49 @@ module.exports = ({ config }) => {
     lsApplicationQueriesSchemes.push('kakaokompassauth', 'kakaolink');
   }
 
-  if (cfBundleUrlTypes.length === 0 && lsApplicationQueriesSchemes.length === 0) {
+  // Android: Google OAuth callback을 앱이 수신하려면 reverse Android client ID 스킴을
+  // intent filter로 등록해야 한다. kkori:// 커스텀 스킴은 Android OAuth 클라이언트가 거부한다.
+  const androidIntentFilters = reversedAndroidClientId
+    ? [
+        {
+          action: 'VIEW',
+          data: [{ scheme: reversedAndroidClientId }],
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ]
+    : [];
+
+  const hasIosChanges = cfBundleUrlTypes.length > 0 || lsApplicationQueriesSchemes.length > 0;
+  if (!hasIosChanges && androidIntentFilters.length === 0) {
     return config;
   }
 
   return {
     ...config,
-    ios: {
-      ...config.ios,
-      infoPlist: {
-        ...config.ios?.infoPlist,
-        ...(cfBundleUrlTypes.length > 0 ? { CFBundleURLTypes: cfBundleUrlTypes } : {}),
-        ...(lsApplicationQueriesSchemes.length > 0
-          ? { LSApplicationQueriesSchemes: lsApplicationQueriesSchemes }
-          : {}),
-      },
-    },
+    ...(hasIosChanges
+      ? {
+          ios: {
+            ...config.ios,
+            infoPlist: {
+              ...config.ios?.infoPlist,
+              ...(cfBundleUrlTypes.length > 0 ? { CFBundleURLTypes: cfBundleUrlTypes } : {}),
+              ...(lsApplicationQueriesSchemes.length > 0
+                ? { LSApplicationQueriesSchemes: lsApplicationQueriesSchemes }
+                : {}),
+            },
+          },
+        }
+      : {}),
+    ...(androidIntentFilters.length > 0
+      ? {
+          android: {
+            ...config.android,
+            intentFilters: [
+              ...(config.android?.intentFilters ?? []),
+              ...androidIntentFilters,
+            ],
+          },
+        }
+      : {}),
   };
 };
