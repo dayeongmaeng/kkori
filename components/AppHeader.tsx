@@ -18,6 +18,7 @@ import { useCurrentPet } from "../contexts/PetContext";
 import { PetResponse } from "../lib/api/pet";
 import { getCachedPets, setCachedCurrentPetId } from "../lib/cache/pet";
 import { showConfirm } from "../lib/dialog";
+import FeatureHintModal from "./FeatureHintModal";
 
 const FEEDBACK_URL = "https://open.kakao.com/o/sqYtAKvi";
 
@@ -54,6 +55,7 @@ export default function AppHeader() {
   const isCreateMode = mode === "create";
   const [sheetOpen, setSheetOpen] = useState(false);
   const [pets, setPets] = useState<PetResponse[]>([]);
+  const [petLimitVisible, setPetLimitVisible] = useState(false);
 
   async function handlePetPress() {
     const cached = await getCachedPets();
@@ -72,6 +74,11 @@ export default function AppHeader() {
   }
 
   function handleAddPet() {
+    if (pets.length >= 3) {
+      setSheetOpen(false);
+      setPetLimitVisible(true);
+      return;
+    }
     setSheetOpen(false);
     router.navigate({ pathname: "/(tabs)/profile", params: { mode: "create" } } as any);
   }
@@ -112,6 +119,13 @@ export default function AppHeader() {
         </TouchableOpacity>
         <Logo species={currentPet?.species} />
       </View>
+
+      <FeatureHintModal
+        visible={petLimitVisible}
+        title="반려동물은 최대 3마리까지 등록할 수 있어요"
+        body={"지금은 최대 3마리까지 함께 기록할 수 있어요.\n더 많은 아이를 기록할 수 있도록 준비 중이에요."}
+        onClose={() => setPetLimitVisible(false)}
+      />
 
       {/* 반려동물 선택 바텀시트 */}
       <Modal
