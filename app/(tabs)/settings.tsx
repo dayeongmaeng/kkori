@@ -542,7 +542,7 @@ export default function SettingsScreen() {
       <Card>
         <Row icon={<MessageCircle size={20} color={colors.textSecondary} />} label="문의하기" desc="카카오 오픈채팅" onPress={() => openURL(FEEDBACK_URL)} />
         <Row icon={<Newspaper size={20} color={colors.textSecondary} />} label="업데이트 소식" onPress={() => openURL(NEWS_URL)} />
-        <Row icon={<Star size={20} color={colors.textSecondary} />} label="리뷰 남기기" desc="앱스토어에서 별점 남기기" onPress={handleReview} />
+       {/* <Row icon={<Star size={20} color={colors.textSecondary} />} label="리뷰 남기기" desc="앱스토어에서 별점 남기기" onPress={handleReview} /> */}
         <Row icon={<Heart size={20} color={colors.textSecondary} />} label="꼬리 응원하기" desc="개발자에게 간식 사주기" onPress={handleDonation} />
         <Row icon={<PawPrint size={20} color={colors.textSecondary} />} label="꼬리 흔들게 하기 🐾" onPress={handleWag} last />
       </Card>
