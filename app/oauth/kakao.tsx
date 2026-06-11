@@ -2,6 +2,8 @@ import { Redirect } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
+import { escapeKakaoTalkInAppBrowser } from '../../lib/utils/inAppBrowser';
+
 const KAKAO_REDIRECT_URI_STORAGE_KEY = 'pet-care:kakao:redirect-uri';
 
 export default function KakaoOAuthCallbackRoute() {
@@ -12,6 +14,10 @@ export default function KakaoOAuthCallbackRoute() {
     const code = params.get('code');
     const error = params.get('error');
     if (!code && !error) return;
+
+    // KakaoTalk 인앱 브라우저 감지: 현재 URL을 외부 Safari에서 다시 열고 중단
+    // iOS: kakaotalk://web/openExternal?url= / Android: intent:// fallback
+    if (escapeKakaoTalkInAppBrowser(window.location.href)) return;
 
     try {
       const isWebLogin = Boolean(window.sessionStorage.getItem(KAKAO_REDIRECT_URI_STORAGE_KEY));

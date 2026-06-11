@@ -553,8 +553,12 @@ export default function AuthScreen() {
         });
 
         if (iosResult.type === 'cancel' || iosResult.type === 'dismiss') {
-          clearLoginTimeout();
-          setLoginProvider(null);
+          // KakaoTalk 인앱 브라우저 탈출 시 Linking으로 콜백이 먼저 처리될 수 있다.
+          // 이미 콜백이 처리된 경우 로그인 상태를 초기화하지 않는다.
+          if (!kakaoCallbackHandledRef.current) {
+            clearLoginTimeout();
+            setLoginProvider(null);
+          }
           return;
         }
         if (iosResult.type !== 'success') {
