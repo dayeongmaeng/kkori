@@ -31,7 +31,7 @@ import {
   setCachedPets,
   upsertCachedPet,
 } from "../../lib/cache/pet";
-import { pickImageUri } from "../../lib/imagePickerHelper";
+import ImagePickerSheet from "../../components/ImagePickerSheet";
 import {
   ImageUploadState,
   prepareImageForUpload,
@@ -308,6 +308,7 @@ export default function ProfileScreen() {
   const [weightPickerVisible, setWeightPickerVisible] = useState(false);
   const [pickerWeight, setPickerWeight] = useState(5.0);
 
+  const [photoPickerVisible, setPhotoPickerVisible] = useState(false);
   const [indicatorStatus, setIndicatorStatus] = useState<SaveStatus>("idle");
   const [showHint, setShowHint] = useState(false);
   const indicatorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -525,10 +526,13 @@ export default function ProfileScreen() {
     }
   }
 
-  async function handlePickImage() {
+  function handlePickImage() {
     if (photoUploadState.status !== 'idle' && photoUploadState.status !== 'failed') return;
-    const uri = await pickImageUri({ allowsEditing: true, aspect: [1, 1] });
-    if (!uri) return;
+    setPhotoPickerVisible(true);
+  }
+
+  async function handlePhotoPickerSelect(uri: string) {
+    setPhotoPickerVisible(false);
     setPhotoSourceUri(uri);
     setPhotoUri(uri);
     await prepareProfilePhoto(uri);
@@ -690,6 +694,14 @@ export default function ProfileScreen() {
         onScrollEndDrag={handleScrollEnd}
         onMomentumScrollEnd={handleScrollEnd}
       >
+        <ImagePickerSheet
+          visible={photoPickerVisible}
+          allowsEditing
+          aspect={[1, 1]}
+          onSelect={handlePhotoPickerSelect}
+          onClose={() => setPhotoPickerVisible(false)}
+        />
+
         {/* 사진 */}
         <TouchableOpacity style={styles.photoWrapper} onPress={handlePickImage}>
           {photoUri ? (

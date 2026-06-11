@@ -14,7 +14,7 @@ import {
 import { colors, radius, spacing } from '../constants/theme';
 import { logApi } from '../lib/api/log';
 import type { LogPhotoResponse } from '../lib/api/log';
-import { pickImageUri } from '../lib/imagePickerHelper';
+import ImagePickerSheet from './ImagePickerSheet';
 import { ImageUploadStatus, prepareImageForUpload } from '../lib/imageUpload';
 import { generateThumbnails } from '../lib/photoUtils';
 
@@ -57,6 +57,7 @@ export default function PhotoAttacher({
   onUploaded,
 }: Props) {
   const [previewPhoto, setPreviewPhoto] = useState<LogPhotoAttachment | null>(null);
+  const [pickerVisible, setPickerVisible] = useState(false);
   // 항상 최신 photos를 참조해 비동기 중간 stale closure 방지
   const photosRef = useRef(photos);
   photosRef.current = photos;
@@ -123,13 +124,14 @@ export default function PhotoAttacher({
     }
   }
 
-  async function handleAdd() {
+  function handleAdd() {
     if (disabled || photos.length >= MAX_PHOTOS) return;
     if (photos.some((p) => isBusy(p.status))) return;
+    setPickerVisible(true);
+  }
 
-    const sourceUri = await pickImageUri({ allowsEditing: true, aspect: [1, 1] });
-    if (!sourceUri) return;
-
+  async function handlePickerSelect(sourceUri: string) {
+    setPickerVisible(false);
     const tempId = `log-photo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const tempPhoto: LogPhotoAttachment = {
       externalId: tempId,
@@ -143,7 +145,6 @@ export default function PhotoAttacher({
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-
     onChangePhotos([...photosRef.current, tempPhoto]);
     await uploadLocalPhoto(tempId, sourceUri, tempPhoto);
   }
@@ -190,6 +191,13 @@ export default function PhotoAttacher({
 
   return (
     <>
+      <ImagePickerSheet
+        visible={pickerVisible}
+        allowsEditing
+        aspect={[1, 1]}
+        onSelect={handlePickerSelect}
+        onClose={() => setPickerVisible(false)}
+      />
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={styles.row}>
           {photos.map((photo) => (

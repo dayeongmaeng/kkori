@@ -31,7 +31,7 @@ try {
 const FEEDBACK_URL = 'https://open.kakao.com/o/sqYtAKvi';
 // TODO: 앱 출시 후 실제 스토어 URL로 교체
 const IOS_REVIEW_URL = 'itms-apps://itunes.apple.com/app/id'; // TODO: App Store ID 교체
-const ANDROID_REVIEW_URL = 'https://play.google.com/store/apps/details?id=com.kkori.app'; // TODO: 실제 패키지명으로 교체
+const ANDROID_REVIEW_URL = 'https://play.google.com/store/apps/details?id=com.kkutudio.kkori'; // TODO: 실제 패키지명으로 교체
 const FEEDBACK_EMAIL = 'kkutudio@gmail.com';
 const PRIVACY_URL = 'https://torpid-yttrium-aa3.notion.site/3719bc69e8b380f6992ed04922f50616';
 const TERMS_URL = 'https://torpid-yttrium-aa3.notion.site/3719bc69e8b380978bf9e524688d01d9';

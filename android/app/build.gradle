@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.kkori.app'
+    namespace 'com.kkutudio.kkori'
     defaultConfig {
-        applicationId 'com.kkori.app'
+        applicationId 'com.kkutudio.kkori'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -1,4 +1,4 @@
-package com.kkori.app
+package com.kkutudio.kkori
 
 import android.app.Application
 import android.content.res.Configuration

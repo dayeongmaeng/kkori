@@ -28,7 +28,7 @@
 
 - 앱 이름/slug: `꼬리` / `kkori`
 - 앱 스킴: `kkori`
-- 번들 ID/패키지: `com.kkori.app`
+- 번들 ID/패키지: `com.kkutudio.kkori`
 - 주요 탭: 홈, 기록, 포토, 프로필, 설정
 - 루트 Provider: `AuthProvider`, `DateProvider`, `PetProvider`
 - 로그인 전에는 `AuthGate`가 로그인 화면을 보여준다.

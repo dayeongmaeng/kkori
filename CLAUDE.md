@@ -36,7 +36,7 @@
 
 - 앱 이름/slug: `꼬리` / `kkori`
 - 앱 스킴: `kkori`
-- 번들 ID/패키지: `com.kkori.app`
+- 번들 ID/패키지: `com.kkutudio.kkori`
 - 주요 탭: 홈, 기록, 포토, 프로필, 설정
 - 루트 Provider: `AuthProvider`, `DateProvider`, `PetProvider`
 - `DateProvider`는 KST 기준 날짜를 관리하며 자정과 앱 활성화 시 갱신한다.
@@ -270,7 +270,7 @@ API 코드 위치: `lib/api/`
 - `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다.
 - 프로필 `gender` 요청 타입은 코드상 `male` / `female` 소문자로 전송한다. 서버 문서가 `MALE` / `FEMALE` 기준이면 정합성 확인이 필요하다.
 - AI 리포트, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
-- 번들 ID/패키지가 `com.kkori.app`로 되어 있다. App Store 제출 전 실제 번들 ID로 교체해야 한다.
+- 번들 ID/패키지가 `com.kkutudio.kkori`로 되어 있다. App Store 제출 전 실제 번들 ID로 교체해야 한다.
 - 고양이 컨디션 이미지는 `assets/conditions/cat-3.png ~ cat-5.png`가 미추가 상태다. 추가 시 `ConditionPicker.tsx`의 `catConditionImages` 매핑을 교체한다.
 - 고양이 로고(`assets/cat-logo.png`)는 미추가 상태로 현재 강아지 로고를 공유한다. 추가 시 `AppHeader.tsx`, `app/photos/[externalId].tsx`의 `catLogoSource`/`catLogoImage`를 교체한다.
 - 공유 화면 로고 분기는 서버가 `PhotoShareResponse.petSpecies`를 응답에 포함해야 동작한다. 백엔드 미반영 시 강아지 로고가 기본값으로 표시된다.

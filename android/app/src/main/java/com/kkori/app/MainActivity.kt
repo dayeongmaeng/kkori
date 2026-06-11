@@ -1,4 +1,4 @@
-package com.kkori.app
+package com.kkutudio.kkori
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
