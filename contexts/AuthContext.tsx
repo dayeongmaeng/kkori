@@ -13,6 +13,7 @@ interface AuthContextValue {
   markLoggedIn: () => void;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextValue>({
   markLoggedIn: () => {},
   logout: async () => {},
   deleteAccount: async () => {},
+  refreshSession: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -94,6 +96,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function refreshSession() {
+    setIsSessionLoading(true);
+    try {
+      await syncServerSessionData();
+    } catch (error) {
+      logger.warn('auth.session.sync.failed', toLogError(error));
+    } finally {
+      setSessionDataVersion((version) => version + 1);
+      setIsSessionLoading(false);
+    }
+  }
+
   async function deleteAccount() {
     // API 실패 시 로컬 토큰을 건드리지 않아야 하므로 await가 throws하면 그대로 전파한다.
     await deleteAccountFromServer();
@@ -116,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         markLoggedIn,
         logout,
         deleteAccount,
+        refreshSession,
       }}
     >
       {children}

@@ -216,7 +216,7 @@ export default function SettingsScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const pickerDateRef = useRef<Date>(new Date());
 
-  const { logout, deleteAccount } = useAuth();
+  const { logout, deleteAccount, refreshSession } = useAuth();
 
   useEffect(() => {
     void getAuthTokens().then((tokens) => {
@@ -310,6 +310,7 @@ export default function SettingsScreen() {
         if (cacheKeys.length > 0) {
           await AsyncStorage.multiRemove(cacheKeys);
         }
+        await refreshSession();
         window.alert('캐시를 비웠어요');
       } catch {
         window.alert('캐시를 비우지 못했어요');
@@ -326,6 +327,7 @@ export default function SettingsScreen() {
           if (cacheKeys.length > 0) {
             await AsyncStorage.multiRemove(cacheKeys);
           }
+          await refreshSession();
           Alert.alert('완료', '캐시를 비웠어요');
         } catch {
           Alert.alert('오류', '캐시를 비우지 못했어요');
