@@ -10,6 +10,7 @@ export interface PetResponse {
   adoptionDate?: string | null;
   gender?: string | null;
   weightKg?: number;
+  weightKgUnknown?: boolean;
   neutered?: boolean;
   medicalNotes?: string;
   photoBase64?: string;
@@ -26,6 +27,7 @@ export interface PetRequest {
   adoptionDate?: string | null;
   gender?: 'male' | 'female';
   weightKg?: number;
+  weightKgUnknown?: boolean;
   neutered?: boolean;
   medicalNotes?: string;
   photoBase64?: string;

@@ -289,6 +289,7 @@ export default function ProfileScreen() {
   const [birthDateUnknown, setBirthDateUnknown] = useState(false);
   const [adoptionDate, setAdoptionDate] = useState("");
   const [weightKg, setWeightKg] = useState("");
+  const [weightKgUnknown, setWeightKgUnknown] = useState(false);
   const [neutered, setNeutered] = useState(false);
   const [medicalNotes, setMedicalNotes] = useState("");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
@@ -393,7 +394,9 @@ export default function ProfileScreen() {
     setBirthDate(isBirthDateUnknown ? "" : (pet.birthDate ?? ""));
     setBirthDateUnknown(isBirthDateUnknown);
     setAdoptionDate(pet.adoptionDate ?? "");
-    setWeightKg(pet.weightKg !== undefined ? String(pet.weightKg) : "");
+    const isWeightKgUnknown = pet.weightKgUnknown ?? false;
+    setWeightKgUnknown(isWeightKgUnknown);
+    setWeightKg(!isWeightKgUnknown && pet.weightKg !== undefined ? String(pet.weightKg) : "");
     setNeutered(pet.neutered ?? false);
     setMedicalNotes(pet.medicalNotes ?? "");
     if (pet.photoBase64) setPhotoUri(pet.photoBase64);
@@ -409,6 +412,7 @@ export default function ProfileScreen() {
     setBirthDateUnknown(false);
     setAdoptionDate("");
     setWeightKg("");
+    setWeightKgUnknown(false);
     setNeutered(false);
     setMedicalNotes("");
     setPhotoUri(undefined);
@@ -549,13 +553,13 @@ export default function ProfileScreen() {
       !breed.trim() ||
       !gender ||
       (!birthDateUnknown && !birthDate.trim()) ||
-      !weightKg.trim()
+      (!weightKgUnknown && !weightKg.trim())
     ) {
       showError();
       return;
     }
-    const weight = parseFloat(weightKg);
-    if (isNaN(weight) || weight <= 0) {
+    const weight = weightKgUnknown ? null : parseFloat(weightKg);
+    if (!weightKgUnknown && (weight === null || isNaN(weight) || weight <= 0)) {
       showError();
       return;
     }
@@ -576,7 +580,8 @@ export default function ProfileScreen() {
         birthDate: birthDateUnknown ? null : birthDate.trim(),
         birthDateUnknown,
         adoptionDate: adoptionDate.trim() || null,
-        weightKg: weight,
+        weightKg: weightKgUnknown ? undefined : (weight as number),
+        weightKgUnknown,
         neutered,
         medicalNotes: medicalNotes.trim() || undefined,
         photoBase64: photoUri,
@@ -648,6 +653,7 @@ export default function ProfileScreen() {
       setBirthDateUnknown(false);
       setAdoptionDate("");
       setWeightKg("");
+      setWeightKgUnknown(false);
       setNeutered(false);
       setMedicalNotes("");
       setPhotoUri(undefined);
@@ -1010,12 +1016,48 @@ export default function ProfileScreen() {
         <View style={styles.field}>
           <Text style={styles.label}>체중 *</Text>
           <TouchableOpacity
-            style={[styles.input, styles.dateButton]}
+            style={[
+              styles.input,
+              styles.dateButton,
+              weightKgUnknown && styles.inputDisabled,
+            ]}
             onPress={openWeightPicker}
+            disabled={weightKgUnknown}
           >
-            <Text style={weightKg ? styles.dateText : styles.datePlaceholder}>
-              {weightKg ? `${weightKg} kg` : "체중 선택"}
+            <Text
+              style={
+                weightKg && !weightKgUnknown
+                  ? styles.dateText
+                  : styles.datePlaceholder
+              }
+            >
+              {weightKgUnknown
+                ? "체중 모름"
+                : weightKg
+                  ? `${weightKg} kg`
+                  : "체중 선택"}
             </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.checkRow}
+            onPress={() => {
+              const next = !weightKgUnknown;
+              setWeightKgUnknown(next);
+              if (next) setWeightKg("");
+            }}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[
+                styles.checkbox,
+                weightKgUnknown && styles.checkboxActive,
+              ]}
+            >
+              {weightKgUnknown ? (
+                <Text style={styles.checkboxMark}>✓</Text>
+              ) : null}
+            </View>
+            <Text style={styles.checkText}>체중 모름</Text>
           </TouchableOpacity>
         </View>
 
