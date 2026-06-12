@@ -10,9 +10,9 @@ const STOOL_OPTIONS: { value: StoolCondition; label: string }[] = [
 ];
 
 const URINE_AMOUNT_OPTIONS: { value: UrineAmount; label: string }[] = [
-  { value: 'LESS', label: '적음' },
+  { value: 'LOW', label: '적음' },
   { value: 'NORMAL', label: '평소' },
-  { value: 'MORE', label: '많음' },
+  { value: 'HIGH', label: '많음' },
 ];
 
 interface Props {
