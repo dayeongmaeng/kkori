@@ -282,3 +282,6 @@ API 코드 위치: `lib/api/`
 - 개인정보처리방침/계정삭제 안내 페이지 준비
 - `.env.example`과 실제 사용 환경변수 정합성 정리 (`EXPO_PUBLIC_SHARE_API_URL`, `WEB_BASE_URL` 등)
 - Phase D 회원가입/계정 모델 고도화 설계
+
+# Project Context
+See PROJECT_CONTEXT.md for full context. Read it at the start of every session.
