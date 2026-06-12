@@ -1,6 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
-
 import { clearAuthTokens, getAuthTokens, saveAuthTokens } from '../auth/tokenStorage';
 import { logger } from '../logger';
 import { ApiError, ApiResponse } from './types';
@@ -9,12 +7,7 @@ const DEV_API_BASE_URL = 'http://localhost:8080';
 const PROD_API_BASE_URL = 'https://api.kkori.co.kr';
 export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://kkori.vercel.app';
 
-// EXPO_PUBLIC_API_URL 또는 EXPO_PUBLIC_API_BASE_URL 중 설정된 값을 우선 사용한다.
-// 없으면 web 개발 환경만 localhost, 그 외(실기기 포함)는 운영 URL.
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ??
-  process.env.EXPO_PUBLIC_API_BASE_URL ??
-  (__DEV__ && Platform.OS === 'web' ? DEV_API_BASE_URL : PROD_API_BASE_URL);
+const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
 logger.info('api.init', { baseUrl: API_BASE_URL });
 
