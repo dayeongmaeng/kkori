@@ -429,6 +429,9 @@ export default function ProfileScreen() {
     );
   }
 
+  // 탭 이탈 시 create 모드 여부를 기억해두고, 재진입 시에만 리셋에 사용
+  const wasModeCreateOnBlurRef = useRef(false);
+
   // 반려동물 전환 시 이전 프로필 즉시 클리어, create 모드면 해제 후 선택된 반려동물 로드
   const isMountedRef = useRef(false);
   useEffect(() => {
@@ -499,6 +502,17 @@ export default function ProfileScreen() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCreateMode, petIdFromContext]);
+
+  useFocusEffect(useCallback(() => {
+    // 탭을 나갔다 돌아온 경우에만 리셋: navigate로 진입한 경우는 blur 기록이 없으므로 건너뜀
+    if (wasModeCreateOnBlurRef.current && isCreateMode && petIdFromContext) {
+      wasModeCreateOnBlurRef.current = false;
+      router.setParams({ mode: undefined });
+    }
+    return () => {
+      wasModeCreateOnBlurRef.current = isCreateMode;
+    };
+  }, [isCreateMode, petIdFromContext]));
 
   useFocusEffect(useCallback(() => {
     AsyncStorage.getItem('pet-care:hint:profile')
