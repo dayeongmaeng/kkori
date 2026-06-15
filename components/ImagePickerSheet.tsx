@@ -1,29 +1,16 @@
 import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
-import * as MediaLibrary from 'expo-media-library';
-import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
 import {
-  Dimensions,
   Modal,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
 import { showAlert } from '../lib/dialog';
 import { logger } from '../lib/logger';
-
-const NUM_COLS = 3;
-const GRID_ROWS = 3;
-// 그리드 셀 수: 카메라 1칸 + 사진 8칸 = 9칸 (3×3)
-const PHOTO_COUNT = NUM_COLS * GRID_ROWS - 1;
-const SCREEN_W = Dimensions.get('window').width;
-const GAP = 1;
-// 셀 너비: 화면 너비에서 열 사이 gap(2개)을 빼고 3등분
-const CELL_SIZE = Math.floor((SCREEN_W - GAP * (NUM_COLS - 1)) / NUM_COLS);
 
 export interface ImagePickerSheetProps {
   visible: boolean;
@@ -33,8 +20,6 @@ export interface ImagePickerSheetProps {
   onClose: () => void;
 }
 
-type GridItem = { kind: 'camera' } | { kind: 'photo'; asset: MediaLibrary.Asset };
-
 export default function ImagePickerSheet({
   visible,
   allowsEditing = false,
@@ -42,35 +27,16 @@ export default function ImagePickerSheet({
   onSelect,
   onClose,
 }: ImagePickerSheetProps) {
-  const [assets, setAssets] = useState<MediaLibrary.Asset[]>([]);
-
-  useEffect(() => {
-    if (!visible || Platform.OS === 'web') {
-      return;
-    }
-    let cancelled = false;
-
-    async function loadRecent() {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (cancelled || status !== 'granted') return;
-      const { assets: recent } = await MediaLibrary.getAssetsAsync({
-        mediaType: 'photo',
-        first: PHOTO_COUNT + 5,
-        sortBy: [['creationTime', false]],
-      });
-      if (!cancelled) setAssets(recent);
-    }
-    loadRecent();
-    return () => { cancelled = true; };
-  }, [visible]);
-
-  // 시트를 닫은 뒤 모달 닫힘 애니메이션이 끝나고 나서 action 실행
   function dismissThen(action: () => Promise<void>) {
     onClose();
     setTimeout(action, 350);
   }
 
   async function launchCamera() {
+    if (Platform.OS === 'web') {
+      await launchLibrary();
+      return;
+    }
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       logger.warn('image.camera.permission.denied');
@@ -111,162 +77,82 @@ export default function ImagePickerSheet({
     }
   }
 
-  async function handlePhotoCell(asset: MediaLibrary.Asset) {
-    onClose();
-    const info = await MediaLibrary.getAssetInfoAsync(asset);
-    const uri = info.localUri ?? asset.uri;
-    if (uri) onSelect(uri);
-  }
-
-  const gridItems: GridItem[] = [
-    { kind: 'camera' },
-    ...assets.slice(0, PHOTO_COUNT).map((a) => ({ kind: 'photo' as const, asset: a })),
-  ];
-
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.root}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>사진 선택</Text>
-            <TouchableOpacity
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              onPress={onClose}
-            >
-              <Ionicons name="close" size={22} color={colors.textTertiary} />
-            </TouchableOpacity>
-          </View>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.backdrop}>
+          <TouchableWithoutFeedback>
+            <View style={styles.sheet}>
+              <View style={styles.menuGroup}>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => dismissThen(launchCamera)}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.menuText}>카메라로 촬영하기</Text>
+                </TouchableOpacity>
 
-          {/* 그리드: Web에서는 숨김 */}
-          {Platform.OS !== 'web' && (
-            <View style={styles.grid}>
-              {gridItems.map((item, i) => {
-                if (item.kind === 'camera') {
-                  return (
-                    <TouchableOpacity
-                      key="camera"
-                      style={[styles.cell, styles.cameraCell]}
-                      onPress={() => dismissThen(launchCamera)}
-                      activeOpacity={0.75}
-                    >
-                      <Ionicons name="camera-outline" size={28} color={colors.textSecondary} />
-                      <Text style={styles.cameraLabel}>카메라</Text>
-                    </TouchableOpacity>
-                  );
-                }
-                return (
-                  <TouchableOpacity
-                    key={item.asset.id ?? String(i)}
-                    style={styles.cell}
-                    onPress={() => handlePhotoCell(item.asset)}
-                    activeOpacity={0.8}
-                  >
-                    <Image
-                      source={{ uri: item.asset.uri }}
-                      style={styles.cellImg}
-                      contentFit="cover"
-                    />
-                  </TouchableOpacity>
-                );
-              })}
+                <View style={styles.divider} />
+
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => dismissThen(launchLibrary)}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.menuText}>앨범에서 고르기</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.6}>
+                <Text style={styles.cancelText}>취소</Text>
+              </TouchableOpacity>
             </View>
-          )}
-
-          {/* 전체 앨범 버튼 */}
-          <TouchableOpacity
-            style={styles.albumBtn}
-            onPress={() => dismissThen(launchLibrary)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="images-outline" size={18} color={colors.primary} />
-            <Text style={styles.albumBtnText}>전체 앨범에서 선택</Text>
-          </TouchableOpacity>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  backdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
   sheet: {
+    padding: spacing.sm,
+    paddingBottom: 34,
+  },
+  menuGroup: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    paddingBottom: 36,
+    borderRadius: radius.xl,
     overflow: 'hidden',
   },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: radius.full,
-    backgroundColor: colors.border,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+  menuItem: {
+    height: 56,
+    paddingHorizontal: spacing.lg + 4,
+    justifyContent: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  headerTitle: {
+  menuText: {
     fontSize: 16,
-    fontWeight: '600',
     color: colors.textPrimary,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: GAP,
+  divider: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginHorizontal: spacing.lg + 4,
   },
-  cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-    backgroundColor: colors.surfaceAlt,
-  },
-  cameraCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  cameraLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  cellImg: {
-    width: '100%',
-    height: '100%',
-  },
-  albumBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: 13,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    backgroundColor: colors.surfaceAlt,
+  cancelButton: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: spacing.lg,
+    alignItems: 'center',
   },
-  albumBtnText: {
-    fontSize: 15,
+  cancelText: {
+    fontSize: 16,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.textSecondary,
   },
 });
