@@ -1447,6 +1447,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: 12,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
   },
   saveButtonDisabled: {
     opacity: 0.5,
@@ -1461,6 +1463,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: 11,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
   },
   deleteButtonDisabled: {
     opacity: 0.5,
@@ -1475,6 +1479,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: 11,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
     borderWidth: 1,
     borderColor: colors.border,
   },
