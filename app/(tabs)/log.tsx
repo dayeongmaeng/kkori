@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   AppState,
   StyleSheet,
@@ -30,6 +29,7 @@ import VomitInput from '../../components/VomitInput';
 import WalkInput from '../../components/WalkInput';
 import WaterPicker from '../../components/WaterPicker';
 import { colors, radius, spacing } from '../../constants/theme';
+import { showAlert } from '../../lib/dialog';
 import {
   LogRequest,
   LogPhotoResponse,
@@ -574,7 +574,7 @@ export default function LogScreen() {
       saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
     } catch {
       setSaveStatus('error');
-      Alert.alert('삭제 실패', '기록을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.');
+      showAlert('삭제 실패', '기록을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsDeleting(false);
     }

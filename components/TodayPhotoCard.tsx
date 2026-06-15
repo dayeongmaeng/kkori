@@ -3,8 +3,9 @@ import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
+import { showAlert } from '../lib/dialog';
 import { LocalPhoto } from '../lib/cache/photo';
 import { logger } from '../lib/logger';
 
@@ -68,7 +69,7 @@ function LiveCameraCard({
       if (!photo?.uri) throw new Error('촬영 데이터가 없어요.');
       onPhotoTaken(photo.uri);
     } catch (e: any) {
-      Alert.alert('오류', `촬영 실패: ${e?.message ?? '알 수 없는 오류'}`);
+      showAlert('오류', `촬영 실패: ${e?.message ?? '알 수 없는 오류'}`);
     } finally {
       setCapturing(false);
     }

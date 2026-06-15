@@ -7,7 +7,7 @@ import {
   PawPrint, Shield, Star, Trash2, UserX,
 } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
 import { showAlert, showConfirm } from '../../lib/dialog';
 import { useAuth } from '../../contexts/AuthContext';
@@ -73,11 +73,11 @@ function getWebCameraDesc(perm: WebCameraPerm): string {
 }
 
 function openURL(url: string) {
-  Linking.openURL(url).catch(() => Alert.alert('오류', '링크를 열 수 없어요.'));
+  Linking.openURL(url).catch(() => showAlert('오류', '링크를 열 수 없어요.'));
 }
 
 function openSettings() {
-  if (Platform.OS === 'web') { Alert.alert('알림', '기기 설정에서 권한을 변경해 주세요.'); return; }
+  if (Platform.OS === 'web') { showAlert('알림', '기기 설정에서 권한을 변경해 주세요.'); return; }
   Linking.openSettings();
 }
 
@@ -265,10 +265,12 @@ export default function SettingsScreen() {
 
   async function handleNotifTimePress() {
     if (notifPermission === 'denied') {
-      Alert.alert('알림 권한 필요', '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.', [
-        { text: '취소', style: 'cancel' },
-        { text: '설정 열기', onPress: openSettings },
-      ]);
+      showConfirm(
+        '알림 권한 필요',
+        '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.',
+        openSettings,
+        { confirmText: '설정 열기' },
+      );
       return;
     }
     if (notifPermission === 'undetermined') {
@@ -276,10 +278,12 @@ export default function SettingsScreen() {
       const newPerm = granted ? 'granted' : 'denied';
       setNotifPermission(newPerm);
       if (!granted) {
-        Alert.alert('알림 권한 필요', '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.', [
-          { text: '취소', style: 'cancel' },
-          { text: '설정 열기', onPress: openSettings },
-        ]);
+        showConfirm(
+          '알림 권한 필요',
+          '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.',
+          openSettings,
+          { confirmText: '설정 열기' },
+        );
         return;
       }
     }
@@ -296,7 +300,7 @@ export default function SettingsScreen() {
       await scheduleDailyNotification(newTime.hour, newTime.minute);
     } catch (error) {
       logger.warn('notification.schedule.failed', toLogError(error));
-      Alert.alert('오류', '알림 설정에 실패했어요. 다시 시도해 주세요.');
+      showAlert('오류', '알림 설정에 실패했어요. 다시 시도해 주세요.');
     }
   }
 
@@ -318,9 +322,10 @@ export default function SettingsScreen() {
       return;
     }
 
-    Alert.alert('캐시 비우기', '저장된 임시 데이터를 모두 삭제할까요?\n다음 실행 시 서버에서 다시 불러옵니다.', [
-      { text: '취소', style: 'cancel' },
-      { text: '비우기', style: 'destructive', onPress: async () => {
+    showConfirm(
+      '캐시 비우기',
+      '저장된 임시 데이터를 모두 삭제할까요?\n다음 실행 시 서버에서 다시 불러옵니다.',
+      async () => {
         try {
           const keys = await AsyncStorage.getAllKeys();
           const cacheKeys = keys.filter(isCacheKey);
@@ -328,19 +333,20 @@ export default function SettingsScreen() {
             await AsyncStorage.multiRemove(cacheKeys);
           }
           await refreshSession();
-          Alert.alert('완료', '캐시를 비웠어요');
+          showAlert('완료', '캐시를 비웠어요');
         } catch {
-          Alert.alert('오류', '캐시를 비우지 못했어요');
+          showAlert('오류', '캐시를 비우지 못했어요');
         }
-      }},
-    ]);
+      },
+      { confirmText: '비우기', confirmStyle: 'destructive' },
+    );
   }
 
   function handleReview() {
     if (Platform.OS === 'ios') {
       openURL(IOS_REVIEW_URL);
     } else if (Platform.OS === 'android') {
-      Alert.alert('리뷰 남기기', 'iOS 앱 출시 후 이용할 수 있어요 🐾');
+      showAlert('리뷰 남기기', 'iOS 앱 출시 후 이용할 수 있어요 🐾');
     } else {
       setShowWebReviewModal(true);
     }
@@ -353,7 +359,7 @@ export default function SettingsScreen() {
       if (typeof window !== 'undefined') {
         window.alert(`메일 앱을 열 수 없어요.\n\n${FEEDBACK_EMAIL} 으로 직접 보내주세요.`);
       } else {
-        Alert.alert('오류', `메일 앱을 열 수 없어요.\n${FEEDBACK_EMAIL} 으로 직접 보내주세요.`);
+        showAlert('오류', `메일 앱을 열 수 없어요.\n${FEEDBACK_EMAIL} 으로 직접 보내주세요.`);
       }
     });
   }

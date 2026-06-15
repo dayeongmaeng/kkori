@@ -4,7 +4,6 @@ import * as MediaLibrary from 'expo-media-library';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
   Dimensions,
   Modal,
   Platform,
@@ -14,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { colors, radius, spacing } from '../constants/theme';
+import { showAlert } from '../lib/dialog';
 import { logger } from '../lib/logger';
 
 const NUM_COLS = 3;
@@ -74,7 +74,7 @@ export default function ImagePickerSheet({
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       logger.warn('image.camera.permission.denied');
-      Alert.alert(
+      showAlert(
         '카메라 권한이 필요해요',
         '카메라 접근 권한을 허용해야 사진을 촬영할 수 있어요.\n설정에서 권한을 허용해주세요.',
       );
@@ -95,7 +95,7 @@ export default function ImagePickerSheet({
   async function launchLibrary() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('권한 필요', '사진 접근 권한이 필요합니다.');
+      showAlert('권한 필요', '사진 접근 권한이 필요합니다.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({

@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Picker } from "@react-native-picker/picker";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Modal,
   Platform,
@@ -19,7 +18,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import FeatureHintModal from "../../components/FeatureHintModal";
 import SaveIndicator from "../../components/SaveIndicator";
 import { colors, radius, spacing } from "../../constants/theme";
-import { showConfirm } from "../../lib/dialog";
+import { showAlert, showConfirm } from "../../lib/dialog";
 import { useCurrentPet } from "../../contexts/PetContext";
 import { SaveStatus } from "../../hooks/useAutoSave";
 import { petApi, PetResponse } from "../../lib/api/pet";
@@ -530,6 +529,20 @@ export default function ProfileScreen() {
     }
   }
 
+  function handleSpeciesPress(next: Species) {
+    if (next === species) return;
+    if (!externalId) {
+      setSpecies(next);
+      return;
+    }
+    showConfirm(
+      "종류를 변경할까요?",
+      "종류를 변경하면 기존 산책 기록 등 일부 항목이 표시되지 않을 수 있어요.",
+      () => setSpecies(next),
+      { confirmText: "변경하기" },
+    );
+  }
+
   function handlePickImage() {
     if (photoUploadState.status !== 'idle' && photoUploadState.status !== 'failed') return;
     setPhotoPickerVisible(true);
@@ -630,7 +643,7 @@ export default function ProfileScreen() {
           errorMessage: "업로드에 실패했어요",
         });
       }
-      Alert.alert("저장 실패", "서버 연결을 확인해주세요.");
+      showAlert("저장 실패", "서버 연결을 확인해주세요.");
     } finally {
       setIsSaving(false);
     }
@@ -672,7 +685,7 @@ export default function ProfileScreen() {
       }
     } catch (e) {
       logger.error("profile.pet.delete.failed", toLogError(e));
-      Alert.alert("삭제 실패", "반려동물을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.");
+      showAlert("삭제 실패", "반려동물을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.");
     } finally {
       setIsDeleting(false);
     }
@@ -757,7 +770,7 @@ export default function ProfileScreen() {
           <View style={styles.segmentRow}>
             <TouchableOpacity
               style={[styles.segmentButton, species === "DOG" && styles.segmentButtonActive]}
-              onPress={() => setSpecies("DOG")}
+              onPress={() => handleSpeciesPress("DOG")}
               activeOpacity={0.8}
             >
               <Text style={[styles.segmentText, species === "DOG" && styles.segmentTextActive]}>
@@ -766,7 +779,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.segmentButton, species === "CAT" && styles.segmentButtonActive]}
-              onPress={() => setSpecies("CAT")}
+              onPress={() => handleSpeciesPress("CAT")}
               activeOpacity={0.8}
             >
               <Text style={[styles.segmentText, species === "CAT" && styles.segmentTextActive]}>

@@ -7,7 +7,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCurrentPet } from '../../contexts/PetContext';
 import {
   ActivityIndicator,
-  Alert,
   AppState,
   Dimensions,
   FlatList,
@@ -39,6 +38,7 @@ import {
   prepareImageForUpload,
 } from '../../lib/imageUpload';
 import { colors, radius, shadow, spacing } from '../../constants/theme';
+import { showAlert } from '../../lib/dialog';
 import { useDate } from '../../contexts/DateContext';
 
 const CELL_SIZE = Math.floor(Dimensions.get('window').width / 3);
@@ -239,7 +239,7 @@ export default function PhotoScreen() {
     debugPhotoUpload('picker start');
     const petId = await getCachedCurrentPetId();
     if (!petId) {
-      Alert.alert('알림', '프로필 탭에서 반려동물을 먼저 등록해주세요.');
+      showAlert('알림', '프로필 탭에서 반려동물을 먼저 등록해주세요.');
       return;
     }
     const uri = await pickImageUri({ allowsEditing: true, aspect: [1, 1] });
@@ -447,7 +447,7 @@ export default function PhotoScreen() {
           </View>
           <TouchableOpacity
             style={styles.calendarBtn}
-            onPress={() => Alert.alert('곧 출시될 기능이에요 🐾', '조금만 기다려주세요')}
+            onPress={() => showAlert('곧 출시될 기능이에요 🐾', '조금만 기다려주세요')}
             activeOpacity={0.75}
           >
             <View style={styles.comingSoonBadge}>

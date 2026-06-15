@@ -1,7 +1,8 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 
+import { showAlert } from './dialog';
 import { logger } from './logger';
 
 const RESIZE_WIDTH = 800;
@@ -57,7 +58,7 @@ async function pickImageNativeRaw(options: PickImageOptions): Promise<string | n
 
   if (status !== 'granted') {
     logger.warn('image.picker.permission.denied');
-    Alert.alert('권한 필요', '사진 접근 권한이 필요합니다.');
+    showAlert('권한 필요', '사진 접근 권한이 필요합니다.');
     return null;
   }
   const result = await ImagePicker.launchImageLibraryAsync({

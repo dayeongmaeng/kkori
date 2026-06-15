@@ -4,7 +4,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Dimensions,
   FlatList,
   Keyboard,
@@ -23,7 +22,7 @@ import {
 } from "react-native";
 import PhotoActionSheet from "../../components/PhotoActionSheet";
 import { colors, spacing } from "../../constants/theme";
-import { showConfirm } from "../../lib/dialog";
+import { showAlert, showConfirm } from "../../lib/dialog";
 import { WEB_BASE_URL } from "../../lib/api/client";
 import { photoApi } from "../../lib/api/photo";
 import { getCachedCurrentPetId } from "../../lib/cache/pet";
@@ -139,7 +138,7 @@ export default function PhotoDetailScreen() {
         url,
       });
     } catch {
-      Alert.alert("오류", "공유 링크를 만들지 못했어요.");
+      showAlert("오류", "공유 링크를 만들지 못했어요.");
     }
   }
 
@@ -149,7 +148,7 @@ export default function PhotoDetailScreen() {
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert(
+      showAlert(
         "링크를 열 수 없어요",
         "공유 웹 도메인이 아직 연결되지 않았을 수 있어요. Vercel 도메인 연결 후 다시 확인해주세요.",
       );
@@ -184,7 +183,7 @@ export default function PhotoDetailScreen() {
       setCaptionModalVisible(false);
       setEditingPhotoId(null);
     } catch {
-      Alert.alert(
+      showAlert(
         "저장 실패",
         "오늘의 한 줄 기록을 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
       );
@@ -206,7 +205,7 @@ export default function PhotoDetailScreen() {
       }
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
+        showAlert(
           "권한 필요",
           "사진을 저장하려면 사진첩 접근 권한이 필요해요.",
         );
@@ -217,9 +216,9 @@ export default function PhotoDetailScreen() {
         `photo_${actionPhoto.externalId}.jpg`,
       );
       await MediaLibrary.saveToLibraryAsync(tempUri);
-      Alert.alert("완료", "사진첩에 저장됐어요 🐾");
+      showAlert("완료", "사진첩에 저장됐어요 🐾");
     } catch {
-      Alert.alert("오류", "저장 중 문제가 발생했어요.");
+      showAlert("오류", "저장 중 문제가 발생했어요.");
     }
   }
 
@@ -233,7 +232,7 @@ export default function PhotoDetailScreen() {
       await removeCachedPhoto(petId, actionPhoto.externalId);
       router.back();
     } catch {
-      Alert.alert("오류", "삭제에 실패했어요. 다시 시도해주세요.");
+      showAlert("오류", "삭제에 실패했어요. 다시 시도해주세요.");
     }
   }
 
