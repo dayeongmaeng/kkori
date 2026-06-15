@@ -59,11 +59,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.background,
-    gap: spacing.xl,
   },
   logoWrapper: {
     width: 120,
     height: 120,
+    marginBottom: spacing.sm,
   },
   logo: {
     width: 120,
@@ -81,6 +81,7 @@ const s = StyleSheet.create({
   dots: {
     flexDirection: 'row',
     gap: spacing.sm,
+    marginTop: spacing.xl,
   },
   dot: {
     width: 6,
