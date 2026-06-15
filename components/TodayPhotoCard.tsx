@@ -179,17 +179,15 @@ export default function TodayPhotoCard({
     // photoUri(blob URL)는 iOS Safari에서 세션 전환 시 만료되므로 마지막 fallback으로.
     const displayUri = todayPhoto.mediumUrl ?? todayPhoto.thumbnailUrl ?? todayPhoto.photoUri;
 
-    if (!displayUri || showFallback) {
+    if (showFallback) {
       return (
         <TouchableOpacity
           style={[styles.photoCard, styles.noLocalCard, { aspectRatio }]}
           onPress={onTapPhoto}
           activeOpacity={0.92}
         >
-          <Text style={styles.noLocalEmoji}>{!displayUri ? '📲' : '🖼️'}</Text>
-          <Text style={styles.noLocalText}>
-            {!displayUri ? '다른 기기에서 찍은 사진이에요' : '사진을 불러오지 못했어요'}
-          </Text>
+          <Text style={styles.noLocalEmoji}>🖼️</Text>
+          <Text style={styles.noLocalText}>사진을 불러오지 못했어요</Text>
         </TouchableOpacity>
       );
     }

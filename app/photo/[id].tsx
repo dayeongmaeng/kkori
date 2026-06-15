@@ -196,10 +196,6 @@ export default function PhotoDetailScreen() {
   async function handleSaveToAlbum() {
     setActionSheetVisible(false);
     if (!actionPhoto) return;
-    if (!actionPhoto.photoUri) {
-      Alert.alert("알림", "이 사진은 다른 기기에서 촬영되어 저장할 수 없어요.");
-      return;
-    }
     try {
       if (Platform.OS === "web") {
         const link = document.createElement("a");
@@ -323,12 +319,7 @@ export default function PhotoDetailScreen() {
                     contentFit="cover"
                   />
                 ) : (
-                  <View style={[styles.feedPhoto, styles.noLocalPhoto]}>
-                    <Text style={styles.noLocalEmoji}>📲</Text>
-                    <Text style={styles.noLocalText}>
-                      다른 기기에서 찍은 사진이에요
-                    </Text>
-                  </View>
+                  <View style={styles.feedPhoto} />
                 )}
                 <View style={styles.feedCaptionSection}>
                   <View style={styles.feedCaptionRow}>
