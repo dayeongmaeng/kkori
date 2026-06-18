@@ -23,6 +23,7 @@ import {
 import PhotoActionSheet from "../../components/PhotoActionSheet";
 import { colors, spacing } from "../../constants/theme";
 import { showAlert, showConfirm } from "../../lib/dialog";
+import { logger, toLogError } from "../../lib/logger";
 import { WEB_BASE_URL } from "../../lib/api/client";
 import { photoApi } from "../../lib/api/photo";
 import { getCachedCurrentPetId } from "../../lib/cache/pet";
@@ -198,7 +199,7 @@ export default function PhotoDetailScreen() {
     try {
       if (Platform.OS === "web") {
         const link = document.createElement("a");
-        link.href = actionPhoto.photoUri;
+        link.href = actionPhoto.photoUri ?? actionPhoto.mediumUrl ?? "";
         link.download = `photo_${actionPhoto.date}.jpg`;
         link.click();
         return;
@@ -211,13 +212,19 @@ export default function PhotoDetailScreen() {
         );
         return;
       }
+      const sourceUri = actionPhoto.photoUri;
+      if (!sourceUri) {
+        showAlert("오류", "저장할 사진 데이터를 찾을 수 없어요.");
+        return;
+      }
       const tempUri = await base64ToTempFile(
-        actionPhoto.photoUri,
+        sourceUri,
         `photo_${actionPhoto.externalId}.jpg`,
       );
       await MediaLibrary.saveToLibraryAsync(tempUri);
       showAlert("완료", "사진첩에 저장됐어요 🐾");
-    } catch {
+    } catch (e) {
+      logger.error("photo.save.album.failed", toLogError(e));
       showAlert("오류", "저장 중 문제가 발생했어요.");
     }
   }
