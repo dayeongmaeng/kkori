@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    height: 38,
+    height: 35,
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',

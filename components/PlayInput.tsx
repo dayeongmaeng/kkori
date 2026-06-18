@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   },
   quickBtn: {
     flex: 1,
-    height: 36,
+    height: 35,
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
