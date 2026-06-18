@@ -538,7 +538,7 @@ export default function LogScreen() {
       return savedId;
     } catch (err) {
       logger.error('log.save.photo_presave.failed', toLogError(err));
-      setSaveStatus('error');
+      setSaveStatus('idle');
       return null;
     } finally {
       setIsSaving(false);

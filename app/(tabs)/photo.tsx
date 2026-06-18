@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { pickImageUri } from '../../lib/imagePickerHelper';
 import { logger, toLogError } from '../../lib/logger';
 import { generateThumbnails } from '../../lib/photoUtils';
@@ -474,14 +475,13 @@ export default function PhotoScreen() {
                 <ActivityIndicator color={colors.textOnPrimary} />
               ) : null}
               {uploadState.status === 'failed' ? (
-                <>
-                  <Text style={styles.uploadOverlayText}>
-                    {uploadState.errorMessage ?? '사진을 올리지 못했어요. 다시 시도해주세요.'}
-                  </Text>
-                  <TouchableOpacity style={styles.uploadRetryButton} onPress={handleRetryUpload}>
-                    <Text style={styles.uploadRetryText}>재시도</Text>
-                  </TouchableOpacity>
-                </>
+                <TouchableOpacity
+                  onPress={handleRetryUpload}
+                  accessibilityLabel="업로드 실패, 재시도"
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="refresh" size={30} color={colors.textOnPrimary} />
+                </TouchableOpacity>
               ) : null}
             </View>
           )}
@@ -648,23 +648,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   uploadErrorOverlay: {
-    backgroundColor: 'rgba(233,75,90,0.72)',
-  },
-  uploadOverlayText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textOnPrimary,
-  },
-  uploadRetryButton: {
-    marginTop: spacing.xs,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-  },
-  uploadRetryText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.danger,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
 });

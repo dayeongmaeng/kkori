@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -657,7 +658,6 @@ export default function ProfileScreen() {
           errorMessage: "업로드에 실패했어요",
         });
       }
-      showAlert("저장 실패", "서버 연결을 확인해주세요.");
     } finally {
       setIsSaving(false);
     }
@@ -762,17 +762,13 @@ export default function ProfileScreen() {
                 <ActivityIndicator color={colors.textOnPrimary} />
               ) : null}
               {photoUploadState.status === "failed" ? (
-                <>
-                  <Text style={styles.photoStatusText}>
-                    사진을 올리지 못했어요. 다시 시도해주세요.
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.photoRetryButton}
-                    onPress={handleRetryPhoto}
-                  >
-                    <Text style={styles.photoRetryText}>재시도</Text>
-                  </TouchableOpacity>
-                </>
+                <TouchableOpacity
+                  onPress={handleRetryPhoto}
+                  accessibilityLabel="업로드 실패, 재시도"
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="refresh" size={28} color={colors.textOnPrimary} />
+                </TouchableOpacity>
               ) : null}
             </View>
           ) : null}
@@ -1227,24 +1223,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   photoStatusErrorOverlay: {
-    backgroundColor: "rgba(233,75,90,0.72)",
-  },
-  photoStatusText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.textOnPrimary,
-    textAlign: "center",
-  },
-  photoRetryButton: {
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  photoRetryText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.danger,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   field: {
     marginBottom: spacing.lg + 4,

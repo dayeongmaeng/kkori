@@ -224,9 +224,12 @@ export default function PhotoAttacher({
 
                 {isFailed(photo.status) && (
                   <View style={[styles.overlay, styles.errorOverlay]}>
-                    <Text style={styles.overlayText}>사진을 올리지 못했어요. 다시 시도해주세요.</Text>
-                    <TouchableOpacity style={styles.retryBtn} onPress={() => handleRetry(photo)}>
-                      <Text style={styles.retryBtnText}>재시도</Text>
+                    <TouchableOpacity
+                      onPress={() => handleRetry(photo)}
+                      accessibilityLabel="업로드 실패, 재시도"
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons name="refresh" size={24} color={colors.textOnPrimary} />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -321,23 +324,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(25,31,40,0.58)',
   },
   errorOverlay: {
-    backgroundColor: 'rgba(233,75,90,0.72)',
-  },
-  overlayText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textOnPrimary,
-  },
-  retryBtn: {
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-  },
-  retryBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.danger,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   removeBtn: {
     position: 'absolute',
