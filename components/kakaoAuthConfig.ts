@@ -6,7 +6,7 @@ import { logger } from '../lib/logger';
 export const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
 export const KAKAO_NATIVE_APP_KEY = process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY;
 
-const KAKAO_WEB_REDIRECT_BASE_URL = 'https://kkori.vercel.app';
+const KAKAO_WEB_REDIRECT_BASE_URL = 'https://api.kkori.co.kr';
 const KAKAO_DEV_REDIRECT_URI = 'http://localhost:8081/oauth/kakao';
 
 // web 전용: localhost(__DEV__) 또는 Vercel URL. 실기기에서는 사용하지 않는다.
