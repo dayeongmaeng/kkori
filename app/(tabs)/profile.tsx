@@ -1184,7 +1184,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.xl,
-    paddingBottom: 100,
+    paddingBottom: 130,
   },
   photoWrapper: {
     alignSelf: "center",
