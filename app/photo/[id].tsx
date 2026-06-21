@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import * as FileSystem from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -213,15 +214,27 @@ export default function PhotoDetailScreen() {
         return;
       }
       const sourceUri = actionPhoto.photoUri;
-      if (!sourceUri) {
+      const fallbackUrl = actionPhoto.mediumUrl ?? actionPhoto.thumbnailUrl;
+      if (!sourceUri && !fallbackUrl) {
         showAlert("오류", "저장할 사진 데이터를 찾을 수 없어요.");
         return;
       }
-      const tempUri = await base64ToTempFile(
-        sourceUri,
-        `photo_${actionPhoto.externalId}.jpg`,
-      );
-      await MediaLibrary.saveToLibraryAsync(tempUri);
+      let saveUri: string;
+      if (sourceUri) {
+        saveUri = await base64ToTempFile(
+          sourceUri,
+          `photo_${actionPhoto.externalId}.jpg`,
+        );
+      } else {
+        const destUri =
+          FileSystem.cacheDirectory + `photo_${actionPhoto.externalId}.jpg`;
+        const result = await FileSystem.downloadAsync(fallbackUrl!, destUri);
+        if (result.status !== 200) {
+          throw new Error(`download failed: ${result.status}`);
+        }
+        saveUri = result.uri;
+      }
+      await MediaLibrary.saveToLibraryAsync(saveUri);
       showAlert("완료", "사진첩에 저장됐어요 🐾");
     } catch (e) {
       logger.error("photo.save.album.failed", toLogError(e));
