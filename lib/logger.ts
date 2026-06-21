@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react-native';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LogPayload = Record<string, unknown>;
 
@@ -23,6 +25,13 @@ function emit(level: LogLevel, event: string, payload?: LogPayload): void {
     fn(tag, payload);
   } else {
     fn(tag);
+  }
+
+  if (level === 'warn' || level === 'error') {
+    Sentry.captureMessage(event, {
+      level: level === 'error' ? 'error' : 'warning',
+      extra: payload,
+    });
   }
 }
 

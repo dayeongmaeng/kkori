@@ -1,0 +1,43 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote",
+    "promptToConfigurePushNotifications": false
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:8080",
+        "EXPO_PUBLIC_WEB_URL": "https://kkori.vercel.app",
+        "EXPO_PUBLIC_SHARE_API_URL": "https://api.kkori.co.kr",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://c88ef813bf1525aa6b3cee9c4ea70d9f@o4511601873256448.ingest.us.sentry.io/4511601881710592",
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "development"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.kkori.co.kr",
+        "EXPO_PUBLIC_WEB_URL": "https://kkori.vercel.app",
+        "EXPO_PUBLIC_SHARE_API_URL": "https://api.kkori.co.kr",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://c88ef813bf1525aa6b3cee9c4ea70d9f@o4511601873256448.ingest.us.sentry.io/4511601881710592",
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "preview"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.kkori.co.kr",
+        "EXPO_PUBLIC_WEB_URL": "https://kkori.vercel.app",
+        "EXPO_PUBLIC_SHARE_API_URL": "https://api.kkori.co.kr",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://c88ef813bf1525aa6b3cee9c4ea70d9f@o4511601873256448.ingest.us.sentry.io/4511601881710592",
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

@@ -3,11 +3,10 @@ import { clearAuthTokens, getAuthTokens, saveAuthTokens } from '../auth/tokenSto
 import { logger } from '../logger';
 import { ApiError, ApiResponse } from './types';
 
-const DEV_API_BASE_URL = 'http://localhost:8080';
-const PROD_API_BASE_URL = 'https://api.kkori.co.kr';
 export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://kkori.vercel.app';
 
-const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? 'http://localhost:8080' : 'https://api.kkori.co.kr');
 
 logger.info('api.init', { baseUrl: API_BASE_URL });
 

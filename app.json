@@ -52,11 +52,25 @@
       "@react-native-community/datetimepicker",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "kkutudio",
+          "project": "kkori-client"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f538a338-0ce0-436e-88d4-66962ac19020"
+      }
+    },
+    "owner": "dayeongmaeng"
   }
 }

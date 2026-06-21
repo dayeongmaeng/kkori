@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Sentry from '@sentry/react-native';
 import Toast from 'react-native-toast-message';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -25,6 +26,12 @@ import { getAuthTokens } from '../lib/auth/tokenStorage';
 import { logger, toLogError } from '../lib/logger';
 import { setupAndroidChannel } from '../lib/notifications';
 import { migrateLegacyData } from '../lib/storage';
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  environment: process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT ?? (__DEV__ ? 'development' : 'production'),
+  enabled: Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN),
+});
 
 const ONBOARDING_KEY = 'pet-care:onboarding:completed';
 
@@ -46,7 +53,7 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme();
   const [appReady, setAppReady] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
@@ -189,3 +196,5 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);
