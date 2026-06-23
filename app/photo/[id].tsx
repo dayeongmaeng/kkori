@@ -199,10 +199,30 @@ export default function PhotoDetailScreen() {
     if (!actionPhoto) return;
     try {
       if (Platform.OS === "web") {
+        const filename = `photo_${actionPhoto.date}.jpg`;
         const link = document.createElement("a");
-        link.href = actionPhoto.photoUri ?? actionPhoto.mediumUrl ?? "";
-        link.download = `photo_${actionPhoto.date}.jpg`;
-        link.click();
+        link.download = filename;
+        if (actionPhoto.photoUri) {
+          link.href = actionPhoto.photoUri;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          const remoteUrl = actionPhoto.mediumUrl ?? "";
+          if (!remoteUrl) {
+            showAlert("오류", "저장할 사진 데이터를 찾을 수 없어요.");
+            return;
+          }
+          const response = await fetch(remoteUrl, { mode: 'cors', cache: 'no-store' });
+          if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          link.href = objectUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(objectUrl);
+        }
         return;
       }
       const { status } = await MediaLibrary.requestPermissionsAsync();
