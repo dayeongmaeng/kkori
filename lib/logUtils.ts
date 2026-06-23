@@ -18,9 +18,12 @@ export function summarizeLog(log: LogResponse): string {
 
   if (log.condition != null) items.push(`컨디션 ${CONDITION_EMOJI[log.condition]}`);
   if (log.walkMinutes != null && log.walkMinutes >= 0) items.push(`산책 ${log.walkMinutes}분`);
+  if (log.playMinutes != null && log.playMinutes >= 1) items.push(`놀이 ${log.playMinutes}분`);
   if (log.meal != null) items.push(MEAL_LABEL[log.meal]);
   if (log.water != null) items.push(WATER_LABEL[log.water]);
   if (log.pooCondition != null) items.push('배변 기록');
+  if (log.vomitCount != null && log.vomitCount >= 1) items.push(`구토 ${log.vomitCount}회`);
+  if (log.photos != null && log.photos.length >= 1) items.push('📷 사진');
   if (log.memo) items.push('메모 있음');
 
   if (items.length === 0) return '기록이 있어요';
