@@ -66,7 +66,7 @@ function renderPage({ photo, externalId, status = 200 }) {
       --bg: #FAF8F5;
       --surface: #FFFFFF;
       --ink: #191F28;
-      --muted: #8B95A1;
+      --muted: #A89F95;
       --subtle: #F2F4F6;
       --line: #E5E8EB;
       --primary: #4E5968;

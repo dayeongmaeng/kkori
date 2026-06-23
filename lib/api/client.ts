@@ -6,7 +6,7 @@ import { ApiError, ApiResponse } from './types';
 export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://kkori.vercel.app';
 
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? 'http://localhost:8080' : 'https://api.kkori.co.kr');
+  process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? 'https://api.kkori.co.kr' : 'https://api.kkori.co.kr');
 
 logger.info('api.init', { baseUrl: API_BASE_URL });
 
