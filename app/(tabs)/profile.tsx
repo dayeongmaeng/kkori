@@ -1359,7 +1359,7 @@ const styles = StyleSheet.create({
     width: 27,
     height: 27,
     borderRadius: 14,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.card,
     alignSelf: "flex-start",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },

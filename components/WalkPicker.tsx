@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { colors } from '../constants/theme';
 
 const QUICK_MINUTES = [15, 30, 60];
 
@@ -34,7 +35,7 @@ export default function WalkPicker({ walkMinutes, walkNote, onChangeMinutes, onC
             onChangeText={handleTextChange}
             keyboardType="number-pad"
             placeholder="-"
-            placeholderTextColor="#C4B8A8"
+            placeholderTextColor={colors.textTertiary}
             maxLength={3}
           />
           <Text style={styles.unit}>분</Text>
@@ -64,7 +65,7 @@ export default function WalkPicker({ walkMinutes, walkNote, onChangeMinutes, onC
         value={walkNote}
         onChangeText={onChangeNote}
         placeholder="산책 장소, 특이사항"
-        placeholderTextColor="#C4B8A8"
+        placeholderTextColor={colors.textTertiary}
         maxLength={100}
       />
     </View>
@@ -86,17 +87,17 @@ const styles = StyleSheet.create({
   minutesInput: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#3D2C1E',
+    color: colors.textPrimary,
     width: 56,
     textAlign: 'center',
     borderBottomWidth: 2,
-    borderBottomColor: '#E8985C',
+    borderBottomColor: colors.primary,
     paddingBottom: 2,
   },
   unit: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#5C4A38',
+    color: colors.textSecondary,
     marginBottom: 3,
   },
   quickRow: {
@@ -107,26 +108,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.surfaceAlt,
   },
   quickBtnSelected: {
-    backgroundColor: '#E8985C',
+    backgroundColor: colors.primary,
   },
   quickBtnText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#666666',
+    color: colors.textSecondary,
   },
   quickBtnTextSelected: {
-    color: '#FFFFFF',
+    color: colors.textOnPrimary,
     fontWeight: '700',
   },
   noteInput: {
-    backgroundColor: '#F8F8F8',
+    backgroundColor: colors.background,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#3D2C1E',
+    color: colors.textPrimary,
   },
 });
