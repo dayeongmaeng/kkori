@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { router, useGlobalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
@@ -22,31 +21,6 @@ import FeatureHintModal from "./FeatureHintModal";
 
 const FEEDBACK_URL = "https://open.kakao.com/o/sqYtAKvi";
 
-const dogLogoSource = require("../assets/dog-logo.svg");
-const catLogoSource: ReturnType<typeof require> = require("../assets/cat-logo.svg");
-
-const LOGO_SOURCES: Record<"dog" | "cat", ReturnType<typeof require>> = {
-  dog: dogLogoSource,
-  cat: catLogoSource,
-};
-
-function getLogoSource(species: string | undefined): ReturnType<typeof require> {
-  if (species?.toLowerCase() === "cat") return LOGO_SOURCES.cat;
-  return LOGO_SOURCES.dog;
-}
-
-function Logo({ species }: { species: string | undefined }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <Text style={styles.logoText}>꼬리</Text>;
-  return (
-    <Image
-      source={getLogoSource(species)}
-      style={styles.logoImage}
-      contentFit="contain"
-      onError={() => setFailed(true)}
-    />
-  );
-}
 
 export default function AppHeader() {
   const insets = useSafeAreaInsets();
@@ -108,17 +82,6 @@ export default function AppHeader() {
 
       <View style={styles.center} />
 
-      {/* 우측: BETA 배지 + 로고 */}
-      <View style={styles.logoArea}>
-        <TouchableOpacity
-          style={styles.betaBadge}
-          onPress={handleBetaPress}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.betaText}>BETA ›</Text>
-        </TouchableOpacity>
-        <Logo species={currentPet?.species} />
-      </View>
 
       <FeatureHintModal
         visible={petLimitVisible}

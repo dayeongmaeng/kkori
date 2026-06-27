@@ -467,7 +467,7 @@ export default function SettingsScreen() {
         {Platform.OS === 'web' ? (
           <>
             <Row
-              icon={<Clock size={20} color={colors.textQuaternary} />}
+              icon={<Clock size={20} color={colors.textSecondary} />}
               label="일일 기록 알림"
               desc="앱에서 이용할 수 있어요"
               disabled
@@ -534,9 +534,9 @@ export default function SettingsScreen() {
 
       <GroupTitle label="데이터" />
       <Card>
-        <Row icon={<Database size={20} color={colors.textQuaternary} />} label="데이터 백업 / 내보내기" right={<ComingSoonBadge />} disabled />
-        <Row icon={<Database size={20} color={colors.textQuaternary} />} label="데이터 가져오기" right={<ComingSoonBadge />} disabled />
-        <Row icon={<Trash2 size={20} color={colors.textSecondary} />} label="캐시 비우기" onPress={handleClearCache} last />
+        <Row icon={<Database size={20} color={colors.textSecondary} />} label="데이터 백업 / 내보내기" right={<ComingSoonBadge />} disabled />
+        <Row icon={<Database size={20} color={colors.textSecondary} />} label="데이터 가져오기" right={<ComingSoonBadge />} disabled />
+        <Row icon={<Trash2 size={20} color={colors.danger} />} label="캐시 비우기" onPress={handleClearCache} destructive last />
       </Card>
 
       <GroupTitle label="정보" />
@@ -550,7 +550,7 @@ export default function SettingsScreen() {
       <Card>
         <Row icon={<MessageCircle size={20} color={colors.textSecondary} />} label="문의하기" desc="카카오 오픈채팅" onPress={() => openURL(FEEDBACK_URL)} />
         <Row icon={<Newspaper size={20} color={colors.textSecondary} />} label="업데이트 소식" onPress={() => openURL(NEWS_URL)} />
-       {/* <Row icon={<Star size={20} color={colors.textSecondary} />} label="리뷰 남기기" desc="앱스토어에서 별점 남기기" onPress={handleReview} /> */}
+        {/*<Row icon={<Star size={20} color={colors.textSecondary} />} label="리뷰 남기기" desc="앱스토어에서 별점 남기기" onPress={handleReview} />*/}
         <Row icon={<Heart size={20} color={colors.textSecondary} />} label="꼬리 응원하기" desc="개발자에게 간식 사주기" onPress={handleDonation} />
         <Row icon={<PawPrint size={20} color={colors.textSecondary} />} label="꼬리 흔들게 하기 🐾" onPress={handleWag} last />
       </Card>
@@ -558,12 +558,13 @@ export default function SettingsScreen() {
       <GroupTitle label="계정" />
       <Card>
         <Row
-          icon={<LogOut size={20} color={colors.textSecondary} />}
+          icon={<LogOut size={20} color={colors.danger} />}
           label="로그아웃"
           desc={isLoggingOut ? '로그아웃 중이에요' : getProviderLabel(loginProvider)}
-          right={isLoggingOut ? <ActivityIndicator color={colors.textSecondary} /> : undefined}
+          right={isLoggingOut ? <ActivityIndicator color={colors.danger} /> : undefined}
           onPress={handleLogout}
           disabled={isLoggingOut || isDeletingAccount}
+          destructive
         />
         <Row
           icon={<UserX size={20} color={colors.danger} />}
@@ -689,7 +690,8 @@ const s = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 56,
+    minHeight: 44,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },
