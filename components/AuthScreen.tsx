@@ -630,7 +630,7 @@ export default function AuthScreen() {
 
         <View style={s.logoArea}>
           <Animated.View style={[s.logo, logoTransform]}>
-            <Image source={require('../assets/dog-logo.svg')} style={s.logoImage} contentFit="contain" />
+            <Image source={require('../assets/login-logo.svg')} style={s.logoImage} contentFit="contain" />
           </Animated.View>
           <Text style={s.logoCaption}>17년의 추억에서 시작된 기록 앱</Text>
         </View>
