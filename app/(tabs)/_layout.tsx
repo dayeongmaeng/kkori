@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppHeader from '../../components/AppHeader';
 import { HomeIcon, PawOutlineIcon, PhotoIcon, RecordsIcon, SettingsIcon } from '../../components/TabIcons';
-import { colors } from '../../constants/theme';
+import { colors, typography } from '../../constants/theme';
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
@@ -20,9 +20,9 @@ export default function TabLayout() {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
             borderTopWidth: 1,
-            paddingTop: 0,
-            paddingBottom: insets.bottom,
-            height: 50 + insets.bottom,
+            paddingTop: 6,
+            paddingBottom: insets.bottom + 6,
+            height: 66 + insets.bottom,
           },
           tabBarItemStyle: {
             flex: 1,
@@ -32,11 +32,17 @@ export default function TabLayout() {
             margin: 0,
           },
           tabBarIconStyle: {
-            width: 30,
-            height: 30,
+            width: 24,
+            height: 24,
             margin: 0,
           },
-          tabBarShowLabel: false,
+          tabBarLabelStyle: {
+            fontSize: typography.caption1.fontSize,
+            lineHeight: typography.caption1.lineHeight,
+            marginTop: 3,
+            includeFontPadding: false,
+          },
+          tabBarShowLabel: true,
         }}
       >
         <Tabs.Screen
@@ -56,7 +62,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="photo"
           options={{
-            title: '포토',
+            title: '하루한장',
             tabBarIcon: ({ color }) => <PhotoIcon color={color} />,
           }}
         />
