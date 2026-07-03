@@ -22,7 +22,9 @@ import {
   View,
 } from "react-native";
 import PhotoActionSheet from "../../components/PhotoActionSheet";
+import SaveIndicator from "../../components/SaveIndicator";
 import { colors, spacing } from "../../constants/theme";
+import { SaveStatus } from "../../hooks/useAutoSave";
 import { showAlert, showConfirm } from "../../lib/dialog";
 import { logger, toLogError } from "../../lib/logger";
 import { WEB_BASE_URL } from "../../lib/api/client";
@@ -71,6 +73,8 @@ export default function PhotoDetailScreen() {
   const [captionDraft, setCaptionDraft] = useState("");
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
   const [isSavingCaption, setIsSavingCaption] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteStatus, setDeleteStatus] = useState<SaveStatus>("idle");
   const flatListRef = useRef<FlatList<LocalPhoto>>(null);
   const captionInputRef = useRef<TextInput>(null);
 
@@ -263,15 +267,22 @@ export default function PhotoDetailScreen() {
   }
 
   async function doDelete() {
-    if (!actionPhoto) return;
+    if (!actionPhoto || isDeleting) return;
     const petId = await getCachedCurrentPetId();
     if (!petId) return;
+
+    setIsDeleting(true);
+    setDeleteStatus("saving");
     try {
       await photoApi.deletePhoto(actionPhoto.externalId);
       await deletePhotoLocal(actionPhoto.externalId);
       await removeCachedPhoto(petId, actionPhoto.externalId);
-      router.back();
-    } catch {
+      setDeleteStatus("saved");
+      setTimeout(() => router.back(), 500);
+    } catch (e) {
+      logger.error("photo.delete.failed", toLogError(e));
+      setDeleteStatus("error");
+      setIsDeleting(false);
       showAlert("오류", "삭제에 실패했어요. 다시 시도해주세요.");
     }
   }
@@ -320,12 +331,20 @@ export default function PhotoDetailScreen() {
         <TouchableOpacity
           style={styles.headerBtn}
           onPress={() => router.back()}
+          disabled={isDeleting}
         >
           <Text style={styles.headerBtnText}>뒤로</Text>
         </TouchableOpacity>
         <Text style={styles.headerDate}>하루 한 장</Text>
         <View style={styles.headerBtn} />
       </View>
+
+      <SaveIndicator
+        status={deleteStatus}
+        labels={{ saved: "삭제되었습니다 ✓" }}
+        backgroundColors={{ saved: "rgba(214,106,106,0.88)" }}
+        centered
+      />
 
       <View style={styles.listContainer}>
         {loaded && (
@@ -371,6 +390,7 @@ export default function PhotoDetailScreen() {
                       }}
                       activeOpacity={0.75}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      disabled={isDeleting}
                     >
                       <Text style={styles.cardMenuBtnText}>•••</Text>
                     </TouchableOpacity>

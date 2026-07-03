@@ -55,7 +55,7 @@ export default function PhotoActionSheet({
 
                 {/*<View style={styles.divider} />*/}
                 <TouchableOpacity style={styles.menuItem} onPress={onDelete} activeOpacity={0.6}>
-                  <Text style={[styles.menuText, styles.menuTextDanger]}>삭제</Text>
+                  <Text style={[styles.menuText, styles.menuTextDanger]}>삭제하기</Text>
                 </TouchableOpacity>
               </View>
 
