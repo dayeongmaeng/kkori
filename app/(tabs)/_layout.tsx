@@ -37,9 +37,9 @@ export default function TabLayout() {
             margin: 0,
           },
           tabBarLabelStyle: {
-            fontSize: typography.caption1.fontSize,
-            lineHeight: typography.caption1.lineHeight,
-            marginTop: 3,
+            fontSize: typography.caption2.fontSize,
+            lineHeight: typography.caption2.lineHeight,
+            marginTop: 1,
             includeFontPadding: false,
           },
           tabBarShowLabel: true,
