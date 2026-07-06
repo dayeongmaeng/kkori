@@ -181,6 +181,10 @@ export default function LogScreen() {
   const logPhotosRef = useRef<LogPhotoAttachment[]>([]);
   dateRef.current = date;
   logExternalIdRef.current = logExternalId;
+  // 사진 피커(카메라/갤러리)가 열려있는 동안, 그리고 닫힌 직후 잠시 발생하는
+  // AppState active 전환은 리로드 트리거에서 제외하기 위한 플래그
+  const isPhotoPickerOpenRef = useRef(false);
+  const photoPickerCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [condition, setCondition] = useState<ConditionScore | undefined>();
   const [meal, setMeal] = useState<MealAmount | undefined>();
@@ -343,11 +347,29 @@ export default function LogScreen() {
     AsyncStorage.setItem('pet-care:hint:log', '1').catch(() => {});
   }
 
+  function handlePhotoPickerVisibleChange(visible: boolean) {
+    if (photoPickerCloseTimerRef.current) {
+      clearTimeout(photoPickerCloseTimerRef.current);
+      photoPickerCloseTimerRef.current = null;
+    }
+    if (visible) {
+      isPhotoPickerOpenRef.current = true;
+      return;
+    }
+    // 피커가 닫힌 직후에도 AppState 'active' 이벤트가 뒤이어 들어올 수 있어 잠시 유지 후 해제
+    photoPickerCloseTimerRef.current = setTimeout(() => {
+      isPhotoPickerOpenRef.current = false;
+    }, 1000);
+  }
+
   useEffect(() => {
     const sub = AppState.addEventListener('change', (appState) => {
-      if (appState === 'active') setReloadKey((k) => k + 1);
+      if (appState === 'active' && !isPhotoPickerOpenRef.current) setReloadKey((k) => k + 1);
     });
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      if (photoPickerCloseTimerRef.current) clearTimeout(photoPickerCloseTimerRef.current);
+    };
   }, []);
 
   // 반려동물 전환 시 이전 데이터 즉시 클리어 + 오늘 날짜로 초기화
@@ -531,10 +553,7 @@ export default function LogScreen() {
         weightKg,
         memo,
       });
-      setSuccessMessage('기록을 먼저 저장했어요 ✓');
-      setSuccessBgColor(undefined);
-      setSaveStatus('saved');
-      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
+      setSaveStatus('idle');
       return savedId;
     } catch (err) {
       logger.error('log.save.photo_presave.failed', toLogError(err));
@@ -736,6 +755,7 @@ export default function LogScreen() {
             onChangePhotos={setLogPhotosState}
             onEnsureLogExternalId={ensureLogExternalIdForPhoto}
             onUploaded={persistLogPhotos}
+            onPickerVisibleChange={handlePhotoPickerVisibleChange}
           />
         </Card>
         <Card title="오늘의 메모">

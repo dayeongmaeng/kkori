@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -35,6 +35,7 @@ interface Props {
   onChangePhotos: (photos: LogPhotoAttachment[]) => void;
   onEnsureLogExternalId: () => Promise<string | null>;
   onUploaded?: (photos: LogPhotoAttachment[]) => Promise<void> | void;
+  onPickerVisibleChange?: (visible: boolean) => void;
 }
 
 function getPhotoKey(photo: LogPhotoAttachment) {
@@ -55,12 +56,18 @@ export default function PhotoAttacher({
   onChangePhotos,
   onEnsureLogExternalId,
   onUploaded,
+  onPickerVisibleChange,
 }: Props) {
   const [previewPhoto, setPreviewPhoto] = useState<LogPhotoAttachment | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   // 항상 최신 photos를 참조해 비동기 중간 stale closure 방지
   const photosRef = useRef(photos);
   photosRef.current = photos;
+
+  useEffect(() => {
+    onPickerVisibleChange?.(pickerVisible);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickerVisible]);
 
   async function commitPhotos(nextPhotos: LogPhotoAttachment[]) {
     onChangePhotos(nextPhotos);
