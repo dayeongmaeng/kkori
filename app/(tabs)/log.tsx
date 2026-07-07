@@ -694,6 +694,7 @@ export default function LogScreen() {
         enableOnAndroid
         extraScrollHeight={20}
         keyboardShouldPersistTaps="handled"
+        enableResetScrollToCoords={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         onScrollEndDrag={handleScrollEnd}

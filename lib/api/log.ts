@@ -1,3 +1,6 @@
+import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
+
 import { api } from './client';
 import { ConditionScore, MealAmount, StoolCondition, UrineAmount, UrineColor, WaterAmount } from '../types';
 import type { ThumbnailFile } from '../photoUtils';
@@ -96,20 +99,36 @@ export const logApi = {
     api.post<LogResponse>('/api/v1/logs', body),
 
   // 신규 기록 생성과 동시에 사진(최대 3장)을 업로드/연결한다. mediums/thumbnails는 인덱스로 매칭된다.
-  createLogWithPhotos: (
+  createLogWithPhotos: async (
     body: LogRequest,
     photos: { medium: ThumbnailFile; thumbnail: ThumbnailFile }[],
   ): Promise<LogResponse> => {
     const formData = new FormData();
-    const requestBlob = new Blob([JSON.stringify(body)], { type: 'application/json' });
-    formData.append('request', requestBlob);
+    let tempUri: string | null = null;
+
+    if (Platform.OS === 'web') {
+      formData.append('request', new Blob([JSON.stringify(body)], { type: 'application/json' }));
+    } else {
+      // iOS/Android: React Native FormData는 Blob의 Content-Type을 멀티파트 헤더에 포함하지 않아
+      // Spring이 'request' 파트를 찾지 못한다. { uri, name, type } 파일 파트 방식을 사용해야 한다.
+      const json = JSON.stringify(body);
+      tempUri = `${FileSystem.cacheDirectory}log_request_${Date.now()}.json`;
+      await FileSystem.writeAsStringAsync(tempUri, json, { encoding: FileSystem.EncodingType.UTF8 });
+      formData.append('request', { uri: tempUri, name: 'request.json', type: 'application/json' } as unknown as Blob);
+    }
 
     photos.forEach(({ medium, thumbnail }) => {
       appendFileField(formData, 'mediums', medium);
       appendFileField(formData, 'thumbnails', thumbnail);
     });
 
-    return api.postFormData<LogResponse>('/api/v1/logs/with-photos', formData);
+    try {
+      return await api.postFormData<LogResponse>('/api/v1/logs/with-photos', formData);
+    } finally {
+      if (tempUri !== null) {
+        FileSystem.deleteAsync(tempUri, { idempotent: true }).catch(() => {});
+      }
+    }
   },
 
   updateLog: (externalId: string, body: Partial<LogRequest>) =>
