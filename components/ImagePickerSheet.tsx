@@ -18,6 +18,10 @@ export interface ImagePickerSheetProps {
   aspect?: [number, number];
   onSelect: (uri: string) => void;
   onClose: () => void;
+  // 카메라/갤러리 네이티브 화면이 실제로 열려있는 동안(true)을 알려준다.
+  // 시트가 닫힌 뒤(350ms 지연) 실제 네이티브 화면이 열리고, 사용자가 촬영/선택을
+  // 마칠 때까지 시간이 걸리므로 시트의 visible 상태만으로는 이 구간을 알 수 없다.
+  onLaunchingChange?: (launching: boolean) => void;
 }
 
 export default function ImagePickerSheet({
@@ -26,10 +30,18 @@ export default function ImagePickerSheet({
   aspect,
   onSelect,
   onClose,
+  onLaunchingChange,
 }: ImagePickerSheetProps) {
   function dismissThen(action: () => Promise<void>) {
     onClose();
-    setTimeout(action, 350);
+    onLaunchingChange?.(true);
+    setTimeout(async () => {
+      try {
+        await action();
+      } finally {
+        onLaunchingChange?.(false);
+      }
+    }, 350);
   }
 
   async function launchCamera() {

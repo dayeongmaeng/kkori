@@ -15,26 +15,29 @@ import { colors, radius, spacing } from '../constants/theme';
 import { logApi } from '../lib/api/log';
 import type { LogPhotoResponse } from '../lib/api/log';
 import ImagePickerSheet from './ImagePickerSheet';
-import { ImageUploadStatus, prepareImageForUpload } from '../lib/imageUpload';
-import { generateThumbnails } from '../lib/photoUtils';
+import { generateThumbnails, ThumbnailFile } from '../lib/photoUtils';
 
 const MAX_PHOTOS = 3;
 
 export type LogPhotoAttachment = LogPhotoResponse & {
   localUri?: string;
   sourceUri?: string;
-  status?: ImageUploadStatus | 'ready' | 'error';
-  progress?: number;
+  // compressing: 로컬 압축 중 / local: 압축 완료, 저장 시 업로드 대기 / ready: 서버에 저장됨
+  status?: 'compressing' | 'local' | 'failed' | 'ready';
   errorMessage?: string;
   tempId?: string;
+  mediumFile?: ThumbnailFile;
+  thumbnailFile?: ThumbnailFile;
 };
 
 interface Props {
   photos: LogPhotoAttachment[];
   disabled?: boolean;
+  // 이미 저장된 기록의 externalId. 신규(미저장) 기록이면 null.
+  logExternalId: string | null;
   onChangePhotos: (photos: LogPhotoAttachment[]) => void;
-  onEnsureLogExternalId: () => Promise<string | null>;
-  onUploaded?: (photos: LogPhotoAttachment[]) => Promise<void> | void;
+  // 이미 서버에 저장된 사진을 삭제해 캐시 동기화가 필요할 때만 호출된다.
+  onPhotoRemoved?: (photos: LogPhotoAttachment[]) => Promise<void> | void;
   onPickerVisibleChange?: (visible: boolean) => void;
 }
 
@@ -50,39 +53,41 @@ function getMediumUri(photo: LogPhotoAttachment) {
   return photo.mediumUrl || photo.localUri || photo.thumbnailUrl;
 }
 
+function isBusy(status: LogPhotoAttachment['status']) {
+  return status === 'compressing';
+}
+
+function isFailed(status: LogPhotoAttachment['status']) {
+  return status === 'failed';
+}
+
 export default function PhotoAttacher({
   photos,
   disabled = false,
+  logExternalId,
   onChangePhotos,
-  onEnsureLogExternalId,
-  onUploaded,
+  onPhotoRemoved,
   onPickerVisibleChange,
 }: Props) {
   const [previewPhoto, setPreviewPhoto] = useState<LogPhotoAttachment | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
+  // 시트가 닫힌 뒤에도 실제 카메라/갤러리 네이티브 화면이 열려있는 동안(true)을 추적
+  const [isLaunching, setIsLaunching] = useState(false);
   // 항상 최신 photos를 참조해 비동기 중간 stale closure 방지
   const photosRef = useRef(photos);
   photosRef.current = photos;
 
+  // 시트가 보이거나, 네이티브 카메라/갤러리가 열려있거나, 로컬 압축이 진행 중이면
+  // 상위 화면에 "사진 관련 작업 진행 중"임을 알려 그 사이의 AppState active 전환으로
+  // 인한 리로드(및 미저장 옵션 초기화)를 막는다.
+  const isFlowBusy = pickerVisible || isLaunching || photos.some((p) => isBusy(p.status));
+
   useEffect(() => {
-    onPickerVisibleChange?.(pickerVisible);
+    onPickerVisibleChange?.(isFlowBusy);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickerVisible]);
+  }, [isFlowBusy]);
 
-  async function commitPhotos(nextPhotos: LogPhotoAttachment[]) {
-    onChangePhotos(nextPhotos);
-    await onUploaded?.(nextPhotos.filter((p) => !isBusy(p.status) && !isFailed(p.status)));
-  }
-
-  function isBusy(status: LogPhotoAttachment['status']) {
-    return status === 'compressing' || status === 'uploading' || status === 'saving';
-  }
-
-  function isFailed(status: LogPhotoAttachment['status']) {
-    return status === 'failed' || status === 'error';
-  }
-
-  async function uploadLocalPhoto(tempId: string, sourceUri: string, initialTempPhoto?: LogPhotoAttachment) {
+  async function prepareLocalPhoto(tempId: string, sourceUri: string, initialTempPhoto?: LogPhotoAttachment) {
     // React가 re-render하기 전에 photosRef.current에 tempPhoto가 없을 수 있으므로
     // tempId가 없으면 initialTempPhoto를 포함해 동기 상태 갱신을 보장한다
     function currentPhotos(): LogPhotoAttachment[] {
@@ -94,38 +99,19 @@ export default function PhotoAttacher({
     try {
       onChangePhotos(currentPhotos().map((photo) => (
         photo.tempId === tempId
-          ? { ...photo, status: 'compressing', progress: 20, errorMessage: undefined }
+          ? { ...photo, status: 'compressing', errorMessage: undefined }
           : photo
       )));
-      const prepared = await prepareImageForUpload(sourceUri, { maxWidth: 1080, compress: 0.75 });
+      const { medium, thumbnail } = await generateThumbnails(sourceUri);
       onChangePhotos(currentPhotos().map((photo) => (
         photo.tempId === tempId
-          ? { ...photo, localUri: prepared.uri, status: 'saving' as const, progress: 45 }
+          ? { ...photo, localUri: medium.uri, mediumFile: medium, thumbnailFile: thumbnail, status: 'local' as const }
           : photo
       )));
-
-      const logExternalId = await onEnsureLogExternalId();
-      if (!logExternalId) throw new Error('기록을 먼저 저장하지 못했어요.');
-
-      onChangePhotos(currentPhotos().map((photo) => (
-        photo.tempId === tempId
-          ? { ...photo, status: 'uploading' as const, progress: 70 }
-          : photo
-      )));
-      const { medium, thumbnail } = await generateThumbnails(prepared.uri);
-      const uploaded = await logApi.uploadLogPhoto(logExternalId, medium, thumbnail);
-
-      // 업로드 성공 후 localUri를 원본 sourceUri로 유지해 웹에서 즉시 표시되도록 한다
-      const nextPhotos = currentPhotos().map((photo) => (
-        photo.tempId === tempId
-          ? { ...uploaded, localUri: sourceUri, sourceUri, status: 'ready' as const, progress: 100 }
-          : photo
-      ));
-      await commitPhotos(nextPhotos);
     } catch {
       onChangePhotos(currentPhotos().map((photo) => (
         photo.tempId === tempId
-          ? { ...photo, status: 'failed', progress: undefined, errorMessage: '업로드에 실패했어요' }
+          ? { ...photo, status: 'failed', errorMessage: '사진 준비에 실패했어요' }
           : photo
       )));
     }
@@ -146,44 +132,38 @@ export default function PhotoAttacher({
       thumbnailUrl: '',
       localUri: sourceUri,
       sourceUri,
-      status: 'idle',
-      progress: 0,
+      status: 'compressing',
       tempId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     onChangePhotos([...photosRef.current, tempPhoto]);
-    await uploadLocalPhoto(tempId, sourceUri, tempPhoto);
+    await prepareLocalPhoto(tempId, sourceUri, tempPhoto);
   }
 
   async function handleRetry(photo: LogPhotoAttachment) {
     const retryUri = photo.sourceUri ?? photo.localUri;
     if (!photo.tempId || !retryUri || disabled) return;
-    onChangePhotos(photosRef.current.map((p) => (
-      p.tempId === photo.tempId
-        ? { ...p, status: 'compressing' as const, progress: 15, errorMessage: undefined }
-        : p
-    )));
-    await uploadLocalPhoto(photo.tempId, retryUri);
+    await prepareLocalPhoto(photo.tempId, retryUri);
   }
 
   async function handleRemove(photo: LogPhotoAttachment) {
     if (disabled) return;
 
     const nextPhotos = photos.filter((p) => getPhotoKey(p) !== getPhotoKey(photo));
-    onChangePhotos(nextPhotos);
 
-    if (photo.tempId || isFailed(photo.status)) {
-      await onUploaded?.(nextPhotos.filter((p) => !isBusy(p.status) && !isFailed(p.status)));
+    // 아직 서버에 저장되지 않은 로컬 사진은 상태에서만 제거한다.
+    if (photo.tempId) {
+      onChangePhotos(nextPhotos);
       return;
     }
 
+    // 이미 서버에 저장된 사진은 즉시 삭제 API를 호출한다.
+    if (!logExternalId) return;
+    onChangePhotos(nextPhotos);
     try {
-      const logExternalId = await onEnsureLogExternalId();
-      if (logExternalId) {
-        await logApi.deleteLogPhoto(logExternalId, photo.externalId);
-      }
-      await onUploaded?.(nextPhotos.filter((p) => p.status !== 'uploading' && p.status !== 'error'));
+      await logApi.deleteLogPhoto(logExternalId, photo.externalId);
+      await onPhotoRemoved?.(nextPhotos);
     } catch {
       onChangePhotos(photos);
     }
@@ -204,6 +184,7 @@ export default function PhotoAttacher({
         aspect={[1, 1]}
         onSelect={handlePickerSelect}
         onClose={() => setPickerVisible(false)}
+        onLaunchingChange={setIsLaunching}
       />
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={styles.row}>
@@ -233,7 +214,7 @@ export default function PhotoAttacher({
                   <View style={[styles.overlay, styles.errorOverlay]}>
                     <TouchableOpacity
                       onPress={() => handleRetry(photo)}
-                      accessibilityLabel="업로드 실패, 재시도"
+                      accessibilityLabel="사진 준비 실패, 재시도"
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                       <Ionicons name="refresh" size={24} color={colors.textOnPrimary} />

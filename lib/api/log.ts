@@ -72,6 +72,15 @@ export interface LogFilter {
   endDate?: string;
 }
 
+function appendFileField(formData: FormData, key: string, file: ThumbnailFile) {
+  if (file.blob) {
+    formData.append(key, file.blob, file.name);
+  } else {
+    // React Native FormData는 { uri, name, type } 객체로 네이티브 파일 업로드를 지원한다.
+    formData.append(key, { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+  }
+}
+
 export const logApi = {
   getLogs: (filter: LogFilter) => {
     const params = new URLSearchParams({ petExternalId: filter.petExternalId });
@@ -86,30 +95,37 @@ export const logApi = {
   createLog: (body: LogRequest) =>
     api.post<LogResponse>('/api/v1/logs', body),
 
+  // 신규 기록 생성과 동시에 사진(최대 3장)을 업로드/연결한다. mediums/thumbnails는 인덱스로 매칭된다.
+  createLogWithPhotos: (
+    body: LogRequest,
+    photos: { medium: ThumbnailFile; thumbnail: ThumbnailFile }[],
+  ): Promise<LogResponse> => {
+    const formData = new FormData();
+    const requestBlob = new Blob([JSON.stringify(body)], { type: 'application/json' });
+    formData.append('request', requestBlob);
+
+    photos.forEach(({ medium, thumbnail }) => {
+      appendFileField(formData, 'mediums', medium);
+      appendFileField(formData, 'thumbnails', thumbnail);
+    });
+
+    return api.postFormData<LogResponse>('/api/v1/logs/with-photos', formData);
+  },
+
   updateLog: (externalId: string, body: Partial<LogRequest>) =>
     api.put<LogResponse>(`/api/v1/logs/${externalId}`, body),
 
   deleteLog: (externalId: string) =>
     api.delete<void>(`/api/v1/logs/${externalId}`),
 
-  uploadLogPhoto: async (
+  uploadLogPhoto: (
     logExternalId: string,
     medium: ThumbnailFile,
     thumbnail: ThumbnailFile,
   ): Promise<LogPhotoResponse> => {
     const formData = new FormData();
-
-    function appendFile(key: string, file: ThumbnailFile) {
-      if (file.blob) {
-        formData.append(key, file.blob, file.name);
-      } else {
-        // React Native FormData는 { uri, name, type } 객체로 네이티브 파일 업로드를 지원한다.
-        formData.append(key, { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
-      }
-    }
-
-    appendFile('medium', medium);
-    appendFile('thumbnail', thumbnail);
+    appendFileField(formData, 'medium', medium);
+    appendFileField(formData, 'thumbnail', thumbnail);
 
     return api.postFormData<LogPhotoResponse>(
       `/api/v1/logs/${logExternalId}/photos/upload`,

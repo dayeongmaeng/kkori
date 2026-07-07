@@ -36,6 +36,7 @@ import {
   LogResponse,
   logApi,
 } from '../../lib/api/log';
+import { ApiError } from '../../lib/api/types';
 import { logger, toLogError } from '../../lib/logger';
 import { initCaregiver } from '../../lib/api/initCaregiver';
 import { getCachedCurrentCaregiverId } from '../../lib/cache/caregiver';
@@ -139,7 +140,7 @@ function Card({ title, children }: { title: string; children?: React.ReactNode }
 
 function toReadyLogPhotos(photos: LogPhotoAttachment[]): LogPhotoResponse[] {
   return photos
-    .filter((photo) => photo.status !== 'uploading' && photo.status !== 'error' && !photo.tempId)
+    .filter((photo) => !photo.tempId)
     .map((photo) => ({
       externalId: photo.externalId,
       dailyLogId: photo.dailyLogId,
@@ -156,6 +157,42 @@ function toReadyLogPhotos(photos: LogPhotoAttachment[]): LogPhotoResponse[] {
 
 function toEditableWalkMinutes(value: number | null | undefined): number | undefined {
   return value == null ? undefined : value;
+}
+
+// 저장 시 업로드한 로컬(임시) 사진을 서버 응답과 tempId 기준으로 매칭한다.
+function mapPendingPhotosById(
+  pending: LogPhotoAttachment[],
+  uploaded: LogPhotoResponse[],
+): Map<string, LogPhotoResponse> {
+  const map = new Map<string, LogPhotoResponse>();
+  pending.forEach((photo, i) => {
+    if (photo.tempId && uploaded[i]) map.set(photo.tempId, uploaded[i]);
+  });
+  return map;
+}
+
+function replaceTempPhotos(
+  photos: LogPhotoAttachment[],
+  uploadedByTempId: Map<string, LogPhotoResponse>,
+): LogPhotoAttachment[] {
+  return photos.map((photo) => {
+    const uploaded = photo.tempId ? uploadedByTempId.get(photo.tempId) : undefined;
+    return uploaded ? { ...uploaded, status: 'ready' as const } : photo;
+  });
+}
+
+function getSaveErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    switch (err.error.code) {
+      case 'VALIDATION_001':
+        return '사진은 최대 3장까지 첨부할 수 있어요.';
+      case 'LOG_PHOTO_002':
+        return '사진 파일이 올바르지 않아요. 사진을 다시 선택한 뒤 저장해주세요.';
+      default:
+        break;
+    }
+  }
+  return '저장에 실패했어요. 잠시 후 다시 시도해주세요.';
 }
 
 export default function LogScreen() {
@@ -209,6 +246,7 @@ export default function LogScreen() {
   const [saveStatus, setSaveStatus] = useState<LogSaveStatus>('idle');
   const [successMessage, setSuccessMessage] = useState('저장되었습니다 ✓');
   const [successBgColor, setSuccessBgColor] = useState<string | undefined>();
+  const [errorMessage, setErrorMessage] = useState('저장에 실패했어요. 잠시 후 다시 시도해주세요.');
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -442,23 +480,45 @@ export default function LogScreen() {
     const extId = data.logExternalId;
     let savedExtId = extId;
 
+    // 아직 서버에 업로드되지 않은, 로컬 준비가 끝난 사진들 (저장 시점에 함께 업로드)
+    const pendingPhotos = logPhotosRef.current.filter(
+      (photo) => photo.tempId && photo.status === 'local' && photo.mediumFile && photo.thumbnailFile,
+    );
+
     if (extId) {
       logger.debug('log.save.update', { logExternalId: extId, date: data.date });
       const result = await logApi.updateLog(extId, body);
+
+      for (const photo of pendingPhotos) {
+        const uploaded = await logApi.uploadLogPhoto(extId, photo.mediumFile!, photo.thumbnailFile!);
+        // 개별 업로드가 끝날 때마다 즉시 반영해 중간에 실패해도 이미 성공한 사진은 재업로드되지 않도록 한다
+        const partial = replaceTempPhotos(logPhotosRef.current, mapPendingPhotosById([photo], [uploaded]));
+        setLogPhotosState(partial);
+        logPhotosRef.current = partial;
+      }
+
+      const finalPhotos = toReadyLogPhotos(logPhotosRef.current);
       if (result) {
-        const photos = result.photos?.length ? result.photos : toReadyLogPhotos(logPhotosRef.current);
-        await upsertCachedLog(currentPetId, { ...result, photos });
+        await upsertCachedLog(currentPetId, { ...result, photos: finalPhotos });
       }
     } else {
-      logger.debug('log.save.create', { date: data.date });
-      const result = await logApi.createLog(body);
+      logger.debug('log.save.create', { date: data.date, photoCount: pendingPhotos.length });
+      const result = await logApi.createLogWithPhotos(
+        body,
+        pendingPhotos.map((photo) => ({ medium: photo.mediumFile!, thumbnail: photo.thumbnailFile! })),
+      );
       savedExtId = result.externalId;
       if (dateRef.current === data.date) {
         setLogExternalId(savedExtId);
         logExternalIdRef.current = savedExtId;
       }
-      const photos = result.photos?.length ? result.photos : toReadyLogPhotos(logPhotosRef.current);
-      await upsertCachedLog(currentPetId, { ...result, photos });
+
+      const uploadedMap = mapPendingPhotosById(pendingPhotos, result.photos ?? []);
+      const updatedPhotos = replaceTempPhotos(logPhotosRef.current, uploadedMap);
+      setLogPhotosState(updatedPhotos);
+      logPhotosRef.current = updatedPhotos;
+
+      await upsertCachedLog(currentPetId, { ...result, photos: toReadyLogPhotos(updatedPhotos) });
     }
 
     return savedExtId;
@@ -498,6 +558,7 @@ export default function LogScreen() {
 
   async function handleSave() {
     if (!isLoaded || hasPet !== true || isSaving || isDeleting) return;
+    if (logPhotos.some((photo) => photo.status === 'compressing')) return;
 
     if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
     setSaveStatus('saving');
@@ -511,13 +572,15 @@ export default function LogScreen() {
       saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
       logger.error('log.save.failed', toLogError(err));
+      setErrorMessage(getSaveErrorMessage(err));
       setSaveStatus('error');
     } finally {
       setIsSaving(false);
     }
   }
 
-  async function persistLogPhotos(nextPhotos: LogPhotoAttachment[]) {
+  // 이미 서버에 저장된 사진을 PhotoAttacher에서 즉시 삭제한 뒤 캐시를 동기화한다.
+  async function handlePhotoRemoved(nextPhotos: LogPhotoAttachment[]) {
     const currentPetId = petIdFromContextRef.current;
     const currentLogExternalId = logExternalIdRef.current;
     if (!currentPetId || !currentLogExternalId) return;
@@ -528,39 +591,6 @@ export default function LogScreen() {
     const cachedLog = await getCachedLogByDate(currentPetId, dateRef.current);
     if (cachedLog) {
       await upsertCachedLog(currentPetId, { ...cachedLog, photos: readyPhotos });
-    }
-  }
-
-  async function ensureLogExternalIdForPhoto() {
-    if (logExternalIdRef.current) return logExternalIdRef.current;
-    if (!isLoaded || hasPet !== true || isSaving || isDeleting) return null;
-
-    if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
-    setSaveStatus('saving');
-    setIsSaving(true);
-
-    try {
-      const savedId = await saveLog({
-        date: dateRef.current,
-        logExternalId: logExternalIdRef.current,
-        condition,
-        meal, mealNote,
-        walkMinutes, walkNote,
-        pooCondition, urineColor, urineNote, pooNote,
-        water, waterNote,
-        playMinutes, playNote, urineAmount: isCat ? (urineAmount ?? 'NONE') : undefined,
-        vomitCount, vomitNote,
-        weightKg,
-        memo,
-      });
-      setSaveStatus('idle');
-      return savedId;
-    } catch (err) {
-      logger.error('log.save.photo_presave.failed', toLogError(err));
-      setSaveStatus('idle');
-      return null;
-    } finally {
-      setIsSaving(false);
     }
   }
 
@@ -600,7 +630,8 @@ export default function LogScreen() {
   }
 
   const isToday = date === today;
-  const isBusy = isSaving || isDeleting || !isLoaded;
+  const isPhotoPreparing = logPhotos.some((photo) => photo.status === 'compressing');
+  const isBusy = isSaving || isDeleting || !isLoaded || isPhotoPreparing;
   const hasLog = Boolean(logExternalId);
 
   const logHint = (
@@ -651,7 +682,7 @@ export default function LogScreen() {
       )}
       <SaveIndicator
         status={saveStatus}
-        labels={{ saved: successMessage }}
+        labels={{ saved: successMessage, error: errorMessage }}
         backgroundColors={{ saved: successBgColor }}
         centered
       />
@@ -752,9 +783,9 @@ export default function LogScreen() {
           <PhotoAttacher
             photos={logPhotos}
             disabled={isBusy}
+            logExternalId={logExternalId}
             onChangePhotos={setLogPhotosState}
-            onEnsureLogExternalId={ensureLogExternalIdForPhoto}
-            onUploaded={persistLogPhotos}
+            onPhotoRemoved={handlePhotoRemoved}
             onPickerVisibleChange={handlePhotoPickerVisibleChange}
           />
         </Card>
