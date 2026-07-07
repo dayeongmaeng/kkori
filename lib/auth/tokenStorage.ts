@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
+const APP_INSTALLED_KEY = 'pet-care:app-installed';
 const ACCESS_TOKEN_KEY = 'pet-care:auth:access-token';
 const REFRESH_TOKEN_KEY = 'pet-care:auth:refresh-token';
 const USER_KEY = 'pet-care:auth:user';
@@ -121,6 +122,17 @@ function clearWebStorageSessionCache() {
   } catch {
     // 일부 브라우저 모드에서는 sessionStorage 접근이 막힐 수 있어요.
   }
+}
+
+// iOS Keychain은 앱 삭제 시에도 유지되므로, AsyncStorage 플래그가 없으면 최초 설치로 간주해 토큰을 초기화한다.
+export async function clearTokensIfFirstLaunch(): Promise<void> {
+  if (Platform.OS === 'web') return;
+
+  const installed = await AsyncStorage.getItem(APP_INSTALLED_KEY);
+  if (installed !== null) return;
+
+  await clearAuthTokens();
+  await AsyncStorage.setItem(APP_INSTALLED_KEY, '1');
 }
 
 export async function clearAuthSessionCache(): Promise<void> {

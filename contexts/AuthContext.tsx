@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-import { clearAuthSessionCache, getAuthTokens } from '../lib/auth/tokenStorage';
+import { clearAuthSessionCache, clearTokensIfFirstLaunch, getAuthTokens } from '../lib/auth/tokenStorage';
 import { deleteAccount as deleteAccountFromServer, logoutFromServer } from '../lib/api/auth';
 import { syncServerSessionData } from '../lib/api/sessionSync';
 import { logger, toLogError } from '../lib/logger';
@@ -34,7 +34,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [sessionDataVersion, setSessionDataVersion] = useState(0);
 
   useEffect(() => {
-    getAuthTokens()
+    clearTokensIfFirstLaunch()
+      .then(() => getAuthTokens())
       .then((tokens) => {
         const hasTokens = Boolean(tokens);
         setIsAuthenticated(hasTokens);
