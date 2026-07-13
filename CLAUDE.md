@@ -11,6 +11,8 @@
 모든 연령의 반려동물을 지원하되, 노령/특수 질환 보호자에게도 깊이 있게 대응하는 방향을 유지한다.
 현재 MVP 타겟은 강아지만 유지한다.
 
+**2026년 7월 8일 iOS App Store 출시 완료.** 이후 작업은 출시 후 안정화(버그 수정, UX 다듬기)와 다음 단계 기능 확장이 중심이다.
+
 ## 개발 환경
 
 - OS: Windows
@@ -31,12 +33,14 @@
 - 데이터베이스: PostgreSQL
 - 파일 저장: AWS S3
 - 웹/정책/공유 페이지: Vercel
+- 에러 트래킹: Sentry (`@sentry/react-native`, `app/_layout.tsx`에서 `Sentry.init` + `Sentry.wrap`)
 
 ## 현재 앱 구조
 
 - 앱 이름/slug: `꼬리` / `kkori`
 - 앱 스킴: `kkori`
 - 번들 ID/패키지: `com.kkutudio.kkori`
+- iOS `supportsTablet: true` — 아이패드 미리보기/실행 지원.
 - 주요 탭: 홈, 기록, 포토, 프로필, 설정
 - 루트 Provider: `AuthProvider`, `DateProvider`, `PetProvider`
 - `DateProvider`는 KST 기준 날짜를 관리하며 자정과 앱 활성화 시 갱신한다.
@@ -107,11 +111,13 @@
 - API 요청에서 401이 발생하면 `/api/v1/auth/refresh`로 access token 갱신 후 원 요청을 재시도한다.
 - 로그아웃은 `/api/v1/auth/logout` 호출 후 인증 토큰과 세션 캐시를 정리한다.
 - 로그인 후 `syncServerSessionData()`가 보호자, 반려동물, 기록, 사진 데이터를 서버에서 가져와 로컬 캐시에 동기화한다.
+- Kakao 웹 로그인 리다이렉트 base URL은 `https://api.kkori.co.kr`이다 (`components/kakaoAuthConfig.ts`). 개발 모드(`__DEV__`)는 `http://localhost:8081/oauth/kakao`를 사용한다.
+- iOS Keychain은 앱 삭제 후에도 토큰이 남아있어, 재설치 시 이전 세션이 그대로 복원되는 문제가 있었다. `lib/auth/tokenStorage.ts`의 `clearTokensIfFirstLaunch()`가 AsyncStorage의 `pet-care:app-installed` 플래그로 최초 실행을 감지해 없으면 저장된 토큰을 초기화한다.
 
 ## 서버 API
 
 - 운영 Base URL: `https://api.kkori.co.kr`
-- 개발 모드 API 기본값은 코드상 `http://localhost:8080`
+- `lib/api/client.ts`의 `API_BASE_URL`은 `EXPO_PUBLIC_API_URL` 미설정 시 `__DEV__` 여부와 무관하게 `https://api.kkori.co.kr`로 고정된다. 로컬 백엔드로 개발하려면 `EXPO_PUBLIC_API_URL=http://localhost:8080`을 명시적으로 설정해야 한다.
 - 권장 운영 환경변수: `EXPO_PUBLIC_API_URL=https://api.kkori.co.kr`
 - 모든 일반 API 요청은 AsyncStorage에 저장된 `pet-care:device-id`를 읽어 `X-Device-Id` 헤더를 붙인다.
 - 최초 실행 시 `expo-crypto`로 UUID를 생성하고 `/api/v1/devices/register`에 등록한다.
@@ -177,6 +183,8 @@ API 코드 위치: `lib/api/`
 - 기록 사진 선택 후 압축/리사이즈, medium/thumbnail 생성, 서버 업로드, 재시도, 삭제, 큰 이미지 미리보기가 구현되어 있다.
 - 식사/산책/배변/물 섭취 등 세부 메모 필드(mealNote, walkNote, pooNote, urineNote, waterNote 등)는 API 필드로 서버에 저장된다. 이전 로컬 `log-extras` 캐시는 구버전 데이터 폴백용으로 읽기만 유지된다.
 - 신규 API 필드: `mealNote`, `walkNote`, `pooNote`, `urineNote`, `waterNote`, `playMinutes`, `playNote`, `urineAmount`, `vomitCount`, `vomitNote`.
+- **사진 저장 시점 변경 완료.** 기록 사진은 선택 시 로컬에서 압축/리사이즈까지만 처리하고, 실제 서버 업로드는 저장 버튼을 눌러 로그를 저장하는 시점에 함께 일어난다. 사진별로 순차 업로드하며 성공한 사진은 즉시 상태를 반영해, 중간에 실패해도 이미 업로드된 사진은 재업로드하지 않는다.
+- 고양이 소변 기록(urineAmount) 저장 오류 수정 완료.
 
 ### 포토 탭
 
@@ -188,11 +196,12 @@ API 코드 위치: `lib/api/`
 - 같은 날짜에 기존 사진이 있으면 새 메타를 만들지 않고 기존 `externalId`를 재사용한다.
 - 업로드 실패 상태 보존과 재시도 UI가 구현되어 있다.
 - 과거 사진은 3열 그리드로 표시하고 pull-to-refresh를 지원한다.
+- 다른 기기(제한된 접근 권한, Limited Photo Library) 사진 선택 대응 범위 확대 완료.
 
 ### 사진 상세/공유
 
-- 사진 상세 화면은 세로 paging FlatList로 사진을 넘겨 볼 수 있다.
-- 상세 화면에서 캡션 수정, 앨범 저장, 공유 미리보기, 공유하기, 삭제가 가능하다.
+- 사진 상세 화면(`app/photo/[id].tsx`)은 세로 paging FlatList로 사진을 넘겨 볼 수 있다.
+- 상세 화면에서 캡션 수정, 공유 미리보기, 공유하기, 삭제가 가능하다. 액션 시트(`PhotoActionSheet`)의 "저장하기"(앨범 저장) 메뉴 항목은 현재 주석 처리로 비활성화되어 있다. 공유는 별도 공유 미리보기 모달(`openSharePreview` → `Share.share()`)로 동작한다.
 - 캡션은 최대 100자이며 `PATCH /api/v1/photos/{externalId}`로 저장한다.
 - 사진 삭제는 `DELETE /api/v1/photos/{externalId}` 호출 후 로컬 사진 캐시와 API 캐시를 삭제한다.
 - 공유 URL은 `{WEB_BASE_URL}/photos/{externalId}` 형태로 생성된다.
@@ -203,7 +212,7 @@ API 코드 위치: `lib/api/`
 ### 프로필 탭
 
 - 반려동물 프로필 생성/수정 화면 구현.
-- 필드: 사진, 이름, 반려동물 종류(강아지/고양이), 성별, 종류(품종), 생일, 생일 모름, 함께한 날, 체중, 중성화 여부, 건강 메모.
+- 필드: 사진, 이름, 반려동물 종류(강아지/고양이), 성별, 종류(품종), 생일, 생일 모름, 함께한 날, 체중, 체중 모름(weightKgUnknown), 중성화 여부, 건강 메모.
 - 반려동물 종류 선택: 강아지/고양이 모두 선택 및 저장 가능. species는 `"DOG"` 또는 `"CAT"`으로 전송된다.
 - 종류(품종) 입력: 강아지 선택 시 강아지 품종 자동완성, 고양이 선택 시 고양이 품종 자동완성으로 분기된다.
 - 생일/함께한 날은 네이티브 DateTimePicker와 웹용 select picker를 분기 처리한다.
@@ -214,11 +223,12 @@ API 코드 위치: `lib/api/`
 ### 설정 탭
 
 - 권한 섹션: 알림, 카메라, 사진 접근 권한 설정 열기.
-- 데이터 섹션: 데이터 백업/내보내기, 데이터 가져오기는 출시 예정. 캐시 비우기는 구현 완료.
+- 데이터 섹션: 데이터 백업/내보내기, 데이터 가져오기는 출시 예정. 캐시 비우기는 구현 완료 (구버전 캐시 정리를 위한 패치 로직 포함).
 - 정보 섹션: 개인정보처리방침, 이용약관, 버전 정보.
 - 지원 섹션: 문의하기, 업데이트 소식, 리뷰 남기기, 후원하기, 꼬리 흔들게 하기.
+- 반려동물 종류 제한 관련 알림, 권한 관련 알림 등은 공통 알림 함수로 통일되어 있다.
 - 계정 섹션: 로그아웃 구현 완료. **회원 탈퇴 UI 구현 완료** (탈퇴 전 안내, Web/native 확인 모달, 성공 시 세션 정리 + 로그인 화면 이동).
-- 리뷰 남기기는 앱 출시 후 실제 App Store ID로 교체해야 하는 TODO가 남아 있다.
+- 리뷰 남기기는 앱 출시 후에도 아직 `IOS_REVIEW_URL`이 실제 App Store ID로 교체되지 않은 TODO 상태다(`app/(tabs)/settings.tsx`). 현재는 "iOS 앱 출시 후 이용할 수 있어요" 안내로 막혀 있다.
 
 ## 도메인 및 인프라
 
@@ -266,22 +276,25 @@ API 코드 위치: `lib/api/`
 ## 현재 코드 기준 주의/갱신 필요
 
 - `.env.example`에는 `EXPO_PUBLIC_SHARE_API_URL`이 없지만 `photoApi.getSharedPhoto()`에서 사용 중이다.
-- 문서에는 `EXPO_PUBLIC_DEV_API_URL` 언급이 있으나 현재 `lib/api/client.ts`는 개발 모드에서 항상 `http://localhost:8080`을 사용한다.
-- `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다.
+- `lib/api/client.ts`의 `API_BASE_URL`은 `EXPO_PUBLIC_API_URL` 미설정 시 `__DEV__` 여부와 무관하게 항상 `https://api.kkori.co.kr`을 사용한다(로컬 개발도 기본은 운영 API). 로컬 백엔드로 개발하려면 `EXPO_PUBLIC_API_URL`을 명시적으로 설정해야 한다.
+- `WEB_BASE_URL` 기본값과 `.env.example`은 아직 `https://kkori.vercel.app` 기준이다. 운영 도메인 `kkori.co.kr` 전환 시 갱신 필요하다. 앱 내 공유 URL 오류 안내 문구도 "Vercel 도메인 연결"을 언급하고 있어, `kkori.co.kr` 웹 도메인이 Vercel에 아직 완전히 연결되지 않았을 가능성이 있다(`app/photo/[id].tsx`).
 - 프로필 `gender` 요청 타입은 코드상 `male` / `female` 소문자로 전송한다. 서버 문서가 `MALE` / `FEMALE` 기준이면 정합성 확인이 필요하다.
 - AI 리포트, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 아직 출시 예정 상태다.
-- 번들 ID/패키지가 `com.kkutudio.kkori`로 되어 있다. App Store 제출 전 실제 번들 ID로 교체해야 한다.
-- 고양이 컨디션 이미지는 `assets/conditions/cat-3.png ~ cat-5.png`가 미추가 상태다. 추가 시 `ConditionPicker.tsx`의 `catConditionImages` 매핑을 교체한다.
-- 고양이 로고(`assets/cat-logo.png`)는 미추가 상태로 현재 강아지 로고를 공유한다. 추가 시 `AppHeader.tsx`, `app/photos/[externalId].tsx`의 `catLogoSource`/`catLogoImage`를 교체한다.
+- 번들 ID/패키지는 `com.kkutudio.kkori`로 App Store에 그대로 출시되었다(2026-07-08).
+- 고양이 컨디션 이미지(`assets/conditions/cat-3.svg ~ cat-5.svg`)와 고양이 로고(`assets/cat-logo.svg`)는 추가 완료되어 더 이상 강아지 이미지를 대체 사용하지 않는다.
 - 공유 화면 로고 분기는 서버가 `PhotoShareResponse.petSpecies`를 응답에 포함해야 동작한다. 백엔드 미반영 시 강아지 로고가 기본값으로 표시된다.
+- 사진 상세 액션 시트의 "저장하기"(앨범 저장) 메뉴는 주석 처리로 비활성화된 상태다(`components/PhotoActionSheet.tsx`).
+- 설정 탭 리뷰 남기기의 `IOS_REVIEW_URL`은 앱 출시 후에도 실제 App Store ID로 아직 교체되지 않았다(`app/(tabs)/settings.tsx`).
 
 ## 다음 작업 후보
 
 - 8080 외부 포트 닫기 확인
-- Vercel에 `kkori.co.kr` / `www.kkori.co.kr` 연결
-- 개인정보처리방침/계정삭제 안내 페이지 준비
+- Vercel에 `kkori.co.kr` / `www.kkori.co.kr` 연결 확인 (공유 링크 오류 안내 문구가 아직 이를 의심하고 있음)
 - `.env.example`과 실제 사용 환경변수 정합성 정리 (`EXPO_PUBLIC_SHARE_API_URL`, `WEB_BASE_URL` 등)
+- 설정 탭 `IOS_REVIEW_URL`을 실제 App Store ID로 교체
+- Android 지원 (Phase 2)
 - Phase D 회원가입/계정 모델 고도화 설계
+- Phase F AI 리포트 설계
 
 # Project Context
 See PROJECT_CONTEXT.md for full context. Read it at the start of every session.

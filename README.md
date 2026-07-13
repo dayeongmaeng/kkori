@@ -4,6 +4,8 @@
 
 일상 기록, 하루 한 장 사진, 반려동물 프로필을 중심으로 시작하고, 장기적으로 병원 방문 전 리포트와 패턴 분석까지 확장하는 것을 목표로 합니다.
 
+**2026년 7월 8일 iOS App Store에 출시했습니다.**
+
 ## 현재 구현
 
 - Google/Kakao OAuth 로그인
@@ -15,7 +17,7 @@
 - 포토: 하루 한 장 사진, 캡션, 업로드 실패/재시도, 3열 그리드
 - 사진 상세: 캡션 수정, 앨범 저장, 공유, 삭제
 - 공유 페이지: `/photos/:externalId` 전용 HTML/OG 메타 렌더링
-- 프로필: 사진, 이름, 반려동물 종류(강아지/고양이), 성별, 품종, 생일, 생일 모름, 함께한 날, 체중, 중성화 여부, 건강 메모, 반려동물 삭제
+- 프로필: 사진, 이름, 반려동물 종류(강아지/고양이), 성별, 품종, 생일, 생일 모름, 함께한 날, 체중, 체중 모름, 중성화 여부, 건강 메모, 반려동물 삭제
 - 설정: 권한 설정, 캐시 비우기, 정책 링크, 후원, 로그아웃, 회원 탈퇴
 
 ## 기술 스택
@@ -28,11 +30,12 @@
 - expo-camera, expo-image-picker, expo-image-manipulator
 - Vercel web export/API route
 - 구조적 로깅: `lib/logger.ts` (개발 debug/info/warn/error, 운영 warn/error)
+- Sentry(`@sentry/react-native`) 에러 트래킹
 
 ## API
 
 - 운영 API: `https://api.kkori.co.kr`
-- 개발 모드 API 기본값: `http://localhost:8080`
+- 개발 모드 API 기본값도 `EXPO_PUBLIC_API_URL` 미설정 시 운영 API(`https://api.kkori.co.kr`)를 사용합니다. 로컬 백엔드로 개발하려면 `EXPO_PUBLIC_API_URL=http://localhost:8080`을 명시적으로 설정하세요.
 - 운영 환경변수: `EXPO_PUBLIC_API_URL=https://api.kkori.co.kr`
 - 일반 API 요청에는 `X-Device-Id` 헤더가 붙습니다.
 - 응답 구조는 `{ success, data, error, timestamp }` 형식입니다.
@@ -67,6 +70,7 @@ npm run lint
 - `.env.example`에는 `EXPO_PUBLIC_SHARE_API_URL`이 없지만 코드에서 사용 중입니다.
 - `WEB_BASE_URL` 기본값은 아직 `https://kkori.vercel.app` 기준입니다. 운영 도메인 `kkori.co.kr` 전환 시 갱신이 필요합니다.
 - 프로필 `gender`는 현재 `male` / `female` 소문자로 전송합니다.
-- `EXPO_PUBLIC_DEV_API_URL` 환경변수는 실제로 사용되지 않습니다. 개발 모드 API는 `http://localhost:8080`으로 하드코딩되어 있습니다.
+- `EXPO_PUBLIC_DEV_API_URL` 환경변수는 실제로 사용되지 않습니다. 개발 모드 API 기본값은 운영 API(`https://api.kkori.co.kr`)로 고정되어 있습니다.
 - 서버 8080 포트 외부 공개 여부가 아직 확인되지 않았습니다. 운영 전 Lightsail 방화벽 설정을 확인하세요.
+- 설정 탭 리뷰 남기기의 App Store 링크는 앱 출시 후에도 아직 실제 App Store ID로 교체되지 않았습니다.
 - AI 리포트, 포토 달력 만들기, 데이터 백업/가져오기, 알림 기능은 출시 예정입니다.
