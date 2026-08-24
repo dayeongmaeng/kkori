@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import AiReportPreview from '../../components/AiReportPreview';
 import EmptyPetState from '../../components/EmptyPetState';
 import FeatureHintModal from '../../components/FeatureHintModal';
@@ -12,9 +12,13 @@ import { colors, spacing } from '../../constants/theme';
 import { useDate } from '../../contexts/DateContext';
 import { useCurrentPet } from '../../contexts/PetContext';
 import { logApi, LogResponse } from '../../lib/api/log';
+import { logger, toLogError } from '../../lib/logger';
 import { PetResponse } from '../../lib/api/pet';
 import { getCachedLogByDate, getCachedLogs, setCachedLogs } from '../../lib/cache/log';
 import { getCachedPet } from '../../lib/cache/pet';
+import { getNotificationPermissionStatus, requestNotificationPermission } from '../../lib/notifications';
+
+const NOTIFICATION_PERMISSION_REQUESTED_KEY = 'kkori:notification-permission-requested';
 
 function get6DaysAgo(today: string): string {
   const d = new Date(today + 'T00:00:00Z');
@@ -90,6 +94,24 @@ export default function HomeScreen() {
     });
     return () => sub.remove();
   }, [loadData]);
+
+  // 홈 화면 최초 진입 시 1회만 알림 권한 자동 요청
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    (async () => {
+      try {
+        const requested = await AsyncStorage.getItem(NOTIFICATION_PERMISSION_REQUESTED_KEY);
+        if (requested !== null) return;
+        const status = await getNotificationPermissionStatus();
+        if (status === 'undetermined') {
+          await requestNotificationPermission();
+        }
+        await AsyncStorage.setItem(NOTIFICATION_PERMISSION_REQUESTED_KEY, '1');
+      } catch (error) {
+        logger.warn('notification.initial.permission.failed', toLogError(error));
+      }
+    })();
+  }, []);
 
   // 반려동물 전환 시 이전 데이터 즉시 클리어
   const isMountedRef = useRef(false);

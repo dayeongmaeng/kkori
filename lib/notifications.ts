@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { logger, toLogError } from './logger';
 
 export const NOTIFICATION_TIME_KEY = 'pet-care:notification-time';
+export const NOTIFICATION_ENABLED_KEY = 'pet-care:notification-enabled';
 export const DEFAULT_NOTIFICATION_HOUR = 22;
 export const DEFAULT_NOTIFICATION_MINUTE = 0;
 
@@ -30,6 +31,18 @@ export async function loadNotificationTime(): Promise<NotificationTime> {
 
 export async function saveNotificationTime(time: NotificationTime): Promise<void> {
   await AsyncStorage.setItem(NOTIFICATION_TIME_KEY, JSON.stringify(time));
+}
+
+export async function loadNotificationEnabled(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY);
+    if (raw !== null) return raw === 'true';
+  } catch {}
+  return true;
+}
+
+export async function saveNotificationEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(NOTIFICATION_ENABLED_KEY, String(enabled));
 }
 
 export async function getNotificationPermissionStatus(): Promise<'granted' | 'denied' | 'undetermined'> {
@@ -77,6 +90,17 @@ export async function scheduleDailyNotification(hour: number, minute: number): P
     logger.info('notification.schedule.success', { hour, minute });
   } catch (error) {
     logger.warn('notification.schedule.failed', toLogError(error));
+    throw error;
+  }
+}
+
+export async function cancelDailyNotification(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    logger.info('notification.cancel.success');
+  } catch (error) {
+    logger.warn('notification.cancel.failed', toLogError(error));
     throw error;
   }
 }

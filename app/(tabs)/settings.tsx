@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import {
-  Bell, Camera, ChevronRight, Clock, Database, FileText,
+  Bell, BellOff, Camera, ChevronRight, Clock, Database, FileText,
   Heart, Image as ImageIcon, Info, LogOut, MessageCircle, Newspaper,
   PawPrint, Shield, Star, Trash2, UserX,
 } from 'lucide-react-native';
@@ -14,9 +14,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getAuthTokens } from '../../lib/auth/tokenStorage';
 import { logger, toLogError } from '../../lib/logger';
 import {
+  cancelDailyNotification,
   getNotificationPermissionStatus,
+  loadNotificationEnabled,
   loadNotificationTime,
   requestNotificationPermission,
+  saveNotificationEnabled,
   saveNotificationTime,
   scheduleDailyNotification,
 } from '../../lib/notifications';
@@ -213,6 +216,7 @@ export default function SettingsScreen() {
 
   const [notifTime, setNotifTime] = useState({ hour: 22, minute: 0 });
   const [notifPermission, setNotifPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
+  const [notifEnabled, setNotifEnabled] = useState(true);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const pickerDateRef = useRef<Date>(new Date());
 
@@ -227,12 +231,14 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (Platform.OS !== 'web') {
       void (async () => {
-        const [time, perm] = await Promise.all([
+        const [time, perm, enabled] = await Promise.all([
           loadNotificationTime(),
           getNotificationPermissionStatus(),
+          loadNotificationEnabled(),
         ]);
         setNotifTime(time);
         setNotifPermission(perm);
+        setNotifEnabled(enabled);
         const d = new Date();
         d.setHours(time.hour, time.minute, 0, 0);
         pickerDateRef.current = d;
@@ -300,6 +306,25 @@ export default function SettingsScreen() {
       await scheduleDailyNotification(newTime.hour, newTime.minute);
     } catch (error) {
       logger.warn('notification.schedule.failed', toLogError(error));
+      showAlert('오류', '알림 설정에 실패했어요. 다시 시도해 주세요.');
+    }
+  }
+
+  async function handleToggleNotifEnabled() {
+    const next = !notifEnabled;
+    setNotifEnabled(next);
+    try {
+      await saveNotificationEnabled(next);
+      if (next) {
+        if (notifPermission === 'granted') {
+          await scheduleDailyNotification(notifTime.hour, notifTime.minute);
+        }
+      } else {
+        await cancelDailyNotification();
+      }
+    } catch (error) {
+      setNotifEnabled(!next);
+      logger.warn('notification.toggle.failed', toLogError(error));
       showAlert('오류', '알림 설정에 실패했어요. 다시 시도해 주세요.');
     }
   }
@@ -490,11 +515,24 @@ export default function SettingsScreen() {
               icon={<Clock size={20} color={colors.textSecondary} />}
               label="일일 기록 알림"
               desc={
-                notifPermission === 'granted'
-                  ? formatNotifTime(notifTime.hour, notifTime.minute)
-                  : '알림을 받으려면 권한 허용이 필요해요'
+                !notifEnabled
+                  ? '알림을 받지 않아요'
+                  : notifPermission === 'granted'
+                    ? formatNotifTime(notifTime.hour, notifTime.minute)
+                    : '알림을 받으려면 권한 허용이 필요해요'
               }
-              onPress={() => { void handleNotifTimePress(); }}
+              onPress={notifEnabled ? () => { void handleNotifTimePress(); } : undefined}
+              disabled={!notifEnabled}
+            />
+            <Row
+              icon={<BellOff size={20} color={colors.textSecondary} />}
+              label="기록 알림 없음"
+              onPress={() => { void handleToggleNotifEnabled(); }}
+              right={
+                <View style={[s.checkbox, !notifEnabled && s.checkboxActive]}>
+                  {!notifEnabled ? <Text style={s.checkboxMark}>✓</Text> : null}
+                </View>
+              }
             />
             <Row
               icon={<Bell size={20} color={colors.textSecondary} />}
@@ -718,6 +756,26 @@ const s = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '600', color: colors.warning },
 
   versionText: { fontSize: 13, color: colors.textTertiary },
+
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  checkboxMark: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textOnPrimary,
+  },
 
   modalOverlay: {
     flex: 1,
