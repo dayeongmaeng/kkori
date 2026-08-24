@@ -986,6 +986,7 @@ export default function ProfileScreen() {
                   locale="ko-KR"
                   minimumDate={minDate}
                   maximumDate={maxDate}
+                  style={styles.datePickerSpinner}
                   onChange={(_: any, date?: Date) => {
                     if (date) setPickerDate(date);
                   }}
@@ -1421,6 +1422,9 @@ const styles = StyleSheet.create({
   },
   webPickerWrapper: {
     padding: spacing.xl,
+  },
+  datePickerSpinner: {
+    width: "100%",
   },
   footer: {
     position: "absolute",
