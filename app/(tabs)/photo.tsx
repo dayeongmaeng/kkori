@@ -21,6 +21,7 @@ import { Image } from 'expo-image';
 import CaptionModal from '../../components/CaptionModal';
 import EmptyPetState from '../../components/EmptyPetState';
 import FeatureHintModal from '../../components/FeatureHintModal';
+import MonthlyCalendarModal from '../../components/MonthlyCalendarModal';
 import TodayPhotoCard from '../../components/TodayPhotoCard';
 import { photoApi } from '../../lib/api/photo';
 import {
@@ -95,6 +96,7 @@ export default function PhotoScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
   const [uploadState, setUploadState] = useState<ImageUploadState>({ status: 'idle' });
   const [failedUpload, setFailedUpload] = useState<{
     sourceUri: string;
@@ -443,18 +445,16 @@ export default function PhotoScreen() {
       <View style={styles.headerBannerCol}>
         <View style={styles.headerBannerRow}>
           <View>
-            <Text style={styles.headerTitle}>하루 한 장</Text>
+            <Text style={styles.headerTitle}>하루 한장</Text>
             <Text style={styles.todayText}>{formatDateKorean(today)}</Text>
           </View>
           <TouchableOpacity
             style={styles.calendarBtn}
-            onPress={() => showAlert('곧 출시될 기능이에요 🐾', '조금만 기다려주세요')}
+            onPress={() => setCalendarModalVisible(true)}
             activeOpacity={0.75}
           >
-            <View style={styles.comingSoonBadge}>
-              <Text style={styles.comingSoonBadgeText}>출시 예정</Text>
-            </View>
-            <Text style={styles.calendarBtnText}>월력 만들기</Text>
+            <Ionicons name="calendar-outline" size={14} color={colors.secondary} />
+            <Text style={styles.calendarBtnText}>한달 한장</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.headerBadge}>
@@ -543,6 +543,12 @@ export default function PhotoScreen() {
           onCancel={handleCancelModal}
         />
       )}
+      <MonthlyCalendarModal
+        visible={calendarModalVisible}
+        onClose={() => setCalendarModalVisible(false)}
+        photos={photos}
+        today={today}
+      />
       {photoHint}
     </View>
   );
@@ -592,23 +598,16 @@ const styles = StyleSheet.create({
   calendarBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    backgroundColor: colors.secondarySoft,
   },
   calendarBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  comingSoonBadge: {
-    backgroundColor: colors.warningBg,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
-  comingSoonBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.warning,
+    color: colors.secondary,
   },
   sectionLabel: {
     fontSize: 13,
