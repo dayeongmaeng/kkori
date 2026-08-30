@@ -979,18 +979,20 @@ export default function ProfileScreen() {
                   <WebDatePicker value={pickerDate} onChange={setPickerDate} />
                 </View>
               ) : DateTimePicker ? (
-                <DateTimePicker
-                  value={pickerDate}
-                  mode="date"
-                  display="spinner"
-                  locale="ko-KR"
-                  minimumDate={minDate}
-                  maximumDate={maxDate}
-                  style={styles.datePickerSpinner}
-                  onChange={(_: any, date?: Date) => {
-                    if (date) setPickerDate(date);
-                  }}
-                />
+                <View style={styles.datePickerContainer}>
+                  <DateTimePicker
+                    value={pickerDate}
+                    mode="date"
+                    display="spinner"
+                    locale="ko-KR"
+                    minimumDate={minDate}
+                    maximumDate={maxDate}
+                    style={styles.datePickerSpinner}
+                    onChange={(_: any, date?: Date) => {
+                      if (date) setPickerDate(date);
+                    }}
+                  />
+                </View>
               ) : null}
             </View>
           </View>
@@ -1422,6 +1424,10 @@ const styles = StyleSheet.create({
   },
   webPickerWrapper: {
     padding: spacing.xl,
+  },
+  datePickerContainer: {
+    width: "100%",
+    alignItems: "center",
   },
   datePickerSpinner: {
     width: "100%",

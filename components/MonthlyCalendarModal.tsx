@@ -12,7 +12,6 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Picker } from '@react-native-picker/picker';
 import * as MediaLibrary from 'expo-media-library';
 import ViewShot from 'react-native-view-shot';
 import SaveIndicator from './SaveIndicator';
@@ -36,10 +35,9 @@ const SHEET_H_PADDING = spacing.lg;
 // 화면 폭에 맞춰 반응형으로 그리되(CAPTURE_WIDTH), 비율과 모든 수치는 기준 캔버스 대비 동일 배율(CAPTURE_SCALE)로 스케일한다.
 // 실제 내보내기 해상도는 ViewShot/html2canvas가 기기 배율(2x/3x)을 그대로 적용해 캡처하므로 별도 width/height 강제는 하지 않는다.
 const CAPTURE_WIDTH = SCREEN_WIDTH - SHEET_H_PADDING * 2;
-// 하단 패딩을 상단(80)과 맞추려고 50→80으로 늘린 만큼(+30), 그리드-푸터 간격을 넓힌 만큼(+28),
-// 주행 위아래 여백을 넓힌 만큼(3→6, 행당 +6 × 6행 = +36) 기준 높이도 1350→1444로 늘려서
-// 주행(그리드) 콘텐츠 영역은 그대로 두고 캔버스 전체 높이만 더 길어지도록 한다.
-const CAPTURE_HEIGHT = Math.round(CAPTURE_WIDTH * (1444 / 1080));
+// 상단 타이틀 잘림 방지를 위해 paddingTop을 80→120으로 늘린 만큼(+40) 기준 높이도 1444→1500으로 늘렸다.
+// 그리드 콘텐츠 영역은 그대로 두고 캔버스 상단 여백만 더 넓어지도록 한다.
+const CAPTURE_HEIGHT = Math.round(CAPTURE_WIDTH * (1500 / 1080));
 const CAPTURE_SCALE = CAPTURE_WIDTH / 1080;
 
 function dp(px: number) {
@@ -165,11 +163,6 @@ export default function MonthlyCalendarModal({ visible, onClose, photos, today }
   }, [visible]);
 
   useEffect(() => {
-    if (year === currentYear && month > currentMonth) setMonth(currentMonth);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year]);
-
-  useEffect(() => {
     return () => {
       if (saveIdleTimerRef.current) clearTimeout(saveIdleTimerRef.current);
     };
@@ -180,16 +173,26 @@ export default function MonthlyCalendarModal({ visible, onClose, photos, today }
     return years.length > 0 ? Math.min(...years, currentYear) : currentYear;
   }, [photos, currentYear]);
 
-  const yearOptions = useMemo(() => {
-    const list: number[] = [];
-    for (let y = earliestYear; y <= currentYear; y++) list.push(y);
-    return list;
-  }, [earliestYear, currentYear]);
+  const canGoPrev = !(year === earliestYear && month === 1);
+  const canGoNext = !(year === currentYear + 1 && month === 12);
 
-  const monthOptions = useMemo(() => {
-    const max = year === currentYear ? currentMonth : 12;
-    return Array.from({ length: max }, (_, i) => i + 1);
-  }, [year, currentYear, currentMonth]);
+  function prevMonth() {
+    if (month === 1) {
+      setYear((y) => y - 1);
+      setMonth(12);
+    } else {
+      setMonth((m) => m - 1);
+    }
+  }
+
+  function nextMonth() {
+    if (month === 12) {
+      setYear((y) => y + 1);
+      setMonth(1);
+    } else {
+      setMonth((m) => m + 1);
+    }
+  }
 
   const photosByDate = useMemo(() => {
     const map = new Map<string, LocalPhoto>();
@@ -329,6 +332,31 @@ export default function MonthlyCalendarModal({ visible, onClose, photos, today }
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
+        {/* 캡처 전용 숨김 뷰: backdrop에 두어 sheet의 borderRadius 마스크 클리핑을 피한다. */}
+        <View style={styles.hiddenOffscreen} pointerEvents="none">
+          {Platform.OS === 'web' ? (
+            <View ref={webGridRef}>
+              <MonthlyCalendarDownloadCanvas
+                year={year}
+                month={month}
+                weeks={weeks}
+                recordedCount={recordedCount}
+                daysInMonthCount={daysInMonthCount}
+              />
+            </View>
+          ) : (
+            <ViewShot ref={gridRef} options={{ format: 'png', quality: 1 }}>
+              <MonthlyCalendarDownloadCanvas
+                year={year}
+                month={month}
+                weeks={weeks}
+                recordedCount={recordedCount}
+                daysInMonthCount={daysInMonthCount}
+              />
+            </ViewShot>
+          )}
+        </View>
+
         <View style={styles.sheet}>
           <View style={styles.header}>
             <View>
@@ -342,82 +370,29 @@ export default function MonthlyCalendarModal({ visible, onClose, photos, today }
 
           <SaveIndicator status={saveStatus} labels={{ saved: successMessage }} centered />
 
-          <View style={styles.monthNav}>
-            {Platform.OS === 'web' ? (
-              <View style={webSelectStyles.row}>
-                <select
-                  value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
-                  style={webSelectStyles.select as any}
-                >
-                  {yearOptions.map((y) => (
-                    <option key={y} value={y}>{y}년</option>
-                  ))}
-                </select>
-                <select
-                  value={month}
-                  onChange={(e) => setMonth(Number(e.target.value))}
-                  style={webSelectStyles.select as any}
-                >
-                  {monthOptions.map((m) => (
-                    <option key={m} value={m}>{m}월</option>
-                  ))}
-                </select>
-              </View>
-            ) : (
-              <View style={styles.pickerRow}>
-                <Picker
-                  selectedValue={year}
-                  onValueChange={(v) => setYear(Number(v))}
-                  style={styles.pickerFlex}
-                  itemStyle={styles.pickerItem}
-                >
-                  {yearOptions.map((y) => (
-                    <Picker.Item key={y} label={`${y}년`} value={y} />
-                  ))}
-                </Picker>
-                <Picker
-                  selectedValue={month}
-                  onValueChange={(v) => setMonth(Number(v))}
-                  style={styles.pickerFlex}
-                  itemStyle={styles.pickerItem}
-                >
-                  {monthOptions.map((m) => (
-                    <Picker.Item key={m} label={`${m}월`} value={m} />
-                  ))}
-                </Picker>
-              </View>
-            )}
+          <View style={styles.monthHeader}>
+            <TouchableOpacity
+              onPress={prevMonth}
+              disabled={!canGoPrev}
+              style={styles.navBtn}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.navBtnText, !canGoPrev && styles.navBtnDisabled]}>‹</Text>
+            </TouchableOpacity>
+            <Text style={styles.monthHeaderText}>{year}년 {month}월</Text>
+            <TouchableOpacity
+              onPress={nextMonth}
+              disabled={!canGoNext}
+              style={styles.navBtn}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.navBtnText, !canGoNext && styles.navBtnDisabled]}>›</Text>
+            </TouchableOpacity>
           </View>
 
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             {gridChildren}
           </ScrollView>
-
-          {/* 캡처 전용 숨김 뷰: 미리보기와 별도 파일(MonthlyCalendarDownloadCanvas)의 독립된 스타일로 렌더링한다. */}
-          <View style={styles.hiddenOffscreen} pointerEvents="none">
-            {Platform.OS === 'web' ? (
-              <View ref={webGridRef}>
-                <MonthlyCalendarDownloadCanvas
-                  year={year}
-                  month={month}
-                  weeks={weeks}
-                  recordedCount={recordedCount}
-                  daysInMonthCount={daysInMonthCount}
-                />
-              </View>
-            ) : (
-              <ViewShot ref={gridRef} options={{ format: 'png', quality: 1 }}>
-                <MonthlyCalendarDownloadCanvas
-                  year={year}
-                  month={month}
-                  weeks={weeks}
-                  recordedCount={recordedCount}
-                  daysInMonthCount={daysInMonthCount}
-                />
-              </ViewShot>
-            )}
-          </View>
 
           <TouchableOpacity
             style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
@@ -476,35 +451,47 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textSecondary,
   },
-  monthNav: {
-    marginTop: spacing.md,
-  },
-  pickerRow: {
+  monthHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
-  pickerFlex: {
-    flex: 1,
-  },
-  pickerItem: {
-    fontSize: 18,
+  monthHeaderText: {
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.textPrimary,
+  },
+  navBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  navBtnText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  navBtnDisabled: {
+    color: colors.border,
   },
   scrollContent: {
     paddingVertical: spacing.md,
   },
   hiddenOffscreen: {
     position: 'absolute',
-    top: -100000,
+    top: 0,
     left: 0,
+    opacity: 0,
   },
 
   // ─── 다운로드 이미지 디자인 (D시안: 다이어리·라운드 정사각형) ─────────────
-  // 기준 캔버스 1080x1350(4:5)을 화면 폭에 맞춰 CAPTURE_SCALE로 스케일링한다.
+  // 기준 캔버스 1080x1500을 화면 폭에 맞춰 CAPTURE_SCALE로 스케일링한다.
   diaryCanvas: {
     width: CAPTURE_WIDTH,
     height: CAPTURE_HEIGHT,
     backgroundColor: diaryColors.canvasBg,
-    paddingTop: dp(80),
+    paddingTop: dp(120),
     paddingHorizontal: dp(70),
     paddingBottom: dp(80),
     flexDirection: 'column',
@@ -522,7 +509,7 @@ const styles = StyleSheet.create({
   },
   diaryMonthText: {
     fontSize: dp(66),
-    lineHeight: dp(66),
+    lineHeight: dp(86),
     fontWeight: '700',
     color: diaryColors.monthText,
     letterSpacing: dp(66) * -0.02,
@@ -625,23 +612,6 @@ const styles = StyleSheet.create({
     color: colors.textOnPrimary,
   },
 });
-
-const webSelectStyles = {
-  row: {
-    flexDirection: 'row' as const,
-    gap: 8,
-    justifyContent: 'center' as const,
-  },
-  select: {
-    flex: 1,
-    fontSize: 16,
-    padding: 8,
-    borderRadius: 8,
-    border: `1px solid ${colors.border}`,
-    backgroundColor: colors.surfaceAlt,
-    color: colors.textPrimary,
-  },
-};
 
 const webThumbStyle = {
   width: '100%',

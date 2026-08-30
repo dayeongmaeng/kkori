@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import {
-  Bell, BellOff, Camera, ChevronRight, Clock, Database, FileText,
+  Bell, Camera, ChevronRight, Clock, Database, FileText,
   Heart, Image as ImageIcon, Info, LogOut, MessageCircle, Newspaper,
   PawPrint, Shield, Star, Trash2, UserX,
 } from 'lucide-react-native';
@@ -218,6 +218,7 @@ export default function SettingsScreen() {
   const [notifPermission, setNotifPermission] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
   const [notifEnabled, setNotifEnabled] = useState(true);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [pickerNoAlarm, setPickerNoAlarm] = useState(false);
   const pickerDateRef = useRef<Date>(new Date());
 
   const { logout, deleteAccount, refreshSession } = useAuth();
@@ -270,20 +271,10 @@ export default function SettingsScreen() {
   }, []);
 
   async function handleNotifTimePress() {
-    if (notifPermission === 'denied') {
-      showConfirm(
-        '알림 권한 필요',
-        '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.',
-        openSettings,
-        { confirmText: '설정 열기' },
-      );
-      return;
-    }
-    if (notifPermission === 'undetermined') {
-      const granted = await requestNotificationPermission();
-      const newPerm = granted ? 'granted' : 'denied';
-      setNotifPermission(newPerm);
-      if (!granted) {
+    // 알림이 활성화된 상태에서만 권한을 먼저 확인한다.
+    // 비활성화 상태에서는 권한 확인 없이 모달을 열어 "기록 알림 없음" 체크 해제가 가능하도록 한다.
+    if (notifEnabled) {
+      if (notifPermission === 'denied') {
         showConfirm(
           '알림 권한 필요',
           '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.',
@@ -292,39 +283,47 @@ export default function SettingsScreen() {
         );
         return;
       }
+      if (notifPermission === 'undetermined') {
+        const granted = await requestNotificationPermission();
+        const newPerm = granted ? 'granted' : 'denied';
+        setNotifPermission(newPerm);
+        if (!granted) {
+          showConfirm(
+            '알림 권한 필요',
+            '알림을 받으려면 설정에서 알림 권한을 허용해 주세요.',
+            openSettings,
+            { confirmText: '설정 열기' },
+          );
+          return;
+        }
+      }
     }
+    setPickerNoAlarm(!notifEnabled);
     setShowTimePicker(true);
   }
 
   async function handleTimeConfirm() {
     setShowTimePicker(false);
-    const d = pickerDateRef.current;
-    const newTime = { hour: d.getHours(), minute: d.getMinutes() };
-    setNotifTime(newTime);
     try {
-      await saveNotificationTime(newTime);
-      await scheduleDailyNotification(newTime.hour, newTime.minute);
-    } catch (error) {
-      logger.warn('notification.schedule.failed', toLogError(error));
-      showAlert('오류', '알림 설정에 실패했어요. 다시 시도해 주세요.');
-    }
-  }
-
-  async function handleToggleNotifEnabled() {
-    const next = !notifEnabled;
-    setNotifEnabled(next);
-    try {
-      await saveNotificationEnabled(next);
-      if (next) {
-        if (notifPermission === 'granted') {
-          await scheduleDailyNotification(notifTime.hour, notifTime.minute);
+      if (pickerNoAlarm) {
+        if (notifEnabled) {
+          setNotifEnabled(false);
+          await saveNotificationEnabled(false);
+          await cancelDailyNotification();
         }
       } else {
-        await cancelDailyNotification();
+        const d = pickerDateRef.current;
+        const newTime = { hour: d.getHours(), minute: d.getMinutes() };
+        setNotifTime(newTime);
+        await saveNotificationTime(newTime);
+        if (!notifEnabled) {
+          setNotifEnabled(true);
+          await saveNotificationEnabled(true);
+        }
+        await scheduleDailyNotification(newTime.hour, newTime.minute);
       }
     } catch (error) {
-      setNotifEnabled(!next);
-      logger.warn('notification.toggle.failed', toLogError(error));
+      logger.warn('notification.schedule.failed', toLogError(error));
       showAlert('오류', '알림 설정에 실패했어요. 다시 시도해 주세요.');
     }
   }
@@ -521,18 +520,7 @@ export default function SettingsScreen() {
                     ? formatNotifTime(notifTime.hour, notifTime.minute)
                     : '알림을 받으려면 권한 허용이 필요해요'
               }
-              onPress={notifEnabled ? () => { void handleNotifTimePress(); } : undefined}
-              disabled={!notifEnabled}
-            />
-            <Row
-              icon={<BellOff size={20} color={colors.textSecondary} />}
-              label="기록 알림 없음"
-              onPress={() => { void handleToggleNotifEnabled(); }}
-              right={
-                <View style={[s.checkbox, !notifEnabled && s.checkboxActive]}>
-                  {!notifEnabled ? <Text style={s.checkboxMark}>✓</Text> : null}
-                </View>
-              }
+              onPress={() => { void handleNotifTimePress(); }}
             />
             <Row
               icon={<Bell size={20} color={colors.textSecondary} />}
@@ -634,17 +622,32 @@ export default function SettingsScreen() {
                   <Text style={s.timePickerDone}>완료</Text>
                 </TouchableOpacity>
               </View>
-              {DateTimePicker && (
-                <DateTimePicker
-                  value={pickerDateRef.current}
-                  mode="time"
-                  display="spinner"
-                  locale="ko-KR"
-                  onChange={(_: unknown, date?: Date) => {
-                    if (date) pickerDateRef.current = date;
-                  }}
-                />
-              )}
+              <TouchableOpacity
+                style={s.timePickerNoAlarmRow}
+                onPress={() => setPickerNoAlarm((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <Text style={s.timePickerNoAlarmLabel}>기록 알림 없음</Text>
+                <View style={[s.checkbox, pickerNoAlarm && s.checkboxActive]}>
+                  {pickerNoAlarm ? <Text style={s.checkboxMark}>✓</Text> : null}
+                </View>
+              </TouchableOpacity>
+              <View
+                style={pickerNoAlarm ? s.timePickerWheelDimmed : undefined}
+                pointerEvents={pickerNoAlarm ? 'none' : 'auto'}
+              >
+                {DateTimePicker && (
+                  <DateTimePicker
+                    value={pickerDateRef.current}
+                    mode="time"
+                    display="spinner"
+                    locale="ko-KR"
+                    onChange={(_: unknown, date?: Date) => {
+                      if (date) pickerDateRef.current = date;
+                    }}
+                  />
+                )}
+              </View>
             </View>
           </View>
         </Modal>
@@ -818,6 +821,22 @@ const s = StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     textAlign: 'right',
+  },
+  timePickerNoAlarmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  timePickerNoAlarmLabel: {
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  timePickerWheelDimmed: {
+    opacity: 0.3,
   },
   modalCard: {
     backgroundColor: colors.surface,

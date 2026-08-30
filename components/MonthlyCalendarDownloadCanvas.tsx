@@ -41,10 +41,9 @@ function pad2(n: number) {
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const H_MARGIN = spacing.lg;
 const CANVAS_WIDTH = SCREEN_WIDTH - H_MARGIN * 2;
-// 하단 패딩을 상단(80)과 맞추려고 50→80으로 늘린 만큼(+30), 그리드-푸터 간격을 넓힌 만큼(+28),
-// 주행 위아래 여백을 넓힌 만큼(3→6, 행당 +6 × 6행 = +36) 기준 높이도 1350→1444로 늘려서
-// 주행(그리드) 콘텐츠 영역은 그대로 두고 캔버스 전체 높이만 더 길어지도록 한다.
-const CANVAS_HEIGHT = Math.round(CANVAS_WIDTH * (1444 / 1080));
+// 상단 타이틀 잘림 방지를 위해 paddingTop을 80→120으로 늘린 만큼(+40) 기준 높이도 1444→1500으로 늘렸다.
+// 그리드 콘텐츠 영역은 그대로 두고 캔버스 상단 여백만 더 넓어지도록 한다.
+const CANVAS_HEIGHT = Math.round(CANVAS_WIDTH * (1500 / 1080));
 const CANVAS_SCALE = CANVAS_WIDTH / 1080;
 
 function dp(px: number) {
@@ -80,7 +79,7 @@ const styles = {
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT,
     backgroundColor: downloadColors.canvasBg,
-    paddingTop: dp(80),
+    paddingTop: dp(120),
     paddingLeft: dp(70),
     paddingRight: dp(70),
     paddingBottom: dp(80),
@@ -100,7 +99,7 @@ const styles = {
   },
   monthText: {
     fontSize: dp(66),
-    lineHeight: lh(dp(66)),
+    lineHeight: lh(dp(86)),
     fontWeight: '700',
     color: downloadColors.monthText,
     letterSpacing: dp(66) * -0.02,
