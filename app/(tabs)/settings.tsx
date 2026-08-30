@@ -40,7 +40,7 @@ const PRIVACY_URL = 'https://torpid-yttrium-aa3.notion.site/3719bc69e8b380f6992e
 const TERMS_URL = 'https://torpid-yttrium-aa3.notion.site/3719bc69e8b380978bf9e524688d01d9';
 const NEWS_URL = 'https://torpid-yttrium-aa3.notion.site/3719bc69e8b38098ab2eef6b6395968e';
 const DONATION_URL = 'supertoss://send?bank=%EC%B9%B4%EC%B9%B4%EC%98%A4%EB%B1%85%ED%81%AC&accountNo=3333227317180';
-const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
+const APP_VERSION = Constants.expoConfig?.version ?? '1.0.1';
 const CACHE_KEYS = [
   'pet-care:api:pets',
   'pet-care:api:current-pet-id',
