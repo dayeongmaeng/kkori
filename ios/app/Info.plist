@@ -57,10 +57,6 @@
     </dict>
     <key>NSCameraUsageDescription</key>
     <string>오늘의 사진을 찍기 위해 카메라가 필요해요.</string>
-    <key>NSFaceIDUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your microphone</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>사진첩에 사진을 저장하기 위해 접근 권한이 필요해요.</string>
     <key>NSPhotoLibraryUsageDescription</key>

@@ -146,7 +146,7 @@ async function request<T>(
 async function requestFormData<T>(path: string, formData: FormData): Promise<T> {
   let headers = await buildBaseHeaders();
 
-  let res = await fetch(`${API_BASE_URL}${path}`, {
+  let res = await fetch(`${API_BASE_UR}${path}`, {
     method: 'POST',
     headers,
     body: formData,
